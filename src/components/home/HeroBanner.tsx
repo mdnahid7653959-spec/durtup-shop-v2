@@ -224,10 +224,18 @@ export function HeroBanner() {
             <div className="flex transition-transform duration-700 ease-out will-change-transform" style={{
           transform: `translateX(-${currentSlide * 100}%)`
         }}>
-              {slides.map(slide => <Link key={slide.id} to={slide.link} className={`min-w-full h-[240px] xs:h-[270px] sm:h-[320px] md:h-[360px] lg:h-[420px] flex items-center relative overflow-hidden bg-black group`}>
+              {slides.map((slide, index) => <Link key={slide.id} to={slide.link} className={`min-w-full h-[240px] xs:h-[270px] sm:h-[320px] md:h-[360px] lg:h-[420px] flex items-center relative overflow-hidden bg-black group`}>
                   {/* Background image */}
                   <div className="absolute inset-0">
-                    <img src={slide.image} alt={slide.title} className="w-full h-full transition-transform duration-[7000ms] group-hover:scale-110" style={{ objectFit: slide.imageFit as any, objectPosition: slide.imagePosition }} loading="lazy" />
+                    <img
+                      src={slide.image}
+                      alt={slide.title}
+                      className="w-full h-full transition-transform duration-[7000ms] group-hover:scale-110"
+                      style={{ objectFit: slide.imageFit as any, objectPosition: slide.imagePosition }}
+                      loading={index === 0 ? "eager" : "lazy"}
+                      fetchPriority={index === 0 ? "high" : "auto"}
+                      decoding="async"
+                    />
                   </div>
 
                   {/* Cinematic gradient overlays */}

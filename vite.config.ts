@@ -24,10 +24,15 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  esbuild: {
+    drop: mode === "production" ? ["console", "debugger"] : [],
+    legalComments: "none",
+  },
   build: {
-    target: "esnext",
+    target: "es2022",
     cssCodeSplit: true,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 1200,
+    minify: "esbuild",
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, "index.html"),
@@ -36,8 +41,22 @@ export default defineConfig(({ mode }) => ({
         manualChunks: {
           "vendor-react": ["react", "react-dom", "react-router-dom"],
           "vendor-query": ["@tanstack/react-query"],
-          "vendor-lucide": ["lucide-react"],
+          "vendor-icons": ["lucide-react"],
+          "vendor-charts": ["recharts"],
           "vendor-firebase": ["firebase/app", "firebase/auth", "firebase/firestore", "firebase/storage"],
+          "vendor-ui": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-toast",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-slot",
+            "class-variance-authority",
+            "clsx",
+            "tailwind-merge",
+          ],
         },
       },
     },

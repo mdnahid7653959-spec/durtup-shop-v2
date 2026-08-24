@@ -79,11 +79,19 @@
     <link rel="dns-prefetch" href="https://mohasagor.com.bd" />
     <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
     <link rel="dns-prefetch" href="https://images.unsplash.com" />
-
-    <!-- Text-style template fonts for the Bento editor -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700;900&family=Playfair+Display:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Critical UI Font (Inter) - High Priority Fast Load -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- Non-Blocking Secondary Bento / Decorative Fonts -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700&family=Cormorant+Garamond:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@400;700&display=swap" />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700&family=Cormorant+Garamond:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700&family=Cormorant+Garamond:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@400;700&display=swap" rel="stylesheet" />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

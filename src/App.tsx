@@ -15,6 +15,7 @@ import { FacebookPixel } from "@/components/FacebookPixel";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NativeAppProvider } from "@/components/NativeAppProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RoutePrefetcher } from "@/components/RoutePrefetcher";
 
 // Eager load - critical pages
 import Index from "./pages/Index";
@@ -118,6 +119,7 @@ const App = () => (
                   <CartProvider>
                       <WishlistProvider>
                         <FacebookPixel />
+                        <RoutePrefetcher />
                         <AppLayout>
                           <Suspense fallback={<PageLoader />}>
                             <Routes>
