@@ -73,6 +73,42 @@ const GENERIC_GADGET_FALLBACKS = [
   "photo-1596755094514", // Shirt
 ];
 
+/**
+ * Converts heavy raw supplier images to ultra-fast, edge-cached WebP CDN images via Cloudflare/wsrv.nl
+ */
+export function optimizeImageUrl(url?: string, width: number = 400, quality: number = 80): string {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+
+  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:") || trimmed.includes(".svg")) {
+    return trimmed;
+  }
+
+  // Already an optimized proxy URL
+  if (trimmed.includes("wsrv.nl")) {
+    return trimmed;
+  }
+
+  // Unsplash images - use native high-speed dynamic CDN parameters
+  if (trimmed.includes("images.unsplash.com")) {
+    const clean = trimmed.split("?")[0];
+    return `${clean}?w=${width}&h=${width}&q=${quality}&fit=crop&auto=format`;
+  }
+
+  // Mohasagor and external supplier images - route through Cloudflare Edge CDN (wsrv.nl)
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return `https://wsrv.nl/?url=${encodeURIComponent(trimmed)}&w=${width}&h=${width}&fit=cover&output=webp&q=${quality}`;
+  }
+
+  if (trimmed.startsWith("//")) {
+    const full = `https:${trimmed}`;
+    return `https://wsrv.nl/?url=${encodeURIComponent(full)}&w=${width}&h=${width}&fit=cover&output=webp&q=${quality}`;
+  }
+
+  return trimmed;
+}
+
 export function getSmartProductImage(
   name: string = "",
   currentImageUrl?: string,
@@ -116,7 +152,7 @@ export function getSmartProductImage(
     // If it is a real image from Mohasagor, Supabase, Cloudinary, or valid external host (not an Unsplash generic fallback)
     if (!isUnsplashGeneric) {
       if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("//") || trimmed.startsWith("data:")) {
-        return trimmed;
+        return optimizeImageUrl(trimmed);
       }
     } else if (key) {
       // If it's a generic Unsplash image, only keep it if it actually matches the detected category
@@ -128,7 +164,7 @@ export function getSmartProductImage(
         (key === "shoes" && trimmed.includes("photo-1560472355")) ||
         (key === "shirt" && trimmed.includes("photo-1596755094514"))
       ) {
-        return trimmed;
+        return optimizeImageUrl(trimmed);
       }
     }
   }
@@ -136,11 +172,11 @@ export function getSmartProductImage(
   // Return a relevant category-matched high-res image
   if (key && CATEGORY_IMAGES[key]) {
     const images = CATEGORY_IMAGES[key];
-    return images[index % images.length];
+    return optimizeImageUrl(images[index % images.length]);
   }
 
   const defaultPool = CATEGORY_IMAGES.watch;
-  return defaultPool[index % defaultPool.length];
+  return optimizeImageUrl(defaultPool[index % defaultPool.length]);
 }
 
 // Proactive High-Speed Image Preloader & Cache Warmer

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Search as SearchIcon, X, Clock, TrendingUp, Loader2, Star, Camera } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/firebaseAdapter";
@@ -73,7 +73,9 @@ const FALLBACK_TRENDING = [
 
 export default function SearchPage() {
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const urlQuery = searchParams.get("q") || searchParams.get("search") || "";
+  const [query, setQuery] = useState(urlQuery);
   const [recent, setRecent] = useState<string[]>([]);
   const [editMode, setEditMode] = useState(false);
   const [imageSearchOpen, setImageSearchOpen] = useState(false);
@@ -82,6 +84,12 @@ export default function SearchPage() {
   const { data: suggestions, isFetching } = useSearchSuggestions(query);
   const { data: popular } = usePopularSearches();
   const trending = popular && popular.length ? popular : FALLBACK_TRENDING;
+
+  useEffect(() => {
+    if (urlQuery && urlQuery !== query) {
+      setQuery(urlQuery);
+    }
+  }, [urlQuery]);
 
   useEffect(() => {
     setRecent(getRecentSearches());

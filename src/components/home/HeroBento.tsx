@@ -6,6 +6,7 @@ import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { titleStyle, subtitleStyle, type TextStyle } from "@/lib/bentoText";
 import { getCachedMohasagorProducts, filterProductsByCategory } from "@/utils/mohasagorCache";
+import { optimizeImageUrl, getSmartProductImage } from "@/utils/productImageHelper";
 
 
 interface HeroBentoProps {
@@ -411,16 +412,26 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
               <div className="flex gap-1.5 sm:gap-2.5 md:gap-3 mb-1">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-md border border-[#decab0] p-0.5 group-hover:scale-105 transition-transform duration-300">
                   <img
-                    src={flashItems[0]?.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=200&h=200&fit=crop"}
+                    src={optimizeImageUrl(flashItems[0]?.image) || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=200&h=200&fit=crop"}
                     alt="Flash Item 1"
                     className="w-full h-full object-cover rounded-[10px] sm:rounded-[14px]"
+                    loading="eager"
+                    decoding="async"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=200&h=200&fit=crop";
+                    }}
                   />
                 </div>
                 <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-md border border-[#decab0] p-0.5 group-hover:scale-105 transition-transform duration-300 hidden sm:block">
                   <img
-                    src={flashItems[1]?.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop"}
+                    src={optimizeImageUrl(flashItems[1]?.image) || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop"}
                     alt="Flash Item 2"
                     className="w-full h-full object-cover rounded-[10px] sm:rounded-[14px]"
+                    loading="eager"
+                    decoding="async"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop";
+                    }}
                   />
                 </div>
               </div>
@@ -453,10 +464,12 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
             >
               {/* Ultra Attractive Product Image */}
               <img
-                src={tileImg}
+                src={optimizeImageUrl(tileImg)}
                 alt={c.title || name}
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                 style={c.imageUrl ? imgStyle(c) : { objectFit: "cover", objectPosition: "center" }}
+                loading="eager"
+                decoding="async"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = defaultImg;
                 }}
@@ -502,35 +515,40 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
                     { id: "fy2", name: "Wireless Bluetooth Speaker", price: 450, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop", slug: "speaker" },
                     { id: "fy3", name: "Smart Fitness Tracker Watch", price: 850, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop", slug: "watch" }
                   ]
-              ).map((p) => (
-                <Link
-                  key={p.id}
-                  to={`/product/${p.slug || p.id}`}
-                  state={{ preloadedProduct: p }}
-                  onMouseEnter={() => { if (p.image) { const i = new Image(); i.src = p.image; } }}
-                  onTouchStart={() => { if (p.image) { const i = new Image(); i.src = p.image; } }}
-                  className="group flex flex-col md:flex-row items-center gap-2 md:gap-3 p-1.5 sm:p-2 md:p-1.5 rounded-xl sm:rounded-2xl hover:bg-muted/60 transition-all border border-border/60 md:border-transparent bg-muted/20 md:bg-transparent active:scale-[0.98]"
-                >
-                  <div className="w-full aspect-square md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden shrink-0 border border-border/80 bg-white shadow-sm flex items-center justify-center">
-                    <img
-                      src={p.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=300&h=300&fit=crop"}
-                      alt={p.name}
-                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=300&h=300&fit=crop";
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0 text-center md:text-left w-full">
-                    <p className="text-[11px] sm:text-xs font-bold text-foreground line-clamp-1 group-hover:text-orange-600 transition-colors">
-                      {p.name}
-                    </p>
-                    <p className="text-xs sm:text-sm font-black text-orange-600 mt-0.5">
-                      ৳ {p.price.toLocaleString("en-BD")}
-                    </p>
-                  </div>
-                </Link>
-              ))}
+              ).map((p) => {
+                const optimizedSrc = optimizeImageUrl(p.image) || getSmartProductImage(p.name, p.image, (p as any).category || "");
+                return (
+                  <Link
+                    key={p.id}
+                    to={`/product/${p.slug || p.id}`}
+                    state={{ preloadedProduct: p }}
+                    onMouseEnter={() => { if (optimizedSrc) { const i = new Image(); i.src = optimizedSrc; } }}
+                    onTouchStart={() => { if (optimizedSrc) { const i = new Image(); i.src = optimizedSrc; } }}
+                    className="group flex flex-col md:flex-row items-center gap-2 md:gap-3 p-1.5 sm:p-2 md:p-1.5 rounded-xl sm:rounded-2xl hover:bg-muted/60 transition-all border border-border/60 md:border-transparent bg-muted/20 md:bg-transparent active:scale-[0.98]"
+                  >
+                    <div className="w-full aspect-square md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden shrink-0 border border-border/80 bg-white shadow-sm flex items-center justify-center relative">
+                      <img
+                        src={optimizedSrc}
+                        alt={p.name}
+                        className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-300"
+                        loading="eager"
+                        decoding="async"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = getSmartProductImage(p.name, "", (p as any).category || "");
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0 text-center md:text-left w-full">
+                      <p className="text-[11px] sm:text-xs font-bold text-foreground line-clamp-1 group-hover:text-orange-600 transition-colors">
+                        {p.name}
+                      </p>
+                      <p className="text-xs sm:text-sm font-black text-orange-600 mt-0.5">
+                        ৳ {p.price.toLocaleString("en-BD")}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         )}
@@ -540,18 +558,20 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
           <Link
             to={trendingCfg.link || (trend ? `/product/${trend.slug}` : "/products")}
             state={trend ? { preloadedProduct: trend } : undefined}
-            onMouseEnter={() => { if (trend?.image) { const i = new Image(); i.src = trend.image; } }}
-            onTouchStart={() => { if (trend?.image) { const i = new Image(); i.src = trend.image; } }}
+            onMouseEnter={() => { if (trend?.image) { const i = new Image(); i.src = optimizeImageUrl(trend.image); } }}
+            onTouchStart={() => { if (trend?.image) { const i = new Image(); i.src = optimizeImageUrl(trend.image); } }}
             className="col-span-2 md:col-span-1 row-span-2 rounded-[1.5rem] md:rounded-[2.5rem] bg-[#0f0f14] overflow-hidden relative group shadow-lg active:scale-[0.99] transition-all flex flex-col justify-between border border-white/10"
           >
             {/* Background product photo */}
             <img
-              src={trendingCfg.imageUrl || trend?.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=1000&fit=crop"}
+              src={optimizeImageUrl(trendingCfg.imageUrl || trend?.image) || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=1000&fit=crop"}
               alt={trendingCfg.title || trend?.name || "Trending Product"}
               className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
               style={{ objectFit: "cover", objectPosition: "center" }}
+              loading="eager"
+              decoding="async"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=1000&fit=crop";
+                (e.target as HTMLImageElement).src = getSmartProductImage(trend?.name || "", "", "watch");
               }}
             />
 
