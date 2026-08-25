@@ -1151,11 +1151,83 @@ export default function Checkout() {
                           >
                             <RadioGroupItem value="cod" id="page-cod" className="shrink-0" />
                             <Label htmlFor="page-cod" className="flex-1 cursor-pointer min-w-0">
-                              <span className="font-bold text-sm text-foreground block">Cash on Delivery (COD)</span>
-                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">Pay in cash when product arrives at your doorstep</p>
+                              <span className="font-bold text-sm text-foreground flex items-center flex-wrap gap-1.5">
+                                <span>Cash on Delivery (ক্যাশ অন ডেলিভারি - COD)</span>
+                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-1.5 h-4">
+                                  অগ্রিম টাকা নেই
+                                </Badge>
+                              </span>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                পণ্য হাতে পেয়ে ডেলিভারি ম্যানের কাছে ক্যাশ টাকা দিয়ে রিসিভ করুন
+                              </p>
                             </Label>
                             {paymentMethod === "cod" && <CheckCircle className="h-5 w-5 text-primary shrink-0 ml-auto" />}
                           </div>
+
+                          {/* COD Detailed Explanation Box */}
+                          {paymentMethod === "cod" && (
+                            <div className="p-3.5 sm:p-5 rounded-xl border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-background to-muted/30 space-y-3.5 animate-in fade-in zoom-in-95 duration-200 w-full min-w-0 overflow-hidden shadow-sm">
+                              {/* Header Title */}
+                              <div className="flex items-center gap-2.5 pb-2.5 border-b border-primary/20">
+                                <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
+                                  <Banknote className="h-4 w-4 text-primary" />
+                                </div>
+                                <div>
+                                  <h4 className="text-sm sm:text-base font-bold text-foreground">
+                                    ক্যাশ অন ডেলিভারি (COD) এর বিস্তারিত নিয়ম:
+                                  </h4>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    কোনো অগ্রিম পেমেন্ট নেই • ১০০% নিরাপদ কেনাকাটা
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* 3 Step Explanation Points */}
+                              <div className="grid gap-2.5 text-xs sm:text-sm">
+                                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-background/90 border border-border/70">
+                                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                                    ১
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-foreground">কোনো অগ্রিম টাকা দিতে হবে না (Zero Advance)</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                      অর্ডার কনফার্ম করার সময় আপনাকে কোনো টাকা বা সার্ভিস চার্জ অগ্রিম দিতে হবে না।
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-background/90 border border-border/70">
+                                  <div className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                                    ২
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-foreground">পণ্য হাতে পেয়ে টাকা পরিশোধ (Pay at Doorstep)</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                      ডেলিভারি ম্যান যখন প্রোডাক্ট আপনার দেওয়া ঠিকানায় নিয়ে আসবে, তখন প্রোডাক্টটি দেখে নিশ্চিত হয়ে ডেলিভারি ম্যানের হাতে ক্যাশ টাকা দিয়ে পার্সেল বুঝে নেবেন।
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-background/90 border border-border/70">
+                                  <div className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-600 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                                    ৩
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-foreground">অর্ডার ভেরিফিকেশন কল (Order Confirmation)</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                      অর্ডার সাবমিট করার পর আমাদের কাস্টমার সার্ভিস প্রতিনিধি আপনার মোবাইল নম্বরে ফোন করে ঠিকানা কনফার্ম করে দ্রুত পার্সেল ডেলিভারিতে পাঠিয়ে দেবে।
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Trust badge */}
+                              <div className="flex items-center gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/25 rounded-lg text-[11px] sm:text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                                <span>১০০% জেনুইন প্রোডাক্ট গ্যারান্টি এবং সহজ রিটার্ন ও রিপ্লেসমেন্ট সুবিধা!</span>
+                              </div>
+                            </div>
+                          )}
 
                           {/* bKash */}
                           <div 
