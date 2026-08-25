@@ -193,57 +193,59 @@ export function Header() {
 
             {/* Actions */}
             <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 flex flex-col items-center h-auto py-1 px-1.5 sm:px-2 rounded-md">
-                    <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span className="text-[8px] sm:text-[9px] leading-none mt-0.5 font-medium">
-                      {user ? profile?.full_name?.split(' ')[0] || 'Account' : 'Account'}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-popover">
-                  {user ? (
-                    <>
-                      <div className="p-3 border-b">
-                        <p className="text-sm font-medium">{profile?.full_name || 'Welcome!'}</p>
-                        <p className="text-xs text-muted-foreground">{user.email}</p>
-                      </div>
-                      <DropdownMenuItem asChild><Link to="/orders" className="cursor-pointer">My Orders</Link></DropdownMenuItem>
-                      <DropdownMenuItem asChild><Link to="/wishlist" className="cursor-pointer">Wishlist</Link></DropdownMenuItem>
-                      <DropdownMenuItem asChild><Link to="/account" className="cursor-pointer">Account Settings</Link></DropdownMenuItem>
-                      {!isInstalled && (
-                        <DropdownMenuItem onClick={openPrompt} className="cursor-pointer text-primary font-semibold">
-                          <Download className="h-4 w-4 mr-2" /> Install Durtup App
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
-                        <LogOut className="h-4 w-4 mr-2" /> Logout
-                      </DropdownMenuItem>
-                    </>
-                  ) : (
-                    <>
-                      <div className="p-3 border-b">
-                        <p className="text-sm font-medium">Welcome to Durtup.shop!</p>
-                        <div className="flex gap-2 mt-2">
-                          <Button asChild size="sm" className="flex-1"><Link to="/login">Sign In</Link></Button>
-                          <Button asChild variant="outline" size="sm" className="flex-1"><Link to="/register">Register</Link></Button>
+              <div className="hidden md:block">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 flex flex-col items-center h-auto py-1 px-1.5 sm:px-2 rounded-md">
+                      <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="text-[8px] sm:text-[9px] leading-none mt-0.5 font-medium">
+                        {user ? profile?.full_name?.split(' ')[0] || 'Account' : 'Account'}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-popover">
+                    {user ? (
+                      <>
+                        <div className="p-3 border-b">
+                          <p className="text-sm font-medium">{profile?.full_name || 'Welcome!'}</p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
                         </div>
-                      </div>
-                      <DropdownMenuItem asChild><Link to="/orders" className="cursor-pointer">My Orders</Link></DropdownMenuItem>
-                      <DropdownMenuItem asChild><Link to="/wishlist" className="cursor-pointer">Wishlist</Link></DropdownMenuItem>
-                      <DropdownMenuItem asChild><Link to="/account" className="cursor-pointer">Account Settings</Link></DropdownMenuItem>
-                      {!isInstalled && (
-                        <DropdownMenuItem onClick={openPrompt} className="cursor-pointer text-primary font-semibold">
-                          <Download className="h-4 w-4 mr-2" /> Install Durtup App
+                        <DropdownMenuItem asChild><Link to="/orders" className="cursor-pointer">My Orders</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link to="/wishlist" className="cursor-pointer">Wishlist</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link to="/account" className="cursor-pointer">Account Settings</Link></DropdownMenuItem>
+                        {!isInstalled && (
+                          <DropdownMenuItem onClick={openPrompt} className="cursor-pointer text-primary font-semibold">
+                            <Download className="h-4 w-4 mr-2" /> Install Durtup App
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
+                          <LogOut className="h-4 w-4 mr-2" /> Logout
                         </DropdownMenuItem>
-                      )}
-                    </>
-                  )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="p-3 border-b">
+                          <p className="text-sm font-medium">Welcome to Durtup.shop!</p>
+                          <div className="flex gap-2 mt-2">
+                            <Button asChild size="sm" className="flex-1"><Link to="/login">Sign In</Link></Button>
+                            <Button asChild variant="outline" size="sm" className="flex-1"><Link to="/register">Register</Link></Button>
+                          </div>
+                        </div>
+                        <DropdownMenuItem asChild><Link to="/orders" className="cursor-pointer">My Orders</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link to="/wishlist" className="cursor-pointer">Wishlist</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link to="/account" className="cursor-pointer">Account Settings</Link></DropdownMenuItem>
+                        {!isInstalled && (
+                          <DropdownMenuItem onClick={openPrompt} className="cursor-pointer text-primary font-semibold">
+                            <Download className="h-4 w-4 mr-2" /> Install Durtup App
+                          </DropdownMenuItem>
+                        )}
+                      </>
+                    )}
 
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
 
               <Link to="/messages">
                 <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 flex flex-col items-center h-auto py-1 px-1.5 sm:px-2 rounded-md relative">
