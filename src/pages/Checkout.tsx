@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { CreditCard, Truck, Shield, ArrowLeft, Loader2, ChevronDown, ChevronUp, CheckCircle, Globe, Tag, X, MapPin, Phone, User as UserIcon, Plus, Edit3, CheckCircle2, Home, Banknote, Smartphone, ArrowRight, Copy } from "lucide-react";
+import { CreditCard, Truck, Shield, ArrowLeft, Loader2, ChevronDown, ChevronUp, CheckCircle, Globe, Tag, X, MapPin, Phone, User as UserIcon, Plus, Edit3, CheckCircle2, Home, Banknote, Smartphone, ArrowRight, Copy, PackageCheck, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +36,16 @@ export default function Checkout() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [confirmedOrderData, setConfirmedOrderData] = useState<{
+    orderNumber: string;
+    total: number;
+    paymentMethod: string;
+    customerName: string;
+    phone: string;
+    address: string;
+    city: string;
+    productName: string;
+  } | null>(null);
   const [checkoutStep, setCheckoutStep] = useState<"shipping" | "payment">("shipping");
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [showOrderSummary, setShowOrderSummary] = useState(false);
@@ -686,11 +696,21 @@ export default function Checkout() {
         console.warn("Telegram trigger error:", tgErr);
       }
 
-      // Mark order placed immediately to prevent rendering empty cart state
+      // Populate confirmed order details for the dedicated Success Screen
+      setConfirmedOrderData({
+        orderNumber: orderNumber,
+        total: total,
+        paymentMethod: paymentMethod,
+        customerName: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim() || "Customer",
+        phone: shippingInfo.phone,
+        address: shippingInfo.address,
+        city: shippingInfo.city,
+        productName: primaryProductName
+      });
       setOrderPlaced(true);
 
-      // Clear both carts
-      await clearCart();
+      // Clear both carts in background
+      clearCart().catch(() => {});
       clearCJCart();
 
       // Send instant native push notification + audio chime to phone/browser
@@ -710,9 +730,6 @@ export default function Checkout() {
         title: "Order placed successfully! 🎉", 
         description: `Your order #${orderNumber} has been confirmed.`
       });
-
-      // Navigate immediately and reliably to Orders page
-      navigate(`/orders?success=${orderNumber}`, { replace: true });
     } catch (error: any) {
       console.error("Order error:", error);
       setOrderPlaced(false);
@@ -726,17 +743,90 @@ export default function Checkout() {
     }
   };
 
-  if (orderPlaced) {
+  if (orderPlaced && confirmedOrderData) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <Header />
-        <main className="flex-1 container py-16 text-center pb-24 md:pb-8 flex flex-col items-center justify-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 animate-bounce">
-            <CheckCircle className="h-8 w-8" />
+        <main className="flex-1 container py-8 sm:py-12 max-w-2xl px-4 flex flex-col items-center justify-center">
+          <div className="w-full bg-card border rounded-2xl p-6 sm:p-8 shadow-sm space-y-6 text-center animate-in fade-in zoom-in-95 duration-300">
+            {/* Celebratory Icon */}
+            <div className="w-20 h-20 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto border-2 border-emerald-500/30">
+              <CheckCircle2 className="h-10 w-10 animate-bounce" />
+            </div>
+
+            {/* Header Text */}
+            <div className="space-y-1.5">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">
+                অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে! 🎉
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                ধন্যবাদ! আপনার অর্ডারটি গ্রহণ করা হয়েছে। খুব শীঘ্রই পার্সেলটি ডেলিভারির জন্য পাঠানো হবে।
+              </p>
+            </div>
+
+            {/* Order Details Summary Box */}
+            <div className="bg-muted/40 border rounded-xl p-4 sm:p-5 text-left space-y-3 text-sm">
+              <div className="flex items-center justify-between pb-3 border-b">
+                <span className="text-muted-foreground text-xs sm:text-sm">অর্ডার নম্বর (Order ID):</span>
+                <div className="flex items-center gap-1.5 font-mono font-bold text-primary">
+                  <span>#{confirmedOrderData.orderNumber}</span>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(confirmedOrderData.orderNumber);
+                      toast({ title: "Copied!", description: "Order ID copied to clipboard" });
+                    }}
+                    className="text-muted-foreground hover:text-foreground p-1"
+                    title="Copy Order ID"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground text-xs sm:text-sm">পেমেন্ট মেথড:</span>
+                <span className="font-semibold text-foreground">
+                  {confirmedOrderData.paymentMethod === "cod" ? "Cash on Delivery (ক্যাশ অন ডেলিভারি)" : "bKash (বিকাশ)"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground text-xs sm:text-sm">মোট মূল্য (Total Amount):</span>
+                <span className="font-bold text-base text-primary">৳{confirmedOrderData.total.toLocaleString()}</span>
+              </div>
+
+              <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
+                <p><span className="font-medium text-foreground">গ্রাহক:</span> {confirmedOrderData.customerName} ({confirmedOrderData.phone})</p>
+                <p><span className="font-medium text-foreground">ঠিকানা:</span> {confirmedOrderData.address}, {confirmedOrderData.city}</p>
+              </div>
+            </div>
+
+            {/* Verification Call Notice */}
+            <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-start gap-3 text-left text-xs sm:text-sm text-emerald-800 dark:text-emerald-300">
+              <Phone className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">আমাদের প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবেন</p>
+                <p className="text-xs text-emerald-700/80 dark:text-emerald-400 mt-0.5">
+                  পার্সেল পাঠানোর পূর্বে ঠিকানা নিশ্চিত করার জন্য আমাদের কাস্টমার কেয়ার টিম আপনাকে কল করবে।
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid sm:grid-cols-2 gap-3 pt-2">
+              <Link to="/orders" className="w-full">
+                <Button variant="outline" className="w-full h-11 font-semibold flex items-center justify-center gap-2">
+                  <PackageCheck className="h-4 w-4" /> আমার অর্ডারসমূহ (My Orders)
+                </Button>
+              </Link>
+              <Link to="/" className="w-full">
+                <Button className="w-full h-11 font-bold flex items-center justify-center gap-2">
+                  <ShoppingBag className="h-4 w-4" /> আরও কেনাকাটা করুন
+                </Button>
+              </Link>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Order Confirmed! 🎉</h1>
-          <p className="text-muted-foreground text-sm">Redirecting to your orders...</p>
-          <Loader2 className="h-6 w-6 animate-spin text-primary mt-2" />
         </main>
         <Footer />
       </div>

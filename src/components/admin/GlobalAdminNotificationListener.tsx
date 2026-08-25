@@ -1,25 +1,49 @@
 import React, { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { db } from "@/integrations/firebase/client";
 import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { playNewOrderSound, sendBrowserNotification, unlockAudio } from "@/hooks/useAdminOrderNotifications";
 import { useToast } from "@/hooks/use-toast";
 import { AdminMessengerOrderBanner } from "@/components/admin/AdminMessengerOrderBanner";
 import { Capacitor } from "@capacitor/core";
+import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useStaff } from "@/contexts/StaffContext";
 
 /**
  * GlobalAdminNotificationListener
- * 24/7 background listener across the entire Admin Panel.
- * Automatically sounds chime, vibrates phone, shows Messenger-style floating pop-up,
- * and posts native Android/Desktop push notifications whenever ANY customer places an order.
+ * Background listener strictly for Admin / Staff panel.
+ * Only sounds chime, vibrates phone, and shows Messenger-style floating pop-up
+ * for authenticated Admin / Staff users or when on /admin /staff routes.
  */
 export const GlobalAdminNotificationListener: React.FC = () => {
+  const location = useLocation();
+  const adminAuth = useAdminAuth();
+  const auth = useAuth();
+  const staffCtx = useStaff();
   const { toast } = useToast();
   const processedDocIds = useRef<Set<string>>(new Set());
   const isFirstLoad = useRef(true);
 
+  const path = location.pathname.toLowerCase();
+  const isAdminPath = path.startsWith("/admin") || path.startsWith("/staff") || path.startsWith("/seller");
+  const isAdminAuthenticated = Boolean(
+    adminAuth?.isAuthenticated ||
+    staffCtx?.isStaff ||
+    auth?.profile?.role === "admin" ||
+    auth?.profile?.role === "staff" ||
+    (typeof window !== "undefined" && (
+      localStorage.getItem("megamart_admin_session") ||
+      localStorage.getItem("staff_token") ||
+      localStorage.getItem("durtup_admin_authenticated")
+    ))
+  );
+
+  const isEligibleAdmin = isAdminPath || isAdminAuthenticated;
+
   // 1. Initialize Native High Priority Channel & Audio unlock
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !isEligibleAdmin) return;
 
     // Load previously notified orders from session storage
     try {
@@ -166,7 +190,7 @@ export const GlobalAdminNotificationListener: React.FC = () => {
 
   // 2. Real-time Firestore listener on `admin_notifications`
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !isEligibleAdmin) return;
 
     try {
       const notifRef = collection(db, "admin_notifications");
@@ -191,11 +215,11 @@ export const GlobalAdminNotificationListener: React.FC = () => {
     } catch (e) {
       console.warn("[GlobalAdminNotificationListener] Error:", e);
     }
-  }, [toast]);
+  }, [isEligibleAdmin, toast]);
 
   // 3. Cross-tab Broadcast Channel & Custom Event listener
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !isEligibleAdmin) return;
 
     let bc: BroadcastChannel | null = null;
     if ("BroadcastChannel" in window) {
@@ -212,7 +236,11 @@ export const GlobalAdminNotificationListener: React.FC = () => {
     return () => {
       if (bc) bc.close();
     };
-  }, [toast]);
+  }, [isEligibleAdmin, toast]);
+
+  if (!isEligibleAdmin) {
+    return null;
+  }
 
   return (
     <>
