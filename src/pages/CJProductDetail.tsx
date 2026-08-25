@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Heart, ShoppingCart, Star, Truck, Shield, RotateCcw, Minus, Plus, Loader2, ChevronLeft, ChevronRight, Share2, Zap, ZoomIn } from "lucide-react";
+import { Home, Heart, ShoppingCart, Star, Truck, Shield, RotateCcw, Minus, Plus, Loader2, ChevronLeft, ChevronRight, Share2, Zap, ZoomIn } from "lucide-react";
 import DOMPurify from "dompurify";
 import { supabase } from "@/lib/firebaseAdapter";
 import { Button } from "@/components/ui/button";
@@ -597,24 +597,44 @@ export default function CJProductDetail() {
           </div>
         </div>
 
-        {/* Mobile sticky bottom bar above MobileBottomNav */}
+        {/* Mobile sticky bottom bar pinned to bottom */}
         <div 
-          className="fixed left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] p-2.5 sm:hidden z-40 max-w-[100vw] overflow-hidden" 
-          style={{ bottom: 'calc(60px + max(env(safe-area-inset-bottom), 6px))' }}
+          className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border shadow-[0_-8px_25px_rgba(0,0,0,0.12)] p-2.5 sm:hidden z-50 max-w-[100vw] overflow-hidden" 
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 10px)' }}
         >
           <div className="flex items-center gap-2 max-w-lg mx-auto w-full">
+            {/* Home shortcut */}
+            <Link 
+              to="/" 
+              className="flex flex-col items-center justify-center h-10 w-11 rounded-xl bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+              title="Home"
+            >
+              <Home className="h-4 w-4" />
+              <span className="text-[9px] font-medium leading-none mt-0.5">Home</span>
+            </Link>
+
+            {/* Cart shortcut */}
+            <Link 
+              to="/cart" 
+              className="flex flex-col items-center justify-center h-10 w-11 rounded-xl bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 relative transition-colors"
+              title="Cart"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span className="text-[9px] font-medium leading-none mt-0.5">Cart</span>
+            </Link>
+
             {/* Mini Quantity */}
-            <div className="flex items-center border rounded-xl overflow-hidden bg-muted/50 shrink-0">
+            <div className="flex items-center border rounded-xl overflow-hidden bg-muted/50 shrink-0 h-10">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-8 h-9 flex items-center justify-center active:bg-muted"
+                className="w-7 h-full flex items-center justify-center active:bg-muted"
               >
                 <Minus className="h-3.5 w-3.5" />
               </button>
-              <span className="w-7 text-center font-semibold text-xs">{quantity}</span>
+              <span className="w-6 text-center font-semibold text-xs">{quantity}</span>
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-8 h-9 flex items-center justify-center active:bg-muted"
+                className="w-7 h-full flex items-center justify-center active:bg-muted"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -623,7 +643,7 @@ export default function CJProductDetail() {
             <Button 
               variant="outline"
               size="sm" 
-              className="flex-1 h-9 text-xs font-bold border-primary text-primary active:scale-[0.98] rounded-xl" 
+              className="flex-1 h-10 text-xs font-bold border-primary/40 text-primary active:scale-[0.98] rounded-xl hover:bg-primary/5" 
               onClick={handleAddToCart}
               disabled={addingToCart || !product.inStock}
             >
@@ -632,11 +652,11 @@ export default function CJProductDetail() {
               ) : (
                 <ShoppingCart className="h-3.5 w-3.5 mr-1 shrink-0" />
               )}
-              Cart
+              <span className="truncate">Add to Cart</span>
             </Button>
             <Button 
               size="sm" 
-              className="flex-1 h-9 text-xs font-bold bg-gradient-to-r from-primary to-primary/80 active:scale-[0.98] rounded-xl shadow-md shadow-primary/20" 
+              className="flex-1 h-10 text-xs font-bold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white active:scale-[0.98] rounded-xl shadow-md shadow-orange-500/25" 
               onClick={handleBuyNow}
               disabled={buyingNow || !product.inStock}
             >
@@ -645,7 +665,7 @@ export default function CJProductDetail() {
               ) : (
                 <Zap className="h-3.5 w-3.5 mr-1 shrink-0" />
               )}
-              Buy Now
+              <span className="truncate">Buy Now</span>
             </Button>
           </div>
         </div>

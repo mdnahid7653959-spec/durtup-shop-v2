@@ -1509,10 +1509,10 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* Mobile sticky action bar directly above MobileBottomNav */}
+        {/* Mobile sticky action bar pinned to bottom */}
         <div 
-          className="md:hidden fixed left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border/80 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] px-3 py-2 max-w-[100vw] overflow-hidden" 
-          style={{ bottom: 'calc(60px + max(env(safe-area-inset-bottom), 6px))' }}
+          className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border shadow-[0_-8px_25px_rgba(0,0,0,0.12)] px-3 py-2 max-w-[100vw] overflow-hidden" 
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 10px)' }}
         >
           <div className="max-w-lg mx-auto w-full space-y-1.5">
             {/* Selected Variant Indicator Pill */}
@@ -1533,8 +1533,34 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {/* Fast Action Buttons */}
+            {/* Fast Action Buttons with Quick Nav icons */}
             <div className="flex items-center gap-2 w-full">
+              {/* Home shortcut */}
+              <Link 
+                to="/" 
+                className="flex flex-col items-center justify-center h-10 w-11 rounded-xl bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+                title="Home"
+              >
+                <Home className="h-4 w-4" />
+                <span className="text-[9px] font-medium leading-none mt-0.5">Home</span>
+              </Link>
+
+              {/* Cart shortcut with badge */}
+              <Link 
+                to="/cart" 
+                className="flex flex-col items-center justify-center h-10 w-11 rounded-xl bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 relative transition-colors"
+                title="Cart"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                <span className="text-[9px] font-medium leading-none mt-0.5">Cart</span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center px-0.5 shadow-xs">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Add to Cart */}
               <Button
                 variant="outline"
                 size="sm"
@@ -1545,6 +1571,8 @@ export default function ProductDetail() {
                 {addingToCart ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin shrink-0" /> : <ShoppingCart className="h-3.5 w-3.5 mr-1.5 shrink-0" />}
                 <span className="truncate">Add to Cart</span>
               </Button>
+
+              {/* Buy Now */}
               <Button
                 size="sm"
                 className="flex-1 h-10 px-2 text-xs font-bold rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md shadow-orange-500/25 active:scale-[0.98]"

@@ -171,10 +171,8 @@ export function startMohasagorAutoSync() {
 
 // Non-blocking background catalog hydrator
 if (typeof window !== "undefined") {
-  startMohasagorAutoSync();
-
-  // Hydrate additional catalog items after browser finishes initial render (2000ms delay)
-  setTimeout(async () => {
+  // Hydrate additional catalog items after browser finishes initial render
+  const hydrateCatalog = async () => {
     try {
       const idbData = await getIdbProducts();
       if (idbData && idbData.length >= 100) {
@@ -187,7 +185,13 @@ if (typeof window !== "undefined") {
     } catch (e) {
       console.warn("Catalog background hydration warning:", e);
     }
-  }, 2000);
+  };
+
+  if ("requestIdleCallback" in window) {
+    (window as any).requestIdleCallback(hydrateCatalog, { timeout: 3000 });
+  } else {
+    setTimeout(hydrateCatalog, 1500);
+  }
 }
 
 async function fetchStaticCatalog(): Promise<Product[]> {
@@ -551,12 +555,13 @@ export function startAutoProductSync(intervalMs: number = AUTO_SYNC_INTERVAL_MS)
     window.clearInterval(autoSyncTimer);
   }
 
-  // Run initial background sync
-  fetchAllPagesMohasagorProducts().catch(() => {});
+  // Defer initial live background sync to not compete with critical page load
+  setTimeout(() => {
+    fetchAllPagesMohasagorProducts().catch(() => {});
+  }, 8000);
 
   // Schedule recurring sync every 5 minutes
   autoSyncTimer = window.setInterval(() => {
-    console.log("[5-Min Auto Sync] Triggering scheduled 5-minute supplier API product sync...");
     fetchAllPagesMohasagorProducts(true).catch((err) => {
       console.warn("Scheduled 5-min product sync warning:", err);
     });

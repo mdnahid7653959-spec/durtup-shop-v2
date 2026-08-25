@@ -23,8 +23,14 @@ export function AppLayout({ children }: AppLayoutProps) {
   const isAdmin = path.startsWith("/admin");
   const isSeller = path.startsWith("/seller");
   const isStaff = path.startsWith("/staff");
+  const isProductDetail = 
+    path.startsWith("/product/") || 
+    path.startsWith("/products/") || 
+    path.startsWith("/p/") || 
+    path.startsWith("/item/") || 
+    path.startsWith("/cj-product/");
 
-  const shouldShowMobileNav = !isCheckout && !isAdmin && !isSeller && !isStaff;
+  const shouldShowMobileNav = !isCheckout && !isAdmin && !isSeller && !isStaff && !isProductDetail;
 
   return (
     <>

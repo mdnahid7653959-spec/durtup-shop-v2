@@ -24,7 +24,6 @@ export function InfiniteProductFeed() {
           setAllCatalog(products);
           setDisplayedProducts((prev) => prev.length > 0 ? prev : products.slice(0, BATCH_SIZE));
           setHasMore(products.length > BATCH_SIZE);
-          prefetchProductImages(products, 60);
         }
       } catch (err) {
         console.error("Failed to load infinite product feed:", err);
@@ -44,7 +43,6 @@ export function InfiniteProductFeed() {
         setDisplayedProducts(rotated.slice(0, BATCH_SIZE));
         setPage(1);
         setHasMore(rotated.length > BATCH_SIZE);
-        prefetchProductImages(rotated, 60);
       }
     }, 5 * 60 * 1000);
 
@@ -57,7 +55,6 @@ export function InfiniteProductFeed() {
           const currentCount = Math.max(prev.length, BATCH_SIZE);
           return updated.slice(0, currentCount);
         });
-        prefetchProductImages(updated, 60);
       }
     };
     window.addEventListener("mohasagor_products_updated", handleUpdate);
@@ -76,8 +73,6 @@ export function InfiniteProductFeed() {
     setDisplayedProducts(nextBatch);
     setPage(nextPage);
     setHasMore(nextBatch.length < allCatalog.length);
-    // Prefetch upcoming images before the user reaches them
-    prefetchProductImages(allCatalog.slice(nextPage * BATCH_SIZE, (nextPage + 2) * BATCH_SIZE), 36);
   };
 
   // IntersectionObserver for Infinite Scroll with large 1000px look-ahead
@@ -91,7 +86,7 @@ export function InfiniteProductFeed() {
           loadNextBatch();
         }
       },
-      { rootMargin: "1000px" }
+      { rootMargin: "600px" }
     );
 
     observer.observe(sentinel);
@@ -115,7 +110,7 @@ export function InfiniteProductFeed() {
       {/* Grid Layout */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
         {displayedProducts.map((product, idx) => (
-          <ProductCard key={`${product.id}-${idx}`} product={product} priority={idx < 12} />
+          <ProductCard key={`${product.id}-${idx}`} product={product} priority={false} />
         ))}
       </div>
 

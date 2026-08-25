@@ -7,6 +7,8 @@ import { getSmartProductImage } from "@/utils/productImageHelper";
 import { cn } from "@/lib/utils";
 
 const LOCAL_STORAGE_KEY = "recently_viewed_products";
+const CACHED_TILES_KEY = "cached_personalized_tiles_v2";
+let inMemoryTilesCache: Tile[] | null = null;
 
 type Row = {
   id: string;
@@ -54,11 +56,30 @@ function primaryImage(p: Row): string {
 
 export function PersonalizedFeed() {
   const { user } = useAuth();
-  const [tiles, setTiles] = useState<Tile[]>([]);
+  const [tiles, setTiles] = useState<Tile[]>(() => {
+    if (inMemoryTilesCache && inMemoryTilesCache.length > 0) return inMemoryTilesCache;
+    try {
+      const cached = sessionStorage.getItem(CACHED_TILES_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          inMemoryTilesCache = parsed;
+          return parsed;
+        }
+      }
+    } catch {}
+    return [];
+  });
   const [personalized, setPersonalized] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !tiles || tiles.length === 0);
 
   useEffect(() => {
+    if (inMemoryTilesCache && inMemoryTilesCache.length >= 6) {
+      setTiles(inMemoryTilesCache);
+      setLoading(false);
+      return;
+    }
+
     async function load() {
       setLoading(true);
       try {
@@ -172,6 +193,10 @@ export function PersonalizedFeed() {
         });
 
         setTiles(built);
+        inMemoryTilesCache = built;
+        try {
+          sessionStorage.setItem(CACHED_TILES_KEY, JSON.stringify(built));
+        } catch {}
       } catch (err) {
         console.error("PersonalizedFeed load error:", err);
       } finally {

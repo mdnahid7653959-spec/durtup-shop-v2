@@ -76,7 +76,7 @@ const GENERIC_GADGET_FALLBACKS = [
 /**
  * Converts heavy raw supplier images to ultra-fast, edge-cached WebP CDN images via Cloudflare/wsrv.nl
  */
-export function optimizeImageUrl(url?: string, width: number = 400, quality: number = 80): string {
+export function optimizeImageUrl(url?: string, width: number = 280, quality: number = 75): string {
   if (!url || typeof url !== "string") return "";
   const trimmed = url.trim();
   if (!trimmed) return "";
@@ -179,15 +179,15 @@ export function getSmartProductImage(
   return optimizeImageUrl(defaultPool[index % defaultPool.length]);
 }
 
-// Proactive High-Speed Image Preloader & Cache Warmer
+// Lightweight Proactive Image Preloader - Only warms top few items on idle
 const preloadedUrls = new Set<string>();
 
 export function prefetchProductImages(
   products: Array<{ image?: string; image_url?: string; images?: any[]; name?: string }>,
-  maxCount: number = 50
+  maxCount: number = 6
 ) {
-  if (typeof window === "undefined" || !Array.isArray(products)) return;
-  const targetSlice = products.slice(0, maxCount);
+  if (typeof window === "undefined" || !Array.isArray(products) || products.length === 0) return;
+  const targetSlice = products.slice(0, Math.min(maxCount, 8));
 
   const warmImage = (rawUrl?: string, name?: string) => {
     if (!rawUrl) return;
@@ -200,21 +200,15 @@ export function prefetchProductImages(
     img.src = finalUrl;
   };
 
+  const runIdle = () => {
+    targetSlice.forEach((p) => {
+      warmImage(p.image || p.image_url, p.name);
+    });
+  };
+
   if ("requestIdleCallback" in window) {
-    (window as any).requestIdleCallback(() => {
-      targetSlice.forEach((p) => {
-        warmImage(p.image || p.image_url, p.name);
-        if (Array.isArray(p.images) && p.images[0]) {
-          const first = typeof p.images[0] === "string" ? p.images[0] : p.images[0]?.image_url;
-          warmImage(first, p.name);
-        }
-      });
-    });
+    (window as any).requestIdleCallback(runIdle, { timeout: 2000 });
   } else {
-    targetSlice.forEach((p, idx) => {
-      setTimeout(() => {
-        warmImage(p.image || p.image_url, p.name);
-      }, idx * 10);
-    });
+    setTimeout(runIdle, 1000);
   }
 }

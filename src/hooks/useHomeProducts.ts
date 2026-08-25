@@ -273,8 +273,7 @@ const CACHE_KEY = "mohasagor_cached_home_products_v11";
 const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes 
 
 function preloadImages(products: Product[]) {
-  if (typeof window === "undefined" || !products) return;
-  prefetchProductImages(products, 80);
+  // Let the browser load images on demand via native loading="lazy"
 }
 
 function getInitialCachedProducts() {
@@ -284,7 +283,6 @@ function getInitialCachedProducts() {
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed && parsed.latestProducts?.length) {
-        preloadImages(parsed.latestProducts);
         return parsed;
       }
     }
@@ -357,7 +355,6 @@ async function fetchAllHomeProducts() {
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify(result));
         } catch (e) {}
-        preloadImages(result.latestProducts);
         return result;
       }
     }
@@ -388,7 +385,6 @@ async function fetchAllHomeProducts() {
       try {
         localStorage.setItem(CACHE_KEY, JSON.stringify(result));
       } catch (e) {}
-      preloadImages(result.latestProducts);
       return result;
     }
   } catch (dbErr) {
@@ -408,7 +404,6 @@ async function fetchAllHomeProducts() {
       try {
         localStorage.setItem(CACHE_KEY, JSON.stringify(result));
       } catch (e) {}
-      preloadImages(result.latestProducts);
       return result;
     }
   } catch (cachedErr) {
