@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { db } from "@/integrations/firebase/client";
-import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -24,10 +24,33 @@ export interface AdminNotification {
   created_at: string;
 }
 
+// Shared AudioContext instance unlocked upon first user interaction
+let globalAudioCtx: AudioContext | null = null;
+
+export function unlockAudio() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    if (!globalAudioCtx) {
+      globalAudioCtx = new AudioContextClass();
+    }
+    if (globalAudioCtx.state === "suspended") {
+      globalAudioCtx.resume().catch(() => {});
+    }
+  } catch {}
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("click", unlockAudio, { passive: true });
+  window.addEventListener("touchstart", unlockAudio, { passive: true });
+  window.addEventListener("keydown", unlockAudio, { passive: true });
+}
+
 // Play loud, pleasant cash register / chime sound on new orders (works on phone & PC)
 export function playNewOrderSound() {
   try {
-    // 1. Device vibration
+    // 1. Device vibration for mobile phones
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate([400, 150, 400, 150, 400, 150, 800]);
     }
@@ -35,7 +58,11 @@ export function playNewOrderSound() {
     // 2. High fidelity Web Audio synthesizer (Cash register "Ka-Ching" + 4-note chord)
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
+    
+    if (!globalAudioCtx || globalAudioCtx.state === "closed") {
+      globalAudioCtx = new AudioContextClass();
+    }
+    const ctx = globalAudioCtx;
     if (ctx.state === "suspended") {
       ctx.resume().catch(() => {});
     }
@@ -48,7 +75,7 @@ export function playNewOrderSound() {
       const gain = ctx.createGain();
       osc.type = "triangle";
       osc.frequency.setValueAtTime(freq, now);
-      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.setValueAtTime(0.45, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -59,7 +86,7 @@ export function playNewOrderSound() {
     // Part 2: Upbeat 4-note chime sequence: C5, E5, G5, C6
     const melody = [523.25, 659.25, 783.99, 1046.50];
     melody.forEach((freq, idx) => {
-      const startTime = now + 0.12 + idx * 0.11;
+      const startTime = now + 0.10 + idx * 0.11;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       
@@ -67,7 +94,7 @@ export function playNewOrderSound() {
       osc.frequency.setValueAtTime(freq, startTime);
       
       gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(0.45, startTime + 0.02);
+      gain.gain.linearRampToValueAtTime(0.5, startTime + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.45);
       
       osc.connect(gain);
@@ -77,11 +104,11 @@ export function playNewOrderSound() {
       osc.stop(startTime + 0.5);
     });
   } catch (e) {
-    console.warn("Audio chime error:", e);
+    console.warn("[OrderAudio] Audio chime error:", e);
   }
 }
 
-// Trigger real Mobile/OS native push notification with Product Image & Vibration (Android Notification Shade)
+// Trigger real Mobile/OS native push notification with Product Image & Vibration
 export async function sendBrowserNotification(
   title: string,
   options?: NotificationOptions & { product_image?: string; order_id?: string; data?: any }
@@ -96,18 +123,17 @@ export async function sendBrowserNotification(
   }
 
   if (currentPerm !== "granted") {
-    console.warn("Notification permission is not granted:", currentPerm);
     return;
   }
 
-  const img = options?.product_image || (options as any)?.image;
+  const img = options?.product_image || (options as any)?.image || "/durtup-logo.png";
   const targetUrl = (options as any)?.data?.url || "/admin/orders";
 
   const notificationOpts: NotificationOptions = {
     body: options?.body || "New order received on Durtup.shop",
-    icon: img || "/durtup-logo.png",
+    icon: img,
     badge: "/favicon-32x32.png",
-    image: img || undefined, // Displays large product preview in Android notification shade
+    image: img, // Displays large product preview in Android notification shade
     vibrate: [400, 150, 400, 150, 400, 150, 800],
     tag: (options as any)?.tag || `durtup-order-${Date.now()}`,
     requireInteraction: true,
@@ -117,10 +143,6 @@ export async function sendBrowserNotification(
       order_id: options?.order_id,
       ...options?.data,
     },
-    actions: [
-      { action: "view_order", title: "🛍️ View Order" },
-      { action: "open_admin", title: "⚡ Open Admin" }
-    ],
     ...options,
   };
 
@@ -132,7 +154,6 @@ export async function sendBrowserNotification(
         reg = await navigator.serviceWorker.register("/sw.js");
       }
 
-      // Use Promise.race with 1.5s timeout so ready never hangs
       const readyPromise = navigator.serviceWorker.ready;
       const timeoutPromise = new Promise<ServiceWorkerRegistration | null>((resolve) =>
         setTimeout(() => resolve(reg || null), 1500)
@@ -142,7 +163,6 @@ export async function sendBrowserNotification(
       if (activeReg && activeReg.showNotification) {
         await activeReg.showNotification(title, notificationOpts);
 
-        // Also postMessage to SW controller
         if (navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
             type: "SHOW_NOTIFICATION",
@@ -182,6 +202,37 @@ export function useAdminOrderNotifications() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const isFirstLoad = useRef(true);
+  const notifiedOrderIds = useRef<Set<string>>(new Set());
+
+  // Trigger alert UI & sound with deduplication
+  const triggerOrderAlert = useCallback((data: Partial<AdminNotification> & { id: string }) => {
+    const orderId = data.id || data.order_id || "";
+    if (orderId && notifiedOrderIds.current.has(orderId)) return;
+    if (orderId) notifiedOrderIds.current.add(orderId);
+
+    const orderNum = data.order_number || orderId.slice(0, 8) || "NEW";
+    const customerName = data.customer_name || "Customer";
+    const prodName = data.product_name || "Product";
+    const amount = Number(data.total_amount || 0);
+    const prodImg = data.product_image || data.image_url || "/durtup-logo.png";
+    const payMethod = data.payment_method ? data.payment_method.toUpperCase() : "COD";
+
+    // 1. Play audio chime & phone vibration
+    playNewOrderSound();
+
+    // 2. Trigger real mobile push notification with product image
+    sendBrowserNotification(data.title || `🛍️ New Order #${orderNum}! (৳${amount.toLocaleString()})`, {
+      body: data.message || `Customer: ${customerName} • "${prodName}" • ${payMethod}`,
+      product_image: prodImg,
+      data: { url: "/admin/orders", order_id: orderId }
+    });
+
+    // 3. Trigger in-app toast
+    toast({
+      title: data.title || `🛍️ New Order #${orderNum}!`,
+      description: `${customerName} ordered ${prodName} (৳${amount.toLocaleString()})`,
+    });
+  }, [toast]);
 
   // Request browser / mobile push notification permission
   const requestPermission = useCallback(async () => {
@@ -198,6 +249,7 @@ export function useAdminOrderNotifications() {
       const result = await Notification.requestPermission();
       setPermission(result);
       if (result === "granted") {
+        unlockAudio();
         toast({
           title: "Phone Push Alerts Enabled! 🔔",
           description: "You will receive instant push notifications with product photos for new orders."
@@ -208,15 +260,15 @@ export function useAdminOrderNotifications() {
 
         // Send confirmation push notification
         sendBrowserNotification("🔔 Durtup Order Alerts Active!", {
-          body: "Direct push alerts enabled on your phone with live product photos & sound!",
-          product_image: "/hero-banner-durtu-perfect.png",
+          body: "Direct push alerts enabled on your device with live product photos & sound!",
+          product_image: "/durtup-logo.png",
           data: { url: "/admin/orders" }
         });
         return true;
       } else {
         toast({
           title: "Permission denied",
-          description: "Please allow notifications in your phone's browser settings to receive order alerts.",
+          description: "Please allow notifications in your browser settings to receive order alerts.",
           variant: "destructive"
         });
         return false;
@@ -229,6 +281,7 @@ export function useAdminOrderNotifications() {
 
   // Send a test push notification with product photo and sound to verify phone integration
   const testPushNotification = useCallback(async () => {
+    unlockAudio();
     if (permission !== "granted") {
       const granted = await requestPermission();
       if (!granted) return;
@@ -243,12 +296,68 @@ export function useAdminOrderNotifications() {
     });
 
     toast({
-      title: "📱 Push Notification Sent to Phone!",
-      description: "Check your phone's notification bar for the test order alert with product photo.",
+      title: "📱 Push Notification Sent!",
+      description: "Order notification with product photo and sound triggered successfully.",
     });
   }, [permission, requestPermission, toast]);
 
-  // Real-time listener for new order notifications
+  // 1. Cross-tab real-time listener (BroadcastChannel + CustomEvents + Storage Event)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let bc: BroadcastChannel | null = null;
+    if ("BroadcastChannel" in window) {
+      try {
+        bc = new BroadcastChannel("durtup_admin_order_notifications");
+        bc.onmessage = (evt) => {
+          if (evt.data?.type === "new_order" && evt.data?.order) {
+            const ord = evt.data.order;
+            triggerOrderAlert(ord);
+            setNotifications((prev) => {
+              if (prev.some((n) => n.id === ord.id)) return prev;
+              return [ord, ...prev];
+            });
+          }
+        };
+      } catch {}
+    }
+
+    const handleCustomOrder = (e: any) => {
+      if (e.detail) {
+        triggerOrderAlert(e.detail);
+        setNotifications((prev) => {
+          if (prev.some((n) => n.id === e.detail.id)) return prev;
+          return [e.detail, ...prev];
+        });
+      }
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "durtup_last_order_event" && e.newValue) {
+        try {
+          const ord = JSON.parse(e.newValue);
+          if (ord?.id && Date.now() - (ord.timestamp || 0) < 30000) {
+            triggerOrderAlert(ord);
+            setNotifications((prev) => {
+              if (prev.some((n) => n.id === ord.id)) return prev;
+              return [ord, ...prev];
+            });
+          }
+        } catch {}
+      }
+    };
+
+    window.addEventListener("durtup_new_order", handleCustomOrder as EventListener);
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      if (bc) bc.close();
+      window.removeEventListener("durtup_new_order", handleCustomOrder as EventListener);
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, [triggerOrderAlert]);
+
+  // 2. Real-time Firestore listener on `admin_notifications`
   useEffect(() => {
     try {
       const notifRef = collection(db, "admin_notifications");
@@ -264,26 +373,13 @@ export function useAdminOrderNotifications() {
         if (!isFirstLoad.current) {
           snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
-              const data = change.doc.data() as AdminNotification;
-              const prodImg = data.product_image || data.image_url;
-              
-              // 1. Play audio chime & phone vibration
-              playNewOrderSound();
-
-              // 2. Trigger real mobile push notification with product image
-              sendBrowserNotification(data.title || `🛍️ New Order #${data.order_number || change.doc.id.slice(0, 8)}!`, {
-                body: data.message || `Customer: ${data.customer_name || "Customer"} • ৳${(data.total_amount || 0).toLocaleString()} • ${data.payment_method?.toUpperCase() || "COD"}`,
-                product_image: prodImg,
-                data: { url: "/admin/orders", order_id: data.order_id || change.doc.id }
-              });
-
-              // 3. Trigger in-app toast
-              toast({
-                title: data.title || "🛍️ New Order Received!",
-                description: `${data.customer_name || "Customer"} ordered ${data.product_name || "Item"} (৳${(data.total_amount || 0).toLocaleString()})`,
-              });
+              const data = { id: change.doc.id, ...(change.doc.data() as any) };
+              triggerOrderAlert(data);
             }
           });
+        } else {
+          // Pre-populate existing docs so they don't trigger sound on initial mount
+          snapshot.forEach((docSnap) => notifiedOrderIds.current.add(docSnap.id));
         }
 
         isFirstLoad.current = false;
@@ -296,7 +392,7 @@ export function useAdminOrderNotifications() {
     } catch (e) {
       console.warn("Failed to attach admin notification listener:", e);
     }
-  }, [toast, navigate]);
+  }, [triggerOrderAlert]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -327,7 +423,7 @@ export function useAdminOrderNotifications() {
     testPushNotification,
     markAsRead,
     markAllAsRead,
-    playNewOrderSound
+    playNewOrderSound,
+    triggerOrderAlert
   };
 }
-

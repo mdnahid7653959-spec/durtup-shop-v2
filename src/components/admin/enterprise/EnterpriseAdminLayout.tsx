@@ -50,6 +50,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
 
 interface NavItem {
   title: string;
@@ -362,6 +363,9 @@ export const EnterpriseAdminLayout: React.FC<{ children: React.ReactNode }> = ({
           </div>
 
           <div className="flex items-center gap-2.5">
+            {/* REAL-TIME ORDER NOTIFICATION BELL */}
+            <AdminNotificationBell />
+
             {/* THEME TOGGLE BUTTON */}
             <Button
               variant="outline"

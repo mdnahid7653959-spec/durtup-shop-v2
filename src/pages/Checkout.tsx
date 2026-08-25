@@ -472,6 +472,23 @@ export default function Checkout() {
           console.warn("admin_notification sync warning:", e);
         });
 
+        // 🚀 Instant Cross-Tab Broadcast to all open Admin tabs/windows
+        try {
+          const broadcastPayload = {
+            id: order.id,
+            ...adminNotificationDoc
+          };
+          if ("BroadcastChannel" in window) {
+            const bc = new BroadcastChannel("durtup_admin_order_notifications");
+            bc.postMessage({ type: "new_order", order: broadcastPayload });
+            bc.close();
+          }
+          window.dispatchEvent(new CustomEvent("durtup_new_order", { detail: broadcastPayload }));
+          localStorage.setItem("durtup_last_order_event", JSON.stringify({ ...broadcastPayload, timestamp: Date.now() }));
+        } catch (bcErr) {
+          console.warn("Cross-tab order broadcast notice:", bcErr);
+        }
+
         try {
           const rawLocal = localStorage.getItem("enterprise_admin_orders") || localStorage.getItem("local_orders") || "[]";
           const localList = JSON.parse(rawLocal);
