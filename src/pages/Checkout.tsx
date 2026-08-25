@@ -29,8 +29,8 @@ interface AppliedCoupon {
 }
 
 export default function Checkout() {
-  const { items: regularItems, subtotal: regularSubtotal, clearCart } = useCart();
-  const { items: cjItems, subtotal: cjSubtotal, clearCart: clearCJCart } = useCJCart();
+  const { items: regularItems, subtotal: regularSubtotal, clearCart, loading: cartLoading } = useCart();
+  const { items: cjItems, subtotal: cjSubtotal, clearCart: clearCJCart, loading: cjLoading } = useCJCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -737,6 +737,19 @@ export default function Checkout() {
           <h1 className="text-2xl font-bold text-foreground">Order Confirmed! 🎉</h1>
           <p className="text-muted-foreground text-sm">Redirecting to your orders...</p>
           <Loader2 className="h-6 w-6 animate-spin text-primary mt-2" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (cartLoading || cjLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 container py-16 text-center pb-24 md:pb-8 flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-muted-foreground text-sm font-medium">Loading checkout details...</p>
         </main>
         <Footer />
       </div>

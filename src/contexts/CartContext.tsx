@@ -42,12 +42,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const CART_STORAGE_KEY = "megamart_cart";
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
-  const { toast } = useToast();
-
-  const getLocalCart = useCallback(() => {
+  const getLocalCart = useCallback((): any[] => {
     try {
       const stored = localStorage.getItem(CART_STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
@@ -56,80 +51,114 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const [items, setItems] = useState<CartItem[]>(() => {
+    try {
+      const stored = localStorage.getItem(CART_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
   const setLocalCart = useCallback((cart: any[]) => {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    } catch {}
   }, []);
 
   const fetchCart = useCallback(async () => {
-    setLoading(true);
     try {
       const catalog = await getCachedMohasagorProducts();
       let rawItems: any[] = [];
+      const localCart = getLocalCart();
 
       if (user) {
-        const cartRef = doc(db, "carts", user.uid);
+        const userId = (user as any).uid || user.id;
+        const cartRef = doc(db, "carts", userId);
         const cartSnap = await getDoc(cartRef);
+        let firestoreItems: any[] = [];
         if (cartSnap.exists()) {
-          rawItems = cartSnap.data().items || [];
-        } else {
-          rawItems = getLocalCart();
+          firestoreItems = cartSnap.data().items || [];
         }
+
+        // Merge local guest cart items with firestore cart so items are NEVER lost
+        const merged = [...firestoreItems];
+        if (Array.isArray(localCart) && localCart.length > 0) {
+          localCart.forEach((localItem: any) => {
+            const exists = merged.some(f => 
+              (f.product_id === localItem.product_id || f.id === localItem.id) &&
+              (f.variant_name === localItem.variant_name || f.variant_id === localItem.variant_id)
+            );
+            if (!exists) {
+              merged.push(localItem);
+            }
+          });
+          // Update Firestore with merged cart
+          setDoc(cartRef, { items: merged, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+        }
+        rawItems = merged.length > 0 ? merged : localCart;
       } else {
-        rawItems = getLocalCart();
+        rawItems = localCart;
       }
 
-      const formatted: CartItem[] = rawItems.map((item: any) => {
-        const matched = catalog.find(p => p.id === item.product_id || p.id === item.id);
-        const prodData = item.product || (matched ? {
-          id: matched.id,
-          name: matched.name,
-          slug: matched.slug,
-          regular_price: matched.originalPrice || matched.price,
-          discount_price: matched.price,
-          stock_quantity: 50
-        } : {
-          id: item.product_id || "item",
-          name: item.name || "Product",
-          slug: `product-${item.product_id}`,
-          regular_price: item.price || 100,
-          discount_price: null,
-          stock_quantity: 50
+      if (rawItems.length > 0) {
+        const formatted: CartItem[] = rawItems.map((item: any) => {
+          const matched = catalog.find(p => p.id === item.product_id || p.id === item.id);
+          const prodData = item.product || (matched ? {
+            id: matched.id,
+            name: matched.name,
+            slug: matched.slug,
+            regular_price: matched.originalPrice || matched.price,
+            discount_price: matched.price,
+            stock_quantity: 50
+          } : {
+            id: item.product_id || item.id || "item",
+            name: item.name || "Product",
+            slug: `product-${item.product_id || item.id}`,
+            regular_price: item.price || 100,
+            discount_price: null,
+            stock_quantity: 50
+          });
+
+          // Resolve variant text
+          let variantName = item.variant_name || null;
+          if (!variantName && item.selected_variants) {
+            variantName = Object.entries(item.selected_variants).map(([k, v]) => `${k}: ${v}`).join(", ");
+          } else if (!variantName && item.variant_id) {
+            try {
+              const parsed = JSON.parse(item.variant_id);
+              if (typeof parsed === "object") {
+                variantName = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(", ");
+              }
+            } catch {}
+          }
+
+          return {
+            id: item.id || `cart-${item.product_id || item.id}`,
+            product_id: item.product_id || item.id,
+            quantity: item.quantity || 1,
+            variant_id: item.variant_id || null,
+            selected_variants: item.selected_variants || null,
+            color: item.color || item.selected_variants?.Color || item.selected_variants?.color || null,
+            size: item.size || item.selected_variants?.Size || item.selected_variants?.size || null,
+            variant_name: variantName,
+            product: prodData,
+            image: item.image || matched?.image || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400"
+          };
         });
 
-        // Resolve variant text
-        let variantName = item.variant_name || null;
-        if (!variantName && item.selected_variants) {
-          variantName = Object.entries(item.selected_variants).map(([k, v]) => `${k}: ${v}`).join(", ");
-        } else if (!variantName && item.variant_id) {
-          try {
-            const parsed = JSON.parse(item.variant_id);
-            if (typeof parsed === "object") {
-              variantName = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(", ");
-            }
-          } catch {}
-        }
-
-        return {
-          id: item.id || `cart-${item.product_id}`,
-          product_id: item.product_id || item.id,
-          quantity: item.quantity || 1,
-          variant_id: item.variant_id || null,
-          selected_variants: item.selected_variants || null,
-          color: item.color || item.selected_variants?.Color || item.selected_variants?.color || null,
-          size: item.size || item.selected_variants?.Size || item.selected_variants?.size || null,
-          variant_name: variantName,
-          product: prodData,
-          image: item.image || matched?.image || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400"
-        };
-      });
-
-      setItems(formatted);
+        setItems(formatted);
+        setLocalCart(formatted);
+      }
     } catch (err) {
       console.error("Failed to load cart:", err);
     } finally {
       setLoading(false);
     }
-  }, [user, getLocalCart]);
+  }, [user, getLocalCart, setLocalCart]);
 
   useEffect(() => {
     fetchCart();
@@ -138,8 +167,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const syncCartToFirebase = async (newItems: CartItem[]) => {
     setLocalCart(newItems);
     if (user) {
+      const userId = (user as any).uid || user.id;
       try {
-        await setDoc(doc(db, "carts", user.uid), {
+        await setDoc(doc(db, "carts", userId), {
           items: newItems,
           updatedAt: new Date().toISOString()
         }, { merge: true });
