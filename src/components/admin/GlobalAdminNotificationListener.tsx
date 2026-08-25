@@ -29,8 +29,8 @@ export const GlobalAdminNotificationListener: React.FC = () => {
       }
     } catch {}
 
-    // Unlock audio & create native channel
-    const handleFirstTouch = async () => {
+    // 1. Auto-initialize Native Channel & Request Permission immediately on app launch
+    const autoInit = async () => {
       unlockAudio();
       
       // If running inside Capacitor Android native app, create urgent heads-up notification channel
@@ -57,7 +57,7 @@ export const GlobalAdminNotificationListener: React.FC = () => {
         }
       }
 
-      // Web Push Permission
+      // Web Push Permission auto-request on load
       if ("Notification" in window && Notification.permission === "default") {
         try {
           const perm = await Notification.requestPermission();
@@ -73,6 +73,13 @@ export const GlobalAdminNotificationListener: React.FC = () => {
           console.warn("[Admin Notification] Permission error:", e);
         }
       }
+    };
+
+    autoInit();
+
+    // 2. Also unlock audio on first touch/tap
+    const handleFirstTouch = () => {
+      unlockAudio();
       window.removeEventListener("click", handleFirstTouch);
       window.removeEventListener("touchstart", handleFirstTouch);
     };
