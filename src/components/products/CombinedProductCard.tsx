@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { openAuthModal } from "@/components/auth/AuthPromptModal";
 import { cn } from "@/lib/utils";
 import type { CombinedProduct } from "@/hooks/useCombinedSearch";
 import { getSmartProductImage } from "@/utils/productImageHelper";
@@ -64,25 +63,13 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
     e.preventDefault();
     e.stopPropagation();
 
+    handleAddToCart(e);
+
     if (!user) {
-      openAuthModal({
-        redirectUrl: "/checkout",
-        product: {
-          id: product.id,
-          name: product.name,
-          image: displayImage,
-          price: product.price,
-          quantity: 1,
-          isCJ: product.source === 'cj',
-          cjProductId: product.cjProductId
-        },
-        title: "অর্ডার করতে অ্যাকাউন্ট তৈরি করুন",
-        message: `"${product.name}" কিনতে এবং অর্ডার করতে ১-ক্লিকে সাইন আপ বা লগইন করুন।`
-      });
+      navigate("/login?redirect=/checkout");
       return;
     }
 
-    handleAddToCart(e);
     navigate("/checkout");
   };
 

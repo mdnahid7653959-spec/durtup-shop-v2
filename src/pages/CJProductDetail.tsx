@@ -9,7 +9,6 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { useCJCart } from "@/hooks/useCJCart";
 import { useAuth } from "@/contexts/AuthContext";
-import { openAuthModal } from "@/components/auth/AuthPromptModal";
 import { useToast } from "@/hooks/use-toast";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
 import { ProductZoomViewer } from "@/components/products/ProductZoomViewer";
@@ -158,25 +157,6 @@ export default function CJProductDetail() {
     const prodPrice = convertToBDT(selectedVariant?.variantSellPrice || product.price);
     const prodImg = selectedVariant?.variantImage || product.images[0] || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=200&h=200&fit=crop";
 
-    // 🔒 If user not logged in, prompt account creation before buy
-    if (!authUser) {
-      openAuthModal({
-        redirectUrl: "/checkout",
-        product: {
-          id: `cj_${product.id}`,
-          name: product.nameEn || product.name,
-          image: prodImg,
-          price: prodPrice,
-          quantity: quantity,
-          isCJ: true,
-          cjProductId: product.id
-        },
-        title: "অর্ডার করতে অ্যাকাউন্ট তৈরি করুন",
-        message: `"${product.nameEn || product.name}" কিনতে ১-ক্লিকে সাইন আপ বা লগইন করুন।`
-      });
-      return;
-    }
-
     setBuyingNow(true);
     
     const cjProduct = {
@@ -191,6 +171,17 @@ export default function CJProductDetail() {
 
     addToCJCart(cjProduct, quantity);
     setBuyingNow(false);
+
+    // 🔒 If user not logged in, take them directly to the Login page
+    if (!authUser) {
+      toast({
+        title: "লগইন / অ্যাকাউন্ট প্রয়োজন",
+        description: "অর্ডার সম্পন্ন করতে দয়া করে লগইন বা রেজিস্ট্রেশন করুন।"
+      });
+      navigate("/login?redirect=/checkout");
+      return;
+    }
+
     navigate("/checkout");
   };
 

@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { openAuthModal } from "@/components/auth/AuthPromptModal";
 import { cn } from "@/lib/utils";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 
@@ -49,23 +48,13 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
 
+    await addToCart(product.id, 1);
+
     if (!user) {
-      openAuthModal({
-        redirectUrl: "/checkout",
-        product: {
-          id: product.id,
-          name: product.name,
-          image: displayImage,
-          price: product.price,
-          quantity: 1,
-        },
-        title: "অর্ডার করতে অ্যাকাউন্ট তৈরি করুন",
-        message: `"${product.name}" কিনতে এবং অর্ডার করতে ১-ক্লিকে সাইন আপ বা লগইন করুন।`
-      });
+      navigate("/login?redirect=/checkout");
       return;
     }
 
-    await addToCart(product.id, 1);
     navigate("/checkout");
   };
 

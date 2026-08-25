@@ -8,7 +8,6 @@ import { Footer } from "@/components/layout/Footer";
 import { useCart } from "@/contexts/CartContext";
 import { useCJCart } from "@/hooks/useCJCart";
 import { useAuth } from "@/contexts/AuthContext";
-import { openAuthModal } from "@/components/auth/AuthPromptModal";
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,11 +21,11 @@ export default function Cart() {
 
   const handleProceedToCheckout = () => {
     if (!user) {
-      openAuthModal({
-        redirectUrl: "/checkout",
-        title: "চেকআউট করতে অ্যাকাউন্ট তৈরি করুন",
-        message: "আপনার কার্টের প্রোডাক্টগুলো অর্ডার কনফার্ম করতে ১-ক্লিকে সাইন আপ বা লগইন করুন।"
+      toast({
+        title: "লগইন / অ্যাকাউন্ট প্রয়োজন",
+        description: "অর্ডার সম্পন্ন করতে দয়া করে লগইন বা রেজিস্ট্রেশন করুন।"
       });
+      navigate("/login?redirect=/checkout");
       return;
     }
     navigate("/checkout");

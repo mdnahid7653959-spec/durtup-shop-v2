@@ -174,8 +174,11 @@ export default function Login() {
 
             <p className="text-center text-sm text-muted-foreground mt-6">
               Don't have an account?{" "}
-              <Link to="/register" className="text-primary hover:underline font-medium">
-                Create one
+              <Link 
+                to={rawNext ? `/register?redirect=${encodeURIComponent(rawNext)}` : "/register"} 
+                className="text-primary hover:underline font-bold"
+              >
+                Create Account (নতুন অ্যাকাউন্ট)
               </Link>
             </p>
           </div>

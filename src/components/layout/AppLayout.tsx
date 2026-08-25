@@ -2,7 +2,6 @@ import { ReactNode, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { PushNotificationInitializer } from "@/components/PushNotificationInitializer";
-import { AuthPromptModal } from "@/components/auth/AuthPromptModal";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -36,7 +35,6 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <>
       <PushNotificationInitializer />
-      <AuthPromptModal />
       {children}
       {shouldShowMobileNav && <MobileBottomNav />}
     </>

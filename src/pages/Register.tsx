@@ -218,8 +218,11 @@ export default function Register() {
 
             <p className="text-center text-sm text-muted-foreground mt-6">
               Already have an account?{" "}
-              <Link to="/login" className="text-primary hover:underline font-medium">
-                Sign in
+              <Link 
+                to={rawNext ? `/login?redirect=${encodeURIComponent(rawNext)}` : "/login"} 
+                className="text-primary hover:underline font-bold"
+              >
+                Sign in (লগইন করুন)
               </Link>
             </p>
           </div>
