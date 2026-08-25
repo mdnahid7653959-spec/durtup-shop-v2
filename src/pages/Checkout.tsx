@@ -19,6 +19,7 @@ import { doc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { sendTelegramOrderNotification } from "@/utils/telegramNotifier";
 import { sendOrderSuccessPushNotification, requestNotificationPermission } from "@/services/notificationService";
+import { openAuthModal } from "@/components/auth/AuthPromptModal";
 
 
 interface AppliedCoupon {
@@ -294,8 +295,16 @@ export default function Checkout() {
     e.preventDefault();
     
     if (!user) {
-      toast({ variant: "destructive", title: "Please login", description: "You need to login to place an order" });
-      navigate("/login?redirect=/checkout");
+      toast({
+        variant: "destructive",
+        title: "অ্যাকাউন্ট প্রয়োজন",
+        description: "অর্ডার সম্পন্ন করতে দয়া করে অ্যাকাউন্ট তৈরি করুন বা লগইন করুন।",
+      });
+      openAuthModal({
+        redirectUrl: "/checkout",
+        title: "অর্ডার কনফার্ম করতে অ্যাকাউন্ট তৈরি করুন",
+        message: "অর্ডারটি প্লেস করতে এবং ডেলিভারি ট্র্যাক করতে ১-ক্লিকে সাইন আপ বা লগইন করুন।"
+      });
       return;
     }
 

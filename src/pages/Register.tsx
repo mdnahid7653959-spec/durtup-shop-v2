@@ -22,8 +22,8 @@ export default function Register() {
   const { signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const location = useLocation();
-  const rawNext = new URLSearchParams(location.search).get("next");
+  const params = new URLSearchParams(location.search);
+  const rawNext = params.get("next") || params.get("redirect");
   const nextPath = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
 
   const handleSubmit = async (e: React.FormEvent) => {

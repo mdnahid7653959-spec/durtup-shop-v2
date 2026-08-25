@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { openAuthModal } from "@/components/auth/AuthPromptModal";
 import { cn } from "@/lib/utils";
 import type { CombinedProduct } from "@/hooks/useCombinedSearch";
 import { getSmartProductImage } from "@/utils/productImageHelper";
@@ -18,6 +20,7 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { items: wishlistItems, addToWishlist, removeFromWishlist } = useWishlist();
+  const { user } = useAuth();
 
   const isInWishlist = wishlistItems.some((item) => item.product_id === product.id);
   const discountPercent = product.originalPrice
@@ -60,6 +63,25 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (!user) {
+      openAuthModal({
+        redirectUrl: "/checkout",
+        product: {
+          id: product.id,
+          name: product.name,
+          image: displayImage,
+          price: product.price,
+          quantity: 1,
+          isCJ: product.source === 'cj',
+          cjProductId: product.cjProductId
+        },
+        title: "অর্ডার করতে অ্যাকাউন্ট তৈরি করুন",
+        message: `"${product.name}" কিনতে এবং অর্ডার করতে ১-ক্লিকে সাইন আপ বা লগইন করুন।`
+      });
+      return;
+    }
+
     handleAddToCart(e);
     navigate("/checkout");
   };

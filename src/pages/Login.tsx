@@ -23,7 +23,7 @@ export default function Login() {
   const location = useLocation();
 
   const params = new URLSearchParams(location.search);
-  const rawNext = params.get("next");
+  const rawNext = params.get("next") || params.get("redirect");
   const nextPath = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
   const from = nextPath || (location.state as any)?.from?.pathname || "/";
 

@@ -4,6 +4,8 @@ import { Heart, Star, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { openAuthModal } from "@/components/auth/AuthPromptModal";
 import { cn } from "@/lib/utils";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 
@@ -34,6 +36,7 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
   const discount = product.originalPrice ? Math.round((1 - product.price / product.originalPrice) * 100) : 0;
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const { user } = useAuth();
   const inWishlist = isInWishlist(product.id);
 
   const handleAddToCart = async (e: React.MouseEvent) => {
@@ -45,6 +48,23 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
   const handleBuyNow = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (!user) {
+      openAuthModal({
+        redirectUrl: "/checkout",
+        product: {
+          id: product.id,
+          name: product.name,
+          image: displayImage,
+          price: product.price,
+          quantity: 1,
+        },
+        title: "অর্ডার করতে অ্যাকাউন্ট তৈরি করুন",
+        message: `"${product.name}" কিনতে এবং অর্ডার করতে ১-ক্লিকে সাইন আপ বা লগইন করুন।`
+      });
+      return;
+    }
+
     await addToCart(product.id, 1);
     navigate("/checkout");
   };

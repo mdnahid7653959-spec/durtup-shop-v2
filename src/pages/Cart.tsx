@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShoppingCart, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,14 +7,30 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { useCart } from "@/contexts/CartContext";
 import { useCJCart } from "@/hooks/useCJCart";
+import { useAuth } from "@/contexts/AuthContext";
+import { openAuthModal } from "@/components/auth/AuthPromptModal";
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Cart() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { items: regularItems, loading: regularLoading, subtotal: regularSubtotal, updateQuantity, removeItem } = useCart();
   const { items: cjItems, loading: cjLoading, subtotal: cjSubtotal, updateQuantity: updateCJQuantity, removeItem: removeCJItem } = useCJCart();
   const { toast } = useToast();
   const [couponCode, setCouponCode] = useState("");
+
+  const handleProceedToCheckout = () => {
+    if (!user) {
+      openAuthModal({
+        redirectUrl: "/checkout",
+        title: "চেকআউট করতে অ্যাকাউন্ট তৈরি করুন",
+        message: "আপনার কার্টের প্রোডাক্টগুলো অর্ডার কনফার্ম করতে ১-ক্লিকে সাইন আপ বা লগইন করুন।"
+      });
+      return;
+    }
+    navigate("/checkout");
+  };
 
   const loading = regularLoading || cjLoading;
   const totalItems = regularItems.length + cjItems.length;
@@ -247,12 +263,10 @@ export default function Cart() {
                   <span className="text-primary">৳{total.toLocaleString()}</span>
                 </div>
 
-                <Link to="/checkout">
-                  <Button className="w-full h-12 text-base font-semibold">
-                    Proceed to Checkout
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
+                <Button onClick={handleProceedToCheckout} className="w-full h-12 text-base font-semibold">
+                  Proceed to Checkout
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
 
                 <Link to="/products" className="block text-center mt-4 text-sm text-primary hover:underline">
                   Continue Shopping
@@ -272,12 +286,14 @@ export default function Cart() {
                 <span className="text-[11px] text-muted-foreground">+ ৳{shipping.toLocaleString()} Delivery</span>
               )}
             </div>
-            <Link to="/checkout" className="flex-1 max-w-[180px]">
-              <Button size="lg" className="h-11 w-full px-4 text-sm sm:text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md shadow-primary/20">
-                Checkout
-                <ArrowRight className="ml-1.5 h-4 w-4" />
-              </Button>
-            </Link>
+            <Button 
+              size="lg" 
+              onClick={handleProceedToCheckout}
+              className="flex-1 max-w-[180px] h-11 px-4 text-sm sm:text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md shadow-primary/20"
+            >
+              Checkout
+              <ArrowRight className="ml-1.5 h-4 w-4" />
+            </Button>
           </div>
         </div>
       </main>

@@ -24,6 +24,7 @@ import { extractProductVariants, getColorHex, sortVariantValues, type ProductVar
 import { db } from "@/integrations/firebase/client";
 import { collection, getDocs } from "firebase/firestore";
 import { ProductZoomViewer } from "@/components/products/ProductZoomViewer";
+import { openAuthModal } from "@/components/auth/AuthPromptModal";
 
 interface ProductImage {
   id: string;
@@ -814,6 +815,28 @@ export default function ProductDetail() {
          });
          return;
        }
+    }
+
+    const displayImg = (product.product_images && product.product_images.length > 0 && product.product_images[0]?.image_url) 
+      ? product.product_images[0].image_url 
+      : getSmartProductImage(product.name, "", "");
+
+    // 🔒 If user has not created an account / logged in, prompt account creation before buy
+    if (!authUser) {
+      openAuthModal({
+        redirectUrl: "/checkout",
+        product: {
+          id: product.id,
+          name: product.name,
+          image: displayImg,
+          price: product.discount_price || product.regular_price,
+          quantity: quantity,
+          selectedVariants: selectedVariants
+        },
+        title: "অর্ডার করতে অ্যাকাউন্ট তৈরি করুন",
+        message: `"${product.name}" কিনতে এবং লাইভ অর্ডার ট্র্যাক করতে ১-ক্লিকে অ্যাকাউন্ট তৈরি করুন।`
+      });
+      return;
     }
 
     setBuyingNow(true);
