@@ -5,8 +5,9 @@ import {
   ArrowUpRight, RefreshCw, Clock, AlertTriangle, Store, Star,
   MessageSquare, Command as CommandIcon, Bell, Sparkles, Search,
   FileText, Palette, Tag, Truck, Percent, Layers, Megaphone, Gift,
-  Wallet, Activity, BarChart3,
+  Wallet, Activity, BarChart3, Smartphone, CheckCircle2
 } from "lucide-react";
+import { useAdminOrderNotifications } from "@/hooks/useAdminOrderNotifications";
 import { supabase } from "@/lib/firebaseAdapter";
 import { db } from "@/integrations/firebase/client";
 import { collection, getDocs } from "firebase/firestore";
@@ -181,6 +182,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { invalidateAll } = useAdminCacheInvalidation();
+  const { permission, requestPermission, testPushNotification } = useAdminOrderNotifications();
 
   const [revenueStats, setRevenueStats] = useState<RevenueStats>({
     today_revenue: 0, yesterday_revenue: 0, monthly_revenue: 0, yearly_revenue: 0,
@@ -574,6 +576,58 @@ export default function AdminDashboard() {
             </Button>
           </div>
         </div>
+
+        {/* Mobile Push Notification Setup / Test Card */}
+        <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/10 via-background to-primary/5 shadow-sm">
+          <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                <Bell className="h-5 w-5" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-bold text-sm sm:text-base text-foreground">
+                    মোবাইল পুশ নোটিফিকেশন সিস্টেম (Mobile Order Push Alerts)
+                  </h3>
+                  {permission === "granted" ? (
+                    <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 text-xs font-semibold">
+                      ✅ চালু আছে (Active)
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="text-xs font-semibold animate-pulse">
+                      ⚠️ পারমিশন প্রয়োজন (Permission Needed)
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {permission === "granted" 
+                    ? "কাস্টমার যেকোনো ডিভাইস থেকে অর্ডার করার সাথে সাথে এই ফোনে ফেসবুক মেসেঞ্জারের মতো ছবি ও সাউন্ডসহ নোটিফিকেশন আসবে।" 
+                    : "আপনার ফোনে নতুন অর্ডারের ছবি ও রিংটোনসহ নোটিফিকেশন পেতে 'অনুমোদন দিন' বাটনে চাপুন।"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+              {permission !== "granted" && (
+                <Button 
+                  onClick={requestPermission} 
+                  className="w-full sm:w-auto font-bold bg-primary hover:bg-primary/90 text-white shadow-sm"
+                  size="sm"
+                >
+                  <Bell className="h-4 w-4 mr-1.5" /> নোটিফিকেশন চালু করুন
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                onClick={testPushNotification} 
+                className="w-full sm:w-auto border-primary/40 text-primary hover:bg-primary/10 font-semibold"
+                size="sm"
+              >
+                <Smartphone className="h-4 w-4 mr-1.5" /> 📱 টেস্ট নোটিফিকেশন পাঠান
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Hero KPIs */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
