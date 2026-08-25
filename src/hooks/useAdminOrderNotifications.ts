@@ -295,9 +295,25 @@ export function useAdminOrderNotifications() {
       data: { url: "/admin/orders" }
     });
 
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("durtup_new_order", {
+        detail: {
+          id: `test-order-${Date.now()}`,
+          order_number: "ORD-TEST-992",
+          customer_name: "Md Nahid",
+          customer_phone: "01700000000",
+          product_name: "Premium Wireless Earbuds Pro",
+          product_image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&h=300&fit=crop",
+          total_amount: 2450,
+          payment_method: "Cash on Delivery",
+          created_at: new Date().toISOString()
+        }
+      }));
+    }
+
     toast({
-      title: "📱 Push Notification Sent!",
-      description: "Order notification with product photo and sound triggered successfully.",
+      title: "📱 Messenger Push Notification Sent!",
+      description: "Order notification with product photo, floating heads-up banner, and sound triggered.",
     });
   }, [permission, requestPermission, toast]);
 

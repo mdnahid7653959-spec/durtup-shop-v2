@@ -3,19 +3,21 @@ import { db } from "@/integrations/firebase/client";
 import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { playNewOrderSound, sendBrowserNotification, unlockAudio } from "@/hooks/useAdminOrderNotifications";
 import { useToast } from "@/hooks/use-toast";
+import { AdminMessengerOrderBanner } from "@/components/admin/AdminMessengerOrderBanner";
+import { Capacitor } from "@capacitor/core";
 
 /**
  * GlobalAdminNotificationListener
  * 24/7 background listener across the entire Admin Panel.
- * Automatically sounds chime, vibrates phone, and posts native Android/Desktop push notifications
- * whenever ANY customer places an order on the storefront.
+ * Automatically sounds chime, vibrates phone, shows Messenger-style floating pop-up,
+ * and posts native Android/Desktop push notifications whenever ANY customer places an order.
  */
 export const GlobalAdminNotificationListener: React.FC = () => {
   const { toast } = useToast();
   const processedDocIds = useRef<Set<string>>(new Set());
   const isFirstLoad = useRef(true);
 
-  // 1. Permission request, Audio unlock, & Screen WakeLock
+  // 1. Initialize Native High Priority Channel & Audio unlock
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -27,15 +29,42 @@ export const GlobalAdminNotificationListener: React.FC = () => {
       }
     } catch {}
 
+    // Unlock audio & create native channel
     const handleFirstTouch = async () => {
       unlockAudio();
+      
+      // If running inside Capacitor Android native app, create urgent heads-up notification channel
+      if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("PushNotifications")) {
+        try {
+          const { PushNotifications } = await import("@capacitor/push-notifications");
+          await PushNotifications.createChannel({
+            id: "durtup_urgent_orders",
+            name: "Urgent Order Alerts (Messenger Style)",
+            description: "High priority heads-up popup banner alerts for new customer orders",
+            importance: 5, // High / Max priority (Heads-up banner)
+            visibility: 1, // Public on lock screen
+            sound: "default",
+            vibration: true,
+            lights: true,
+            lightColor: "#FF5500"
+          });
+          const perm = await PushNotifications.requestPermissions();
+          if (perm.receive === "granted") {
+            await PushNotifications.register();
+          }
+        } catch (capErr) {
+          console.warn("[GlobalAdminNotificationListener] Capacitor channel setup warning:", capErr);
+        }
+      }
+
+      // Web Push Permission
       if ("Notification" in window && Notification.permission === "default") {
         try {
           const perm = await Notification.requestPermission();
           if (perm === "granted") {
             playNewOrderSound();
-            sendBrowserNotification("🔔 Durtup Admin Alerts Active!", {
-              body: "Real-time order push notifications enabled on this device!",
+            sendBrowserNotification("🔔 Durtup Order Alerts Active!", {
+              body: "Real-time order push notifications enabled like Facebook Messenger!",
               product_image: "/durtup-logo.png",
               data: { url: "/admin/orders" }
             });
@@ -91,7 +120,7 @@ export const GlobalAdminNotificationListener: React.FC = () => {
     // 🔊 1. Sound & Vibration
     playNewOrderSound();
 
-    // 📱 2. Notification Push
+    // 📱 2. Android Notification Tray Push
     sendBrowserNotification(`🛍️ New Order #${orderNum}! (৳${amount.toLocaleString()})`, {
       body: `${customerName} ordered "${prodName}" • ${payMethod}`,
       product_image: prodImg,
@@ -108,6 +137,24 @@ export const GlobalAdminNotificationListener: React.FC = () => {
       title: `🛍️ New Order #${orderNum}!`,
       description: `${customerName} ordered ${prodName} (৳${amount.toLocaleString()})`,
     });
+
+    // 💬 4. Dispatch custom event so the Messenger Floating Heads-Up Banner pops up
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("durtup_new_order", {
+        detail: {
+          id: orderId,
+          order_number: orderNum,
+          customer_name: customerName,
+          customer_phone: data.customer_phone || data.shipping_address?.phone || "",
+          customer_email: data.customer_email || "",
+          product_name: prodName,
+          product_image: prodImg,
+          total_amount: amount,
+          payment_method: payMethod,
+          created_at: data.created_at || new Date().toISOString()
+        }
+      }));
+    }
   };
 
   // 2. Real-time Firestore listener on `admin_notifications`
@@ -155,21 +202,17 @@ export const GlobalAdminNotificationListener: React.FC = () => {
       } catch {}
     }
 
-    const handleCustomEvent = (evt: any) => {
-      if (evt.detail) {
-        handleIncomingOrder(evt.detail, "custom_event");
-      }
-    };
-
-    window.addEventListener("durtup_new_order", handleCustomEvent as EventListener);
-
     return () => {
       if (bc) bc.close();
-      window.removeEventListener("durtup_new_order", handleCustomEvent as EventListener);
     };
   }, [toast]);
 
-  return null;
+  return (
+    <>
+      {/* Floating Messenger-Style Heads-Up Banner */}
+      <AdminMessengerOrderBanner />
+    </>
+  );
 };
 
 export default GlobalAdminNotificationListener;
