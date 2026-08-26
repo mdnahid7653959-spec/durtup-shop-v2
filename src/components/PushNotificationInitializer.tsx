@@ -1,17 +1,34 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { db } from '@/integrations/firebase/client';
 import { collection, query, orderBy, limit, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { sendBrowserNotification, playNewOrderSound, unlockAudio } from '@/hooks/useAdminOrderNotifications';
-import { Bell, X } from 'lucide-react';
+import { Bell, X, ExternalLink, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+interface BroadcastPayload {
+  id: string;
+  title: string;
+  message: string;
+  image_url?: string | null;
+  action_url?: string | null;
+}
 
 export const PushNotificationInitializer: React.FC = () => {
   const navigate = useNavigate();
   const [showSoftPrompt, setShowSoftPrompt] = useState(false);
+  const [activeBroadcast, setActiveBroadcast] = useState<BroadcastPayload | null>(null);
+  const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 1. Device registration (saves device to Firestore `push_tokens` for live admin counters)
+  // 1. Register Service Worker & Save Device Token to Firestore
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // Register Service Worker for Mobile Notifications
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('[PushNotificationInitializer] Service worker register warning:', err);
+      });
+    }
 
     const registerDeviceToken = async () => {
       try {
@@ -44,7 +61,7 @@ export const PushNotificationInitializer: React.FC = () => {
 
     registerDeviceToken();
 
-    // Check if we should ask for notification permission on phone/web
+    // Soft prompt for permission on mobile & desktop if not yet answered
     if (
       typeof window !== 'undefined' &&
       'Notification' in window &&
@@ -52,7 +69,7 @@ export const PushNotificationInitializer: React.FC = () => {
     ) {
       const dismissed = sessionStorage.getItem('durtup_notif_prompt_dismissed');
       if (!dismissed) {
-        const timer = setTimeout(() => setShowSoftPrompt(true), 3500);
+        const timer = setTimeout(() => setShowSoftPrompt(true), 2500);
         return () => clearTimeout(timer);
       }
     }
@@ -77,17 +94,17 @@ export const PushNotificationInitializer: React.FC = () => {
             const data = change.doc.data();
             const campaignId = change.doc.id;
 
-            // Only notify for fresh campaigns (within last 90 seconds)
+            // Only notify for fresh campaigns (within last 2 minutes)
             const campaignTime = data.created_at ? new Date(data.created_at).getTime() : (data.timestamp || Date.now());
-            const isFresh = Date.now() - campaignTime < 90000;
+            const isFresh = Date.now() - campaignTime < 120000;
 
             if (isFresh && !notifiedCampaigns.has(campaignId)) {
               notifiedCampaigns.add(campaignId);
 
-              // 🔊 Play pleasant chime & vibrate phone
+              // 🔊 1. Sound & Vibration
               playNewOrderSound();
 
-              // 📱 Trigger native mobile/browser push notification
+              // 📱 2. System Notification Shade (Android / Web)
               sendBrowserNotification(data.title || '🛍️ Durtup.shop Special Offer!', {
                 body: data.message || 'Check out the latest discounts and deals!',
                 product_image: data.image_url || data.image || '/icon-512.png',
@@ -97,6 +114,21 @@ export const PushNotificationInitializer: React.FC = () => {
                   campaign_id: campaignId
                 }
               });
+
+              // 💬 3. Floating Heads-Up Push Notification Card on Mobile/Screen
+              setActiveBroadcast({
+                id: campaignId,
+                title: data.title || '🛍️ Durtup.shop Special Offer!',
+                message: data.message || 'Check out the latest discounts and deals!',
+                image_url: data.image_url || data.image || null,
+                action_url: data.action_url || data.url || '/'
+              });
+
+              // Auto dismiss floating card after 12 seconds
+              if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+              dismissTimerRef.current = setTimeout(() => {
+                setActiveBroadcast(null);
+              }, 12000);
             }
           }
         });
@@ -118,8 +150,8 @@ export const PushNotificationInitializer: React.FC = () => {
         const perm = await Notification.requestPermission();
         if (perm === 'granted') {
           playNewOrderSound();
-          sendBrowserNotification('🔔 Notifications Enabled!', {
-            body: 'You will now receive instant flash sales, order updates, and discount alerts directly on your phone!',
+          sendBrowserNotification('🎉 নোটিফিকেশন চালু হয়েছে!', {
+            body: 'ধন্যবাদ! এখন থেকে যেকোনো অফার ও ফ্ল্যাশ সেল সরাসরি আপনার ফোনের স্ক্রিনে পৌঁছে যাবে।',
             product_image: '/icon-512.png',
             data: { url: '/' }
           });
@@ -135,42 +167,117 @@ export const PushNotificationInitializer: React.FC = () => {
     sessionStorage.setItem('durtup_notif_prompt_dismissed', 'true');
   };
 
-  if (!showSoftPrompt) return null;
+  const handleBroadcastClick = () => {
+    if (activeBroadcast?.action_url) {
+      const url = activeBroadcast.action_url;
+      setActiveBroadcast(null);
+      if (url.startsWith('http')) {
+        window.open(url, '_blank');
+      } else {
+        navigate(url);
+      }
+    } else {
+      setActiveBroadcast(null);
+    }
+  };
 
   return (
-    <div className="fixed top-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-96 z-50 bg-card border border-primary/30 rounded-2xl p-3.5 shadow-2xl shadow-primary/10 flex items-start gap-3 animate-in slide-in-from-top-4 duration-300">
-      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shrink-0 shadow-md">
-        <Bell className="w-5 h-5 animate-bounce" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <h4 className="text-xs sm:text-sm font-bold text-foreground leading-tight">
-          অফার ও ডিসকাউন্ট নোটিফিকেশন 🔔
-        </h4>
-        <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
-          সেরা ডিল এবং নতুন অফার সবার আগে আপনার ফোনে পেতে নোটিফিকেশন অন করুন।
-        </p>
-        <div className="flex items-center gap-2 mt-2.5">
-          <button
-            onClick={handleEnableNotifications}
-            className="px-3 py-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-lg shadow-sm hover:opacity-95 active:scale-95 transition-all cursor-pointer"
-          >
-            অনুমতি দিন (Allow)
-          </button>
+    <>
+      {/* 1. Interactive Floating Push Notification Alert (Heads-Up Banner for Phone & Web) */}
+      {activeBroadcast && (
+        <div className="fixed top-3 left-3 right-3 sm:left-auto sm:right-5 sm:w-[420px] z-[9999] animate-in slide-in-from-top-6 duration-300">
+          <div className="bg-card/95 backdrop-blur-md border-2 border-primary/40 rounded-2xl p-3.5 shadow-2xl shadow-primary/20 flex flex-col gap-2.5">
+            <div className="flex items-start gap-3">
+              {activeBroadcast.image_url ? (
+                <img
+                  src={activeBroadcast.image_url}
+                  alt=""
+                  className="w-14 h-14 rounded-xl object-cover border border-primary/20 shadow-sm shrink-0 bg-muted"
+                  onError={(e) => { (e.target as any).style.display = 'none'; }}
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shrink-0 shadow-md">
+                  <Sparkles className="w-6 h-6 animate-pulse" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary uppercase">
+                    🔔 New Offer
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">এখনই</span>
+                </div>
+                <h4 className="text-sm font-bold text-foreground leading-tight line-clamp-1">
+                  {activeBroadcast.title}
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
+                  {activeBroadcast.message}
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveBroadcast(null)}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1 border-t border-border/40">
+              <button
+                onClick={handleBroadcastClick}
+                className="flex-1 py-2 px-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold rounded-xl shadow-md flex items-center justify-center gap-1.5 active:scale-98 transition-all cursor-pointer"
+              >
+                <span>অফারটি দেখুন (View Deal)</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setActiveBroadcast(null)}
+                className="py-2 px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-colors cursor-pointer"
+              >
+                বাদ দিন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Soft Permission Request Banner (Prompt to enable mobile notifications) */}
+      {showSoftPrompt && !activeBroadcast && (
+        <div className="fixed top-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-96 z-50 bg-card border border-primary/30 rounded-2xl p-3.5 shadow-2xl shadow-primary/10 flex items-start gap-3 animate-in slide-in-from-top-4 duration-300">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shrink-0 shadow-md">
+            <Bell className="w-5 h-5 animate-bounce" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-xs sm:text-sm font-bold text-foreground leading-tight">
+              অফার ও ডিসকাউন্ট নোটিফিকেশন 🔔
+            </h4>
+            <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+              সেরা ডিল এবং নতুন অফার সবার আগে আপনার ফোনে পেতে নোটিফিকেশন অন করুন।
+            </p>
+            <div className="flex items-center gap-2 mt-2.5">
+              <button
+                onClick={handleEnableNotifications}
+                className="px-3 py-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-lg shadow-sm hover:opacity-95 active:scale-95 transition-all cursor-pointer"
+              >
+                অনুমতি দিন (Allow)
+              </button>
+              <button
+                onClick={handleDismissPrompt}
+                className="px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                পরে (Later)
+              </button>
+            </div>
+          </div>
           <button
             onClick={handleDismissPrompt}
-            className="px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted transition-colors"
           >
-            পরে (Later)
+            <X className="w-4 h-4" />
           </button>
         </div>
-      </div>
-      <button
-        onClick={handleDismissPrompt}
-        className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted transition-colors"
-      >
-        <X className="w-4 h-4" />
-      </button>
-    </div>
+      )}
+    </>
   );
 };
 

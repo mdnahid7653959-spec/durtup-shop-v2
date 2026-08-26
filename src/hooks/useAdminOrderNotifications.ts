@@ -147,22 +147,15 @@ export async function sendBrowserNotification(
   };
 
   // 1. Try ServiceWorkerRegistration (Required for Android / Mobile Notification shade)
-  const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-  if ("serviceWorker" in navigator && !isLocal) {
+  if ("serviceWorker" in navigator) {
     try {
       let reg = await navigator.serviceWorker.getRegistration();
       if (!reg) {
-        reg = await navigator.serviceWorker.register("/sw.js");
+        reg = await navigator.serviceWorker.register("/sw.js").catch(() => null);
       }
 
-      const readyPromise = navigator.serviceWorker.ready;
-      const timeoutPromise = new Promise<ServiceWorkerRegistration | null>((resolve) =>
-        setTimeout(() => resolve(reg || null), 1500)
-      );
-      const activeReg = await Promise.race([readyPromise, timeoutPromise]);
-
-      if (activeReg && activeReg.showNotification) {
-        await activeReg.showNotification(title, notificationOpts);
+      if (reg && reg.showNotification) {
+        await reg.showNotification(title, notificationOpts);
 
         if (navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
@@ -179,19 +172,21 @@ export async function sendBrowserNotification(
         return;
       }
     } catch (swErr) {
-      console.warn("ServiceWorker showNotification error:", swErr);
+      console.warn("ServiceWorker showNotification warning:", swErr);
     }
   }
 
-  // 2. Fallback to Window Notification (Desktop browsers)
+  // 2. Fallback to Window Notification (Desktop / macOS browsers)
   try {
-    const notif = new Notification(title, notificationOpts);
-    notif.onclick = () => {
-      window.focus();
-      window.location.href = targetUrl;
-    };
+    if (typeof Notification !== "undefined") {
+      const notif = new Notification(title, notificationOpts);
+      notif.onclick = () => {
+        window.focus();
+        window.location.href = targetUrl;
+      };
+    }
   } catch (err) {
-    console.warn("Window Notification error:", err);
+    console.warn("Window Notification fallback notice (normal on mobile):", err);
   }
 }
 
