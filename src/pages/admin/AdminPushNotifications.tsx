@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/integrations/firebase/client";
 import { collection, query, orderBy, limit, onSnapshot, doc, setDoc } from "firebase/firestore";
 import { playNewOrderSound, sendBrowserNotification, unlockAudio } from "@/hooks/useAdminOrderNotifications";
-import { Bell, Send, Users, CheckCircle, XCircle, Loader2, ImageIcon, LinkIcon, Sparkles, Smartphone, Volume2 } from "lucide-react";
+import { Bell, Send, Users, CheckCircle, XCircle, Loader2, ImageIcon, LinkIcon, Sparkles, Smartphone, Volume2, UploadCloud, Trash2, X, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 
 interface PushNotification {
@@ -73,7 +73,125 @@ export default function AdminPushNotifications() {
   const [actionUrl, setActionUrl] = useState("");
   const [targetType, setTargetType] = useState<"all" | "android" | "ios" | "web">("all");
 
-  // 1. Live Firestore token stats
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [imageMode, setImageMode] = useState<"upload" | "url">("upload");
+
+  const processAndCompressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 900;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+            resolve(compressedDataUrl);
+          } else {
+            resolve(e.target?.result as string);
+          }
+        };
+        img.onerror = () => resolve(e.target?.result as string);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleProcessFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid File",
+        description: "Please upload an image file (PNG, JPG, WEBP, GIF).",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsProcessingImage(true);
+      const dataUrl = await processAndCompressImage(file);
+      setImageUrl(dataUrl);
+      toast({
+        title: "📸 ছবি যুক্ত হয়েছে!",
+        description: "ছবিটি প্রসেস করে পুশ নোটিফিকেশনের জন্য অপ্টিমাইজ করা হয়েছে।"
+      });
+    } catch (err) {
+      toast({
+        title: "Upload Error",
+        description: "Failed to read image file.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleProcessFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleProcessFile(e.target.files[0]);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image/")) {
+          const file = items[i].getAsFile();
+          if (file) {
+            handleProcessFile(file);
+            break;
+          }
+        }
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageUrl("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
   useEffect(() => {
     try {
       const tokensRef = collection(db, "push_tokens");
@@ -394,20 +512,131 @@ export default function AdminPushNotifications() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="imageUrl" className="flex items-center gap-1">
-                    <ImageIcon className="h-4 w-4" /> Image URL (ছবি লিংক - ঐচ্ছিক)
-                  </Label>
-                  <Input
-                    id="imageUrl"
-                    placeholder="https://example.com/product-image.jpg"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    type="url"
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold">
+                      <ImageIcon className="h-4 w-4 text-orange-500" />
+                      নোটিফিকেশনের ছবি (Notification Image - ঐচ্ছিক)
+                    </Label>
+                    <div className="flex items-center bg-muted p-0.5 rounded-lg text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setImageMode("upload")}
+                        className={`px-2.5 py-1 rounded-md transition-all font-medium ${
+                          imageMode === "upload" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        📁 ড্র্যাগ ও ড্রপ
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageMode("url")}
+                        className={`px-2.5 py-1 rounded-md transition-all font-medium ${
+                          imageMode === "url" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        🔗 ওয়েব লিংক
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileInputChange}
                   />
-                  {imageUrl && (
-                    <div className="mt-1.5 w-full h-28 rounded-lg border overflow-hidden bg-muted flex items-center justify-center">
-                      <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" onError={(e) => { (e.target as any).style.display = 'none'; }} />
+
+                  {imageUrl ? (
+                    <div className="relative group rounded-xl border border-primary/30 overflow-hidden bg-muted/30 p-2">
+                      <div className="relative w-full h-36 rounded-lg overflow-hidden bg-black/5 flex items-center justify-center">
+                        <img
+                          src={imageUrl}
+                          alt="Notification Preview"
+                          className="w-full h-full object-contain"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="text-xs h-8 bg-white/90 text-black hover:bg-white"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5 mr-1" /> পরিবর্তন করুন
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={handleRemoveImage}
+                            className="text-xs h-8"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 mr-1" /> রিমুভ করুন
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between mt-2 px-1 text-[11px] text-muted-foreground">
+                        <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                          ✓ ছবি সফলভাবে যুক্ত হয়েছে
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="text-destructive hover:underline cursor-pointer"
+                        >
+                          মুছে ফেলুন
+                        </button>
+                      </div>
+                    </div>
+                  ) : imageMode === "upload" ? (
+                    <div
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onPaste={handlePaste}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
+                        isDragging
+                          ? "border-primary bg-primary/10 scale-[0.99]"
+                          : "border-border hover:border-primary/50 hover:bg-muted/40"
+                      }`}
+                    >
+                      {isProcessingImage ? (
+                        <div className="py-3 flex flex-col items-center gap-2">
+                          <Loader2 className="w-7 h-7 text-primary animate-spin" />
+                          <p className="text-xs text-muted-foreground">ছবি প্রসেসিং ও অপ্টিমাইজ করা হচ্ছে...</p>
+                        </div>
+                      ) : (
+                        <div className="py-2 flex flex-col items-center gap-1.5">
+                          <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-1">
+                            <UploadCloud className="w-6 h-6" />
+                          </div>
+                          <p className="text-xs sm:text-sm font-semibold text-foreground">
+                            এখানে ছবি ড্র্যাগ ও ড্রপ (Drag & Drop) করুন
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            অথবা কম্পিউটার / ফোন থেকে সিলেক্ট করতে <span className="text-primary font-bold underline">ক্লিক করুন</span>
+                          </p>
+                          <p className="text-[10px] text-muted-foreground/80 mt-1">
+                            সাপোর্টেড ফরম্যাট: PNG, JPG, WEBP, GIF (ক্লিপবোর্ড থেকে Ctrl+V ও করতে পারবেন)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Input
+                        placeholder="https://example.com/product-image.jpg"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        type="url"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        ইন্টারনেট থেকে সরাসরি কোনো ছবির সরাসরি URL লিংক এখানে পেস্ট করতে পারেন।
+                      </p>
                     </div>
                   )}
                 </div>
