@@ -255,11 +255,7 @@ function SectionRenderer({
       );
 
     case "promo_banners":
-      return (
-        <section className="w-full px-3 sm:px-4 pb-4" style={sectionStyle}>
-          <div className="max-w-7xl mx-auto"><MemoizedPromoBanners /></div>
-        </section>
-      );
+      return null;
 
     default:
       return null;

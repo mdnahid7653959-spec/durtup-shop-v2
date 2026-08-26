@@ -60,7 +60,7 @@ export const defaultSections: SectionConfig[] = [
   { id: "trending", label: "Trending", visible: true, order: 6, gridCols: 6, responsiveGrid: { mobile: 2, tablet: 3, desktop: 6 } },
   { id: "new_arrivals", label: "New Arrivals", visible: true, order: 7, gridCols: 6, responsiveGrid: { mobile: 2, tablet: 3, desktop: 6 } },
   { id: "recommended", label: "For You", visible: true, order: 8, gridCols: 6, responsiveGrid: { mobile: 2, tablet: 3, desktop: 6 } },
-  { id: "promo_banners", label: "Promo Banners", visible: true, order: 9 },
+  { id: "promo_banners", label: "Promo Banners", visible: false, order: 9 },
 ];
 
 function isSectionScheduled(schedule?: SectionSchedule): boolean {
