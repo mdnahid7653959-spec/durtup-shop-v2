@@ -147,7 +147,8 @@ export async function sendBrowserNotification(
   };
 
   // 1. Try ServiceWorkerRegistration (Required for Android / Mobile Notification shade)
-  if ("serviceWorker" in navigator) {
+  const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  if ("serviceWorker" in navigator && !isLocal) {
     try {
       let reg = await navigator.serviceWorker.getRegistration();
       if (!reg) {

@@ -4,9 +4,11 @@ import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestor
 import { sendBrowserNotification, playNewOrderSound } from '@/hooks/useAdminOrderNotifications';
 
 export const PushNotificationInitializer: React.FC = () => {
-  // 1. Register Service Worker quietly if supported
+  // 1. Register Service Worker quietly if supported (production only)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) return;
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch((err) => {

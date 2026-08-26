@@ -82,12 +82,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- Critical UI Font (Inter) - High Priority Fast Load -->
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+    <!-- Critical UI Font (Inter) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <!-- Non-Blocking Secondary Bento / Decorative Fonts -->
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700&family=Cormorant+Garamond:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@400;700&display=swap" />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700&family=Cormorant+Garamond:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
     <noscript>
       <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700&family=Cormorant+Garamond:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@400;700&display=swap" rel="stylesheet" />
@@ -97,17 +95,25 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
-        });
-      } else if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (var registration of registrations) {
-            registration.unregister();
+      (function() {
+        var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.');
+        if (isLocal) {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for (var registration of registrations) {
+                registration.unregister();
+              }
+            }).catch(function() {});
           }
-        });
-      }
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (var name of names) {
+                caches.delete(name);
+              }
+            }).catch(function() {});
+          }
+        }
+      })();
     </script>
   </body>
 </html>

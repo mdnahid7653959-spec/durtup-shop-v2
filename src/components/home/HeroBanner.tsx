@@ -233,7 +233,7 @@ export function HeroBanner() {
                       className="w-full h-full transition-transform duration-[7000ms] group-hover:scale-110"
                       style={{ objectFit: slide.imageFit as any, objectPosition: slide.imagePosition }}
                       loading={index === 0 ? "eager" : "lazy"}
-                      fetchPriority={index === 0 ? "high" : "auto"}
+                      {...({ fetchpriority: index === 0 ? "high" : "auto" } as any)}
                       decoding="async"
                     />
                   </div>

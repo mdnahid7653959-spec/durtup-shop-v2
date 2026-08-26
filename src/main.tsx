@@ -15,15 +15,31 @@ window.addEventListener("error", (event) => {
   console.error("Unhandled error:", event.error);
 });
 
-// Auto-register Service Worker for instant background push notifications on phone
+// Manage Service Worker: Unregister on localhost/development to prevent white-screen & stale caching, register in production for push alerts
 if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").then((reg) => {
-      console.log("[Storefront SW] Registered for push notifications:", reg.scope);
-    }).catch((err) => {
-      console.warn("[Storefront SW] Registration warning:", err);
+  const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  if (isLocal) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister();
+      }
+    }).catch(() => {});
+    if ("caches" in window) {
+      caches.keys().then((keys) => {
+        for (const key of keys) {
+          caches.delete(key);
+        }
+      }).catch(() => {});
+    }
+  } else {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        console.log("[Storefront SW] Registered for push notifications:", reg.scope);
+      }).catch((err) => {
+        console.warn("[Storefront SW] Registration warning:", err);
+      });
     });
-  });
+  }
 }
 
 const rootElement = document.getElementById("root");
