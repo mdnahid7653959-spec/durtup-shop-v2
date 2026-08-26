@@ -193,14 +193,14 @@ self.addEventListener('message', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/admin/orders';
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
-        if (client.url.includes('/admin') && 'focus' in client) {
-          if ('navigate' in client) {
+        if ('focus' in client) {
+          if ('navigate' in client && targetUrl) {
             client.navigate(targetUrl);
           }
           return client.focus();
