@@ -4,13 +4,13 @@ import { getSmartProductImage } from "@/utils/productImageHelper";
 import { extractProductVariants } from "@/utils/productVariantHelper";
 import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
 
-const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v11";
+const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v12";
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 // IndexedDB configuration for unlimited, fast persistent storage
 const IDB_NAME = "durtup_catalog_db";
 const IDB_STORE = "products_store";
-const IDB_KEY = "mohasagor_catalog_master_v11";
+const IDB_KEY = "mohasagor_catalog_master_v12";
 const IDB_VERSION = 1;
 
 // Initialize in-memory cache synchronously with seed products for 0ms Instant First-Render!

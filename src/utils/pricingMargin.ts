@@ -2,8 +2,8 @@ import { supabase } from "@/lib/firebaseAdapter";
 
 export interface PricingMarginConfig {
   enabled: boolean;
-  type: 'percentage' | 'fixed'; // 'percentage' (e.g. +20%) or 'fixed' (e.g. +৳100)
-  marginValue: number; // e.g. 15 for 15% or 100 for ৳100
+  type: 'percentage' | 'fixed'; // 'percentage' (e.g. +20%) or 'fixed' (e.g. +৳160)
+  marginValue: number; // e.g. 15 for 15% or 160 for ৳160
   regularPriceMarkupPercent: number; // e.g. 35% above selling price for crossed-out price
   roundTo99: boolean;
 }
@@ -11,12 +11,12 @@ export interface PricingMarginConfig {
 export const DEFAULT_PRICING_MARGIN_CONFIG: PricingMarginConfig = {
   enabled: true, // Margin active
   type: 'fixed', // Fixed amount ৳
-  marginValue: 100, // ৳100 added to every product
+  marginValue: 160, // ৳160 added to every product
   regularPriceMarkupPercent: 35,
   roundTo99: false,
 };
 
-const STORAGE_KEY = "darzo_pricing_margin_config_v2";
+const STORAGE_KEY = "darzo_pricing_margin_config_v3";
 
 export function getPricingMarginConfig(): PricingMarginConfig {
   if (typeof window === "undefined") return DEFAULT_PRICING_MARGIN_CONFIG;
@@ -26,8 +26,8 @@ export function getPricingMarginConfig(): PricingMarginConfig {
       const parsed = JSON.parse(saved);
       return {
         enabled: Boolean(parsed.enabled),
-        type: parsed.type === 'fixed' ? 'fixed' : 'percentage',
-        marginValue: Number(parsed.marginValue) !== undefined && !isNaN(Number(parsed.marginValue)) ? Number(parsed.marginValue) : 100,
+        type: parsed.type === 'percentage' ? 'percentage' : 'fixed',
+        marginValue: Number(parsed.marginValue) !== undefined && !isNaN(Number(parsed.marginValue)) ? Number(parsed.marginValue) : 160,
         regularPriceMarkupPercent: Number(parsed.regularPriceMarkupPercent) || 35,
         roundTo99: Boolean(parsed.roundTo99),
       };
@@ -87,7 +87,8 @@ export async function savePricingMarginConfig(newConfig: PricingMarginConfig): P
     if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
       // Invalidate existing caches so prices recalculate everywhere
-      localStorage.removeItem("mohasagor_products_master_cache_v5");
+      localStorage.removeItem("mohasagor_products_master_cache_v11");
+      localStorage.removeItem("mohasagor_products_master_cache_v12");
       localStorage.removeItem("mohasagor_cached_home_products_v5");
       window.dispatchEvent(new CustomEvent("pricing_margin_updated", { detail: newConfig }));
     }

@@ -939,7 +939,7 @@ export default function AdminSupplierIntegrations() {
                             </>
                           ) : (
                             <>
-                              {[0, 50, 100, 150, 200, 300, 500].map((amt) => (
+                              {[0, 50, 100, 150, 160, 200, 300, 500].map((amt) => (
                                 <button
                                   key={amt}
                                   type="button"

@@ -50,7 +50,7 @@ export class AdminSupplierEngine {
     let profit = 0;
 
     if (rule.marginType === "FIXED_PROFIT") {
-      profit = rule.fixedProfitAmount || 100;
+      profit = rule.fixedProfitAmount || 160;
     } else if (rule.marginType === "PERCENTAGE_MARGIN") {
       profit = (costPrice * (rule.percentageMargin || 15)) / 100;
     } else {
