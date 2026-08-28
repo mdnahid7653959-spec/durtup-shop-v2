@@ -27,8 +27,8 @@ export const EnterpriseShipping: React.FC = () => {
           </div>
           <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-2">
             <h3 className="text-sm font-bold text-white">Outside Dhaka Delivery Rate</h3>
-            <p className="text-lg font-black text-emerald-400">৳120</p>
-            <span className="text-[10px] text-slate-400">Standard 3-5 Days Delivery</span>
+            <p className="text-lg font-black text-emerald-400">৳60</p>
+            <span className="text-[10px] text-slate-400">Standard 2-3 Days Delivery</span>
           </div>
         </div>
       </div>
