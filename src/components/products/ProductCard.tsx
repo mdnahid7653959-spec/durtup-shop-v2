@@ -49,12 +49,6 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
     e.stopPropagation();
 
     await addToCart(product.id, 1);
-
-    if (!user) {
-      navigate("/login?redirect=/checkout");
-      return;
-    }
-
     navigate("/checkout");
   };
 

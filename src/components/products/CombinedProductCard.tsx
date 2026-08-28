@@ -64,12 +64,6 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
     e.stopPropagation();
 
     handleAddToCart(e);
-
-    if (!user) {
-      navigate("/login?redirect=/checkout");
-      return;
-    }
-
     navigate("/checkout");
   };
 

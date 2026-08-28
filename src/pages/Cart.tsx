@@ -20,14 +20,6 @@ export default function Cart() {
   const [couponCode, setCouponCode] = useState("");
 
   const handleProceedToCheckout = () => {
-    if (!user) {
-      toast({
-        title: "লগইন / অ্যাকাউন্ট প্রয়োজন",
-        description: "অর্ডার সম্পন্ন করতে দয়া করে লগইন বা রেজিস্ট্রেশন করুন।"
-      });
-      navigate("/login?redirect=/checkout");
-      return;
-    }
     navigate("/checkout");
   };
 

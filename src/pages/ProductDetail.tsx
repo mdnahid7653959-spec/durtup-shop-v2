@@ -820,16 +820,6 @@ export default function ProductDetail() {
     await addToCart(product.id, quantity, selectedVariants);
     setBuyingNow(false);
 
-    // 🔒 If user has not logged in, take them directly to the Login page
-    if (!authUser) {
-      toast({
-        title: "লগইন / অ্যাকাউন্ট প্রয়োজন",
-        description: "অর্ডার সম্পন্ন করতে দয়া করে লগইন বা রেজিস্ট্রেশন করুন।"
-      });
-      navigate("/login?redirect=/checkout");
-      return;
-    }
-
     navigate("/checkout");
   };
   const handleWishlistToggle = () => {

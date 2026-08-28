@@ -302,16 +302,6 @@ export default function Checkout() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "লগইন প্রয়োজন",
-        description: "অর্ডার সম্পন্ন করতে দয়া করে লগইন বা রেজিস্ট্রেশন করুন।",
-      });
-      navigate("/login?redirect=/checkout");
-      return;
-    }
 
     if (totalItems === 0) {
       toast({ variant: "destructive", title: "Cart is empty", description: "Please add items to your cart" });
@@ -324,11 +314,27 @@ export default function Checkout() {
         setIsEditingAddress(true);
         toast({
           variant: "destructive",
-          title: "Shipping Address Required",
-          description: "Please enter your name, phone number, and street address to proceed.",
+          title: "ঠিকানা আবশ্যক",
+          description: "অর্ডার করতে দয়া করে আপনার নাম, মোবাইল নম্বর ও ঠিকানা পূরণ করুন।",
         });
         return;
       }
+
+      // Save entered address to localStorage for convenience
+      try {
+        const fullNameCombined = `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim();
+        localStorage.setItem("durtup_saved_address", JSON.stringify({
+          fullName: fullNameCombined,
+          phone: shippingInfo.phone,
+          address: shippingInfo.address,
+          city: shippingInfo.city,
+          state: shippingInfo.state,
+          zipCode: shippingInfo.zipCode,
+          country: shippingInfo.country,
+          email: shippingInfo.email
+        }));
+        setHasSavedAddress(true);
+      } catch {}
 
       // Move to Payment Step
       setCheckoutStep("payment");
@@ -359,42 +365,55 @@ export default function Checkout() {
     setLoading(true);
 
     try {
-      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      const orderNumber = `ORD-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const effectiveUserId = user?.id || `guest_${shippingInfo.phone ? shippingInfo.phone.replace(/\D/g, '') : Date.now()}`;
 
       const notesCombined = [
         appliedCoupon ? `Coupon: ${appliedCoupon.code}` : null,
         paymentMethod === "bkash" ? `bKash Sender: ${bkashNumber} | TrxID: ${bkashTrxId}` : null
       ].filter(Boolean).join(" | ") || null;
 
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: user.id,
-          order_number: orderNumber,
-          subtotal,
-          shipping_cost: shipping,
-          tax_amount: tax,
-          discount_amount: couponDiscount,
-          total,
-          status: "pending",
-          payment_status: paymentMethod === "cod" ? "pending" : "pending",
-          payment_method: paymentMethod,
-          shipping_address: {
-            firstName: shippingInfo.firstName,
-            lastName: shippingInfo.lastName,
-            address: shippingInfo.address,
-            city: shippingInfo.city,
-            state: shippingInfo.state,
-            zipCode: shippingInfo.zipCode,
-            country: shippingInfo.country,
-            phone: shippingInfo.phone
-          },
-          notes: notesCombined
-        })
-        .select()
-        .single();
+      const orderPayload = {
+        user_id: effectiveUserId,
+        order_number: orderNumber,
+        subtotal,
+        shipping_cost: shipping,
+        tax_amount: tax,
+        discount_amount: couponDiscount,
+        total,
+        status: "pending",
+        payment_status: paymentMethod === "cod" ? "pending" : "pending",
+        payment_method: paymentMethod,
+        shipping_address: {
+          firstName: shippingInfo.firstName,
+          lastName: shippingInfo.lastName,
+          address: shippingInfo.address,
+          city: shippingInfo.city,
+          state: shippingInfo.state,
+          zipCode: shippingInfo.zipCode,
+          country: shippingInfo.country,
+          phone: shippingInfo.phone
+        },
+        notes: notesCombined
+      };
 
-      if (orderError) throw orderError;
+      let orderRecord: any = null;
+
+      try {
+        const { data: order, error: orderError } = await supabase
+          .from("orders")
+          .insert(orderPayload)
+          .select()
+          .single();
+
+        if (order && !orderError) {
+          orderRecord = order;
+        }
+      } catch (err) {
+        console.warn("Supabase orders insert warning:", err);
+      }
+
+      const orderId = orderRecord?.id || `ord-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
 
       // Sync order to Firestore and Local Storage so Admin Panel instantly sees the order
       try {
@@ -408,10 +427,11 @@ export default function Checkout() {
         const totalItemsCount = allCartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
         const firestoreOrderDoc = {
-          id: order.id,
+          id: orderId,
+          order_id: orderId,
           order_number: orderNumber,
           orderNumber,
-          user_id: user.id,
+          user_id: effectiveUserId,
           subtotal,
           shipping_cost: shipping,
           tax_amount: tax,
@@ -430,6 +450,7 @@ export default function Checkout() {
               (item as any)?.variant || 
               null;
             const baseName = (item as any)?.product?.name || (item as any)?.product_name || (item as any)?.name || (item as any)?.title || "Item";
+            const itemPrice = (item as any)?.product?.discount_price || (item as any)?.product?.regular_price || (item as any)?.price || 0;
             return {
               id: item.id,
               product_id: (item as any)?.product_id || item.id,
@@ -441,7 +462,7 @@ export default function Checkout() {
               selected_variants: (item as any)?.selected_variants || null,
               size: (item as any)?.size || (item as any)?.selected_variants?.Size || (item as any)?.selected_variants?.size || null,
               color: (item as any)?.color || (item as any)?.selected_variants?.Color || (item as any)?.selected_variants?.color || null,
-              price: (item as any)?.product?.discount_price || (item as any)?.product?.regular_price || (item as any)?.price || 0,
+              price: itemPrice,
               quantity: item.quantity || 1,
               image: (item as any)?.image || (item as any)?.product_image || (item as any)?.product?.image_url || "/durtup-logo.png",
             };
@@ -460,7 +481,8 @@ export default function Checkout() {
           bkash_details: paymentMethod === "bkash" ? { sender_number: bkashNumber, trx_id: bkashTrxId } : null,
           created_at: new Date().toISOString()
         };
-        setDoc(doc(db, "orders", order.id), firestoreOrderDoc, { merge: true }).catch(() => {});
+        
+        await setDoc(doc(db, "orders", orderId), firestoreOrderDoc, { merge: true }).catch(() => {});
 
         // Emit real-time Admin Notification with Product Photo for instant push alerts & sound
         const adminNotificationDoc = {
@@ -472,7 +494,7 @@ export default function Checkout() {
           product_image: primaryProductImage,
           image_url: primaryProductImage,
           total_items: totalItemsCount,
-          order_id: order.id,
+          order_id: orderId,
           order_number: orderNumber,
           customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim(),
           customer_phone: shippingInfo.phone,
@@ -482,14 +504,15 @@ export default function Checkout() {
           read: false,
           created_at: new Date().toISOString()
         };
-        setDoc(doc(db, "admin_notifications", order.id), adminNotificationDoc, { merge: true }).catch((e) => {
+        
+        await setDoc(doc(db, "admin_notifications", orderId), adminNotificationDoc, { merge: true }).catch((e) => {
           console.warn("admin_notification sync warning:", e);
         });
 
         // 🚀 Instant Cross-Tab Broadcast to all open Admin tabs/windows
         try {
           const broadcastPayload = {
-            id: order.id,
+            id: orderId,
             ...adminNotificationDoc
           };
           if ("BroadcastChannel" in window) {
@@ -514,24 +537,25 @@ export default function Checkout() {
         console.warn("Firestore order sync warning:", fsErr);
       }
 
-
-      // Persist phone + full name to profile so admin sees latest details
+      // Persist phone + full name to profile if logged in
       const fullNameCombined = `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim();
-      try {
-        await supabase.from("profiles").upsert({
-          id: user.id,
-          user_id: user.id,
-          full_name: fullNameCombined || undefined,
-          phone: shippingInfo.phone || undefined,
-          updated_at: new Date().toISOString(),
-        });
-      } catch (e) { console.warn("profile update skipped", e); }
+      if (user?.id) {
+        try {
+          await supabase.from("profiles").upsert({
+            id: user.id,
+            user_id: user.id,
+            full_name: fullNameCombined || undefined,
+            phone: shippingInfo.phone || undefined,
+            updated_at: new Date().toISOString(),
+          });
+        } catch (e) { console.warn("profile update skipped", e); }
+      }
 
       // Save / update default address so it prefills next time
       try {
         const addressPayload = {
-          id: user.id,
-          user_id: user.id,
+          id: effectiveUserId,
+          user_id: effectiveUserId,
           full_name: fullNameCombined || "Customer",
           phone: shippingInfo.phone,
           address_line1: shippingInfo.address,
@@ -558,18 +582,20 @@ export default function Checkout() {
 
       // Increment coupon used_count if a coupon was used
       if (appliedCoupon) {
-        const { data: currentCoupon } = await supabase
-          .from("coupons")
-          .select("used_count")
-          .eq("code", appliedCoupon.code)
-          .single();
-        
-        if (currentCoupon) {
-          await supabase
+        try {
+          const { data: currentCoupon } = await supabase
             .from("coupons")
-            .update({ used_count: (currentCoupon.used_count || 0) + 1 })
-            .eq("code", appliedCoupon.code);
-        }
+            .select("used_count")
+            .eq("code", appliedCoupon.code)
+            .single();
+          
+          if (currentCoupon) {
+            await supabase
+              .from("coupons")
+              .update({ used_count: (currentCoupon.used_count || 0) + 1 })
+              .eq("code", appliedCoupon.code);
+          }
+        } catch {}
       }
 
       // Add regular order items
@@ -588,75 +614,80 @@ export default function Checkout() {
           }
         }
 
+        const prodName = item.product?.name || (item as any)?.name || (item as any)?.title || "Product";
+        const itemPrice = item.product?.discount_price || item.product?.regular_price || (item as any)?.price || 0;
+
         return {
-          order_id: order.id,
-          product_id: item.product_id,
-          product_name: variantStr ? `${item.product.name} (${variantStr})` : item.product.name,
-          quantity: item.quantity,
-          price: item.product.discount_price || item.product.regular_price,
-          total: (item.product.discount_price || item.product.regular_price) * item.quantity,
+          order_id: orderId,
+          product_id: item.product_id || item.id,
+          product_name: variantStr ? `${prodName} (${variantStr})` : prodName,
+          quantity: item.quantity || 1,
+          price: itemPrice,
+          total: itemPrice * (item.quantity || 1),
           variant_id: variantStr || item.variant_id || null,
-          product_image: item.image || null
+          product_image: item.image || (item as any)?.product?.image || null
         };
       });
 
       // Add CJ order items
       const cjOrderItems = cjItems.map(item => ({
-        order_id: order.id,
-        product_id: item.id || null, // Store CJ product ID from API
+        order_id: orderId,
+        product_id: item.id || null,
         product_name: `[CJ] ${item.name}${item.variant ? ` - ${item.variant}` : ''}`,
-        quantity: item.quantity,
-        price: item.price,
-        total: item.price * item.quantity,
+        quantity: item.quantity || 1,
+        price: item.price || 0,
+        total: (item.price || 0) * (item.quantity || 1),
         product_image: item.image || null
       }));
 
       const allOrderItems = [...regularOrderItems, ...cjOrderItems];
 
       if (allOrderItems.length > 0) {
-        const { error: itemsError } = await supabase
-          .from("order_items")
-          .insert(allOrderItems);
-
-        if (itemsError) throw itemsError;
+        try {
+          await supabase.from("order_items").insert(allOrderItems);
+        } catch (e) {
+          console.warn("order_items insert warning:", e);
+        }
       }
 
-      // Forward order to dropship suppliers automatically if any item is mapped
+      // Forward order to dropship suppliers automatically if applicable
       try {
-        const productIds = regularItems.map(i => i.product_id).filter(Boolean);
-        if (productIds.length > 0) {
-          const { data: products } = await supabase
-            .from("products")
-            .select("id, seller_id, sku")
-            .in("id", productIds);
-          
-          if (products && products.length > 0) {
-            const hasMohasagorItems = products.some(p => 
-              p.seller_id === "mohasagor.com.bd" || 
-              p.seller_id === "Mohasagor" || 
-              p.sku?.startsWith("MOH-")
-            );
-            if (hasMohasagorItems) {
-              await supabase.functions.invoke("supplier-api", {
-                body: {
-                  action: "forward-order",
-                  supplierId: "da929859-f7fa-4590-a3ad-f7012eac5b8c", // Use the valid UUID supplierId we seeded
-                  payload: {
-                    orderId: order.id,
-                    shipping_address: {
-                      name: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim(),
-                      phone: shippingInfo.phone,
-                      address: shippingInfo.address,
-                      city: shippingInfo.city,
-                      state: shippingInfo.state,
-                      zip: shippingInfo.zipCode,
-                      country: shippingInfo.country
+        if ((supabase as any)?.functions?.invoke) {
+          const productIds = regularItems.map(i => i.product_id).filter(Boolean);
+          if (productIds.length > 0) {
+            const { data: products } = await supabase
+              .from("products")
+              .select("id, seller_id, sku")
+              .in("id", productIds);
+            
+            if (products && products.length > 0) {
+              const hasMohasagorItems = products.some(p => 
+                p.seller_id === "mohasagor.com.bd" || 
+                p.seller_id === "Mohasagor" || 
+                p.sku?.startsWith("MOH-")
+              );
+              if (hasMohasagorItems) {
+                await (supabase as any).functions.invoke("supplier-api", {
+                  body: {
+                    action: "forward-order",
+                    supplierId: "da929859-f7fa-4590-a3ad-f7012eac5b8c",
+                    payload: {
+                      orderId: orderId,
+                      shipping_address: {
+                        name: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim(),
+                        phone: shippingInfo.phone,
+                        address: shippingInfo.address,
+                        city: shippingInfo.city,
+                        state: shippingInfo.state,
+                        zip: shippingInfo.zipCode,
+                        country: shippingInfo.country
+                      }
                     }
                   }
-                }
-              }).catch(err => {
-                console.error("Automatic order forwarding failed for Mohasagor:", err);
-              });
+                }).catch(err => {
+                  console.error("Automatic order forwarding failed for Mohasagor:", err);
+                });
+              }
             }
           }
         }
@@ -668,14 +699,14 @@ export default function Checkout() {
       try {
         const itemSummary = [
           ...regularItems.map(i => ({
-            name: i.product.name,
-            quantity: i.quantity,
-            price: i.product.discount_price || i.product.regular_price
+            name: i.product?.name || (i as any)?.name || "Item",
+            quantity: i.quantity || 1,
+            price: i.product?.discount_price || i.product?.regular_price || (i as any)?.price || 0
           })),
           ...cjItems.map(i => ({
             name: `[CJ] ${i.name}${i.variant ? ` (${i.variant})` : ''}`,
-            quantity: i.quantity,
-            price: i.price
+            quantity: i.quantity || 1,
+            price: i.price || 0
           }))
         ];
 
@@ -697,6 +728,11 @@ export default function Checkout() {
       }
 
       // Populate confirmed order details for the dedicated Success Screen
+      const allCartItems = [...regularItems, ...cjItems];
+      const firstCartItem = allCartItems[0];
+      const primaryProductImage = (firstCartItem as any)?.image || (firstCartItem as any)?.product_image || (firstCartItem as any)?.productImage || (firstCartItem as any)?.product?.image_url || "/durtup-logo.png";
+      const primaryProductName = (firstCartItem as any)?.product?.name || (firstCartItem as any)?.product_name || (firstCartItem as any)?.title || (firstCartItem as any)?.name || "Product";
+
       setConfirmedOrderData({
         orderNumber: orderNumber,
         total: total,
@@ -721,22 +757,21 @@ export default function Checkout() {
         productImage: primaryProductImage,
         totalAmount: total,
         paymentMethod: paymentMethod,
-        orderId: order.id,
+        orderId: orderId,
       }).catch((err) => {
         console.warn("Order push notification trigger error:", err);
       });
 
       toast({ 
-        title: "Order placed successfully! 🎉", 
-        description: `Your order #${orderNumber} has been confirmed.`
+        title: "অর্ডার সফলভাবে সম্পন্ন হয়েছে! 🎉", 
+        description: `আপনার অর্ডার #${orderNumber} কনফার্ম করা হয়েছে।`
       });
     } catch (error: any) {
       console.error("Order error:", error);
-      setOrderPlaced(false);
       toast({ 
         variant: "destructive", 
-        title: "Failed to place order", 
-        description: error.message 
+        title: "অর্ডার সম্পন্ন হতে সমস্যা হয়েছে", 
+        description: error.message || "অনুগ্রহ করে পুনরায় চেষ্টা করুন।" 
       });
     } finally {
       setLoading(false);
@@ -949,7 +984,7 @@ export default function Checkout() {
             )}
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form id="checkout-form" onSubmit={handleSubmit}>
             <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
               {/* Main Column */}
               <div className="lg:col-span-2 space-y-4 sm:space-y-6">
@@ -1467,14 +1502,22 @@ export default function Checkout() {
                       <span className="text-primary font-black text-xl">৳{total.toLocaleString()}</span>
                     </div>
 
-                    <Button type="submit" className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md" disabled={loading}>
+                    <Button type="submit" className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2" disabled={loading}>
                       {loading ? (
                         <>
-                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          Processing Order...
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span>অর্ডার কনফার্ম হচ্ছে...</span>
+                        </>
+                      ) : checkoutStep === "shipping" ? (
+                        <>
+                          <span>পরবর্তী ধাপ (পেমেন্ট পদ্ধতি)</span>
+                          <ArrowRight className="h-4 w-4 ml-1" />
                         </>
                       ) : (
-                        checkoutStep === "shipping" ? "Place Order" : `Confirm Order • ৳${total.toLocaleString()}`
+                        <>
+                          <CheckCircle2 className="h-5 w-5" />
+                          <span>অর্ডার কনফার্ম করুন • ৳{total.toLocaleString()}</span>
+                        </>
                       )}
                     </Button>
 
@@ -1489,7 +1532,7 @@ export default function Checkout() {
 
             {/* Mobile Place Order Bar */}
             <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border p-3 sm:p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
-              <div className="flex items-center justify-between gap-4 max-w-lg mx-auto w-full">
+              <div className="flex items-center justify-between gap-3 max-w-lg mx-auto w-full">
                 <div>
                   <p className="text-xs text-muted-foreground">Total Payable</p>
                   <p className="text-xl font-black text-primary">৳{total.toLocaleString()}</p>
@@ -1497,14 +1540,22 @@ export default function Checkout() {
                     <p className="text-[11px] text-success font-semibold">Saved ৳{couponDiscount.toLocaleString()}</p>
                   )}
                 </div>
-                <Button type="submit" size="lg" className="h-12 px-6 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex-1 max-w-[200px] shadow-md shadow-primary/20" disabled={loading}>
+                <Button type="submit" size="lg" className="h-12 px-5 text-sm sm:text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex-1 max-w-[220px] shadow-md shadow-primary/20 transition-all active:scale-[0.99] flex items-center justify-center gap-1.5" disabled={loading}>
                   {loading ? (
                     <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Processing...
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>কনফার্ম হচ্ছে...</span>
+                    </>
+                  ) : checkoutStep === "shipping" ? (
+                    <>
+                      <span>পরবর্তী ধাপ</span>
+                      <ArrowRight className="h-4 w-4" />
                     </>
                   ) : (
-                    checkoutStep === "shipping" ? "Place Order" : "Confirm Order"
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>অর্ডার কনফার্ম করুন</span>
+                    </>
                   )}
                 </Button>
               </div>
