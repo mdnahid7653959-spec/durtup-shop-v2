@@ -137,40 +137,51 @@ export function SmartSearchBar({
 
   const showDropdown =
     open && (hasQuery ? true : rows.length > 0);
-  // Mobile: tap opens dedicated /search page for a richer experience
+  // Mobile: tap opens dedicated /search page for a richer experience + 1-tap Camera search
   if (variant === "mobile") {
     return (
-      <button
-        type="button"
-        onClick={() => {
-          onNavigate?.();
-          navigate("/search");
-        }}
-        aria-label="Open search"
-        className={cn(
-          "w-full h-10 pl-3.5 pr-1 flex items-center gap-2 rounded-full",
-          "bg-background/95 border border-border/60 shadow-lg shadow-black/5 text-left",
-          "active:scale-[0.99] transition",
-          className
-        )}
-      >
-        <Search className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-        <span className="flex-1 min-w-0 truncate text-[13px] text-muted-foreground/70">
-          {placeholder}
-        </span>
-        <span
-          aria-hidden
-          className="h-8 w-8 grid place-items-center rounded-full bg-primary text-primary-foreground shrink-0"
+      <div className={cn("w-full flex items-center gap-1.5", className)}>
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate?.();
+            navigate("/search");
+          }}
+          aria-label="Open search"
+          className="flex-1 h-10 pl-3.5 pr-2 flex items-center gap-2 rounded-full bg-background/95 border border-border/60 shadow-lg shadow-black/5 text-left active:scale-[0.99] transition min-w-0"
         >
-          <Search className="h-3.5 w-3.5" />
-        </span>
-      </button>
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+          <span className="flex-1 min-w-0 truncate text-[13px] text-muted-foreground/70">
+            {placeholder}
+          </span>
+          <span
+            aria-hidden
+            className="h-7 w-7 grid place-items-center rounded-full bg-primary text-primary-foreground shrink-0"
+          >
+            <Search className="h-3.5 w-3.5" />
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setImageSearchOpen(true)}
+          aria-label="Search with image"
+          title="ছবি দিয়ে খুঁজুন (Search with image)"
+          className="h-10 w-10 grid place-items-center rounded-full bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border border-primary/25 shrink-0 transition-all active:scale-95 shadow-sm"
+        >
+          <Camera className="h-4 w-4" />
+        </button>
+
+        <ImageSearchModal
+          open={imageSearchOpen}
+          onOpenChange={setImageSearchOpen}
+        />
+      </div>
     );
   }
 
   return (
     <div ref={wrapRef} className={cn("relative w-full", className)}>
-
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -187,8 +198,6 @@ export function SmartSearchBar({
             variant === "desktop" ? "h-11 gap-2 pl-4 pr-1.5" : "h-10 gap-2 pl-3.5 pr-1"
           )}
         >
-
-
           <Search className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
           <input
             ref={inputRef}
@@ -216,6 +225,7 @@ export function SmartSearchBar({
           {isFetching && hasQuery && (
             <Loader2 className="h-4 w-4 text-muted-foreground animate-spin shrink-0" aria-hidden />
           )}
+
           {query && (
             <button
               type="button"
@@ -225,11 +235,22 @@ export function SmartSearchBar({
                 setActiveIdx(-1);
                 inputRef.current?.focus();
               }}
-              className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           )}
+
+          {/* Visual Product Search (Camera) Button */}
+          <button
+            type="button"
+            onClick={() => setImageSearchOpen(true)}
+            aria-label="Search by image"
+            title="ছবি দিয়ে খুঁজুন (Search by Image)"
+            className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all shrink-0 active:scale-90 flex items-center justify-center"
+          >
+            <Camera className="h-4 w-4 text-primary" />
+          </button>
 
           <button
             type="submit"
@@ -245,6 +266,11 @@ export function SmartSearchBar({
           </button>
         </div>
       </form>
+
+      <ImageSearchModal
+        open={imageSearchOpen}
+        onOpenChange={setImageSearchOpen}
+      />
 
       {showDropdown && (
         <div

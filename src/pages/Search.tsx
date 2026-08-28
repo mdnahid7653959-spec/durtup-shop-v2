@@ -162,10 +162,25 @@ export default function SearchPage() {
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
+              {/* Visual Search Button */}
+              <button
+                type="button"
+                onClick={() => setImageSearchOpen(true)}
+                aria-label="Search with image"
+                title="ছবি দিয়ে খুঁজুন (Search with image)"
+                className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-all shrink-0 active:scale-95 flex items-center justify-center"
+              >
+                <Camera className="h-4 w-4" />
+              </button>
             </div>
           </form>
         </div>
       </div>
+
+      <ImageSearchModal
+        open={imageSearchOpen}
+        onOpenChange={setImageSearchOpen}
+      />
 
       <div className="px-4 py-4 space-y-6 max-w-2xl mx-auto pb-24">
         {/* Live suggestions */}

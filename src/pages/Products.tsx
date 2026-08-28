@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Filter, ChevronRight, Globe, X, SlidersHorizontal, ArrowUpDown, Tag, Sparkles } from "lucide-react";
+import { Filter, ChevronRight, Globe, X, SlidersHorizontal, ArrowUpDown, Tag, Sparkles, Camera } from "lucide-react";
 import { useCombinedSearch } from "@/hooks/useCombinedSearch";
 import { useCategories } from "@/hooks/useProductSearch";
 import { useCJSettings } from "@/hooks/useCJSettings";
@@ -343,6 +343,40 @@ export default function Products() {
                   Filters {hasFilters && `(${Array.from(searchParams.keys()).length})`}
                 </Button>
               </div>
+
+              {/* Visual Search Active Banner */}
+              {searchParams.get("visualSearch") === "true" && (
+                <div className="mb-4 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-primary/10 via-orange-500/10 to-amber-500/10 border border-primary/25 flex items-center justify-between gap-3 flex-wrap animate-in fade-in duration-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-sm shrink-0">
+                      <Camera className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                        <span>ছবি দিয়ে খোঁজা ফলাফল (Visual Search Results)</span>
+                        <Badge className="bg-primary text-primary-foreground text-[10px] font-bold">AI Match</Badge>
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        আপনার আপলোড করা ছবির বৈশিষ্ট্য ও রঙের ভিত্তিতে প্রাপ্ত প্রোডাক্টসমূহ
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const p = new URLSearchParams(searchParams);
+                      p.delete("visualSearch");
+                      p.delete("search");
+                      setSearchParams(p);
+                    }}
+                    className="h-8 text-xs font-semibold rounded-lg shrink-0"
+                  >
+                    সব প্রোডাক্ট দেখুন
+                  </Button>
+                </div>
+              )}
 
               {/* Active Filter Badges */}
               {hasFilters && (
