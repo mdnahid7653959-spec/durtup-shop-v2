@@ -213,11 +213,6 @@ export function Header() {
                         <DropdownMenuItem asChild><Link to="/orders" className="cursor-pointer">My Orders</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link to="/wishlist" className="cursor-pointer">Wishlist</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link to="/account" className="cursor-pointer">Account Settings</Link></DropdownMenuItem>
-                        {!isInstalled && (
-                          <DropdownMenuItem onClick={openPrompt} className="cursor-pointer text-primary font-semibold">
-                            <Download className="h-4 w-4 mr-2" /> Install Durtup App
-                          </DropdownMenuItem>
-                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
                           <LogOut className="h-4 w-4 mr-2" /> Logout
@@ -235,11 +230,6 @@ export function Header() {
                         <DropdownMenuItem asChild><Link to="/orders" className="cursor-pointer">My Orders</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link to="/wishlist" className="cursor-pointer">Wishlist</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link to="/account" className="cursor-pointer">Account Settings</Link></DropdownMenuItem>
-                        {!isInstalled && (
-                          <DropdownMenuItem onClick={openPrompt} className="cursor-pointer text-primary font-semibold">
-                            <Download className="h-4 w-4 mr-2" /> Install Durtup App
-                          </DropdownMenuItem>
-                        )}
                       </>
                     )}
 
