@@ -1608,53 +1608,38 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {/* Fast Action Buttons with Quick Nav icons */}
+            {/* Fast Action Buttons with Sleek Home shortcut */}
             <div className="flex items-center gap-2 w-full">
-              {/* Home shortcut */}
+              {/* Professional Home Shortcut Tile */}
               <Link 
                 to="/" 
-                className="flex flex-col items-center justify-center h-10 w-11 rounded-xl bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-                title="Home"
+                className="flex items-center justify-center h-11 w-11 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-orange-600 hover:bg-orange-50 active:scale-90 shrink-0 transition-all border border-slate-200/60 dark:border-slate-700 shadow-xs group"
+                title="Go to Home"
+                aria-label="Home"
               >
-                <Home className="h-4 w-4" />
-                <span className="text-[9px] font-medium leading-none mt-0.5">Home</span>
-              </Link>
-
-              {/* Cart shortcut with badge */}
-              <Link 
-                to="/cart" 
-                className="flex flex-col items-center justify-center h-10 w-11 rounded-xl bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 relative transition-colors"
-                title="Cart"
-              >
-                <ShoppingCart className="h-4 w-4" />
-                <span className="text-[9px] font-medium leading-none mt-0.5">Cart</span>
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center px-0.5 shadow-xs">
-                    {cartCount > 99 ? "99+" : cartCount}
-                  </span>
-                )}
+                <Home className="h-5 w-5 group-hover:scale-110 transition-transform text-slate-700 dark:text-slate-200" />
               </Link>
 
               {/* Add to Cart */}
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1 h-10 px-2 text-xs font-bold rounded-xl border-primary/40 text-primary hover:bg-primary/5 active:scale-[0.98]"
+                className="flex-1 h-11 px-3 text-xs sm:text-sm font-black rounded-2xl border-orange-200 dark:border-orange-900/40 text-orange-600 hover:bg-orange-50/50 active:scale-[0.98] shadow-xs"
                 onClick={handleAddToCart}
                 disabled={addingToCart}
               >
-                {addingToCart ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin shrink-0" /> : <ShoppingCart className="h-3.5 w-3.5 mr-1.5 shrink-0" />}
+                {addingToCart ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin shrink-0" /> : <ShoppingCart className="h-4 w-4 mr-1.5 shrink-0" />}
                 <span className="truncate">Add to Cart</span>
               </Button>
 
               {/* Buy Now */}
               <Button
                 size="sm"
-                className="flex-1 h-10 px-2 text-xs font-bold rounded-xl active:scale-[0.98]"
+                className="flex-1 h-11 px-3 text-xs sm:text-sm font-black rounded-2xl bg-orange-600 hover:bg-orange-500 text-white active:scale-[0.98] shadow-md shadow-orange-600/30"
                 onClick={handleBuyNow}
                 disabled={buyingNow}
               >
-                {buyingNow ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin shrink-0" /> : <Zap className="h-3.5 w-3.5 mr-1.5 shrink-0" />}
+                {buyingNow ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin shrink-0" /> : <Zap className="h-4 w-4 mr-1.5 shrink-0" />}
                 <span className="truncate">Buy Now</span>
               </Button>
             </div>

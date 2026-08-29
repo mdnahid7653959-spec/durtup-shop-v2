@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { 
   ArrowLeft, 
   Package, 
@@ -266,6 +266,7 @@ const resolveOrderItemImage = async (it: any): Promise<string | null> => {
 export default function OrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [order, setOrder] = useState<Order | null>(null);
@@ -285,21 +286,22 @@ export default function OrderDetail() {
 
   useEffect(() => {
     const fetchOrder = async () => {
-      if (!id || !user) return;
+      if (!id) return;
       setIsLoading(true);
 
       try {
+        // 1. Try Supabase by UUID id or order_number
         const { data: orderData } = await supabase
           .from("orders")
           .select("*")
-          .eq("id", id)
+          .or(`id.eq.${id},order_number.eq.${id}`)
           .maybeSingle();
 
         if (orderData) {
           const { data: itemsData } = await supabase
             .from("order_items")
             .select("*")
-            .eq("order_id", id);
+            .eq("order_id", orderData.id);
             
           const formattedItems = await Promise.all((itemsData || []).map(async (it: any) => {
             const product_image = await resolveOrderItemImage(it);
@@ -320,7 +322,7 @@ export default function OrderDetail() {
           let latestPaymentStatus = (orderData.payment_status || "pending").toLowerCase();
 
           try {
-            const docRef = doc(db, "orders", id);
+            const docRef = doc(db, "orders", orderData.id);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
               const raw = docSnap.data();
@@ -333,7 +335,7 @@ export default function OrderDetail() {
             const adminOrdersRaw = localStorage.getItem("enterprise_admin_orders") || localStorage.getItem("local_orders");
             if (adminOrdersRaw) {
               const adminOrders = JSON.parse(adminOrdersRaw);
-              const found = adminOrders.find((o: any) => o.id === id || o.order_number === id);
+              const found = adminOrders.find((o: any) => o.id === orderData.id || o.order_number === id || o.id === id);
               if (found) {
                 if (found.status) latestStatus = found.status.toLowerCase();
                 if (found.payment_status) latestPaymentStatus = found.payment_status.toLowerCase();
@@ -351,27 +353,29 @@ export default function OrderDetail() {
           return;
         }
 
-        // Firestore Fallback
-        const docRef = doc(db, "orders", id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const raw = docSnap.data();
-          let latestStatus = (raw.status || "pending").toLowerCase();
-          let latestPaymentStatus = (raw.payment_status || raw.paymentStatus || "pending").toLowerCase();
+        // 2. Firestore Fallback
+        let docSnap = await getDoc(doc(db, "orders", id)).catch(() => null);
+        let raw = docSnap && docSnap.exists() ? docSnap.data() : null;
 
+        // If not found by direct doc ID, check by order_number in localStorage
+        if (!raw) {
           try {
             const adminOrdersRaw = localStorage.getItem("enterprise_admin_orders") || localStorage.getItem("local_orders");
             if (adminOrdersRaw) {
               const adminOrders = JSON.parse(adminOrdersRaw);
-              const found = adminOrders.find((o: any) => o.id === id || o.order_number === id);
+              const found = adminOrders.find((o: any) => o.id === id || o.order_number === id || o.orderNumber === id);
               if (found) {
-                if (found.status) latestStatus = found.status.toLowerCase();
-                if (found.payment_status) latestPaymentStatus = found.payment_status.toLowerCase();
+                raw = found;
               }
             }
           } catch {}
+        }
 
-          const rawItemList = Array.isArray(raw.items) ? raw.items : [];
+        if (raw) {
+          let latestStatus = (raw.status || "pending").toLowerCase();
+          let latestPaymentStatus = (raw.payment_status || raw.paymentStatus || "pending").toLowerCase();
+
+          const rawItemList = Array.isArray(raw.items) ? raw.items : (Array.isArray(raw.order_items) ? raw.order_items : []);
           const formattedItems = await Promise.all(rawItemList.map(async (it: any, idx: number) => {
             const product_image = await resolveOrderItemImage(it);
             return {
@@ -387,8 +391,8 @@ export default function OrderDetail() {
           }));
 
           const formatted: Order = {
-            id: docSnap.id,
-            order_number: raw.order_number || raw.orderNumber || docSnap.id.slice(0, 10),
+            id: docSnap?.id || raw.id || id,
+            order_number: raw.order_number || raw.orderNumber || docSnap?.id?.slice(0, 10) || id,
             status: latestStatus,
             payment_status: latestPaymentStatus,
             payment_method: raw.payment_method || raw.paymentMethod || "cod",
@@ -537,17 +541,6 @@ export default function OrderDetail() {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <p>Please log in to view order details.</p>
-        </main>
-      </div>
-    );
-  }
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -584,6 +577,23 @@ export default function OrderDetail() {
       
       <main className="flex-1 pb-24 md:pb-8">
         <div className="container max-w-4xl py-4 px-3 sm:px-4">
+          {/* Fresh Order Placed Celebration Banner */}
+          {location.state?.orderPlaced && (
+            <div className="mb-5 p-4 sm:p-5 bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 dark:border-emerald-800/60 rounded-2xl flex items-start gap-3 sm:gap-4 shadow-sm animate-in fade-in slide-in-from-top-3 duration-300">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-extrabold text-base sm:text-lg text-emerald-900 dark:text-emerald-200">
+                  অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে! 🎉
+                </h3>
+                <p className="text-xs sm:text-sm text-emerald-800/90 dark:text-emerald-300/90 mt-0.5">
+                  ধন্যবাদ! আপনার অর্ডারটি নিশ্চিত করা হয়েছে। খুব শীঘ্রই পার্সেলটি ডেলিভারির জন্য পাঠানো হবে।
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
             <Button variant="ghost" size="icon" onClick={() => navigate("/orders")}>

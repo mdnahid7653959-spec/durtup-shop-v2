@@ -1,17 +1,80 @@
 import { memo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Zap, ChevronRight, Timer } from "lucide-react";
-import { ProductCard, type Product } from "@/components/products/ProductCard";
+import { Zap, MoreHorizontal } from "lucide-react";
 
-interface FlashSaleSectionProps {
-  products: Product[];
+interface CategoryShortcut {
+  name: string;
+  href: string;
+  image: string;
+  bgGradient: string;
+  border: string;
 }
 
-function FlashSaleSectionComponent({ products }: FlashSaleSectionProps) {
+// 8 Real Categories matching the actual database & supplier catalog of Durtup.shop
+const QUICK_CATEGORIES: CategoryShortcut[] = [
+  {
+    name: "Gadgets",
+    href: "/products?category=Gadgets%20%26%20Electronics",
+    image: "https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=200&h=200&fit=crop",
+    bgGradient: "from-blue-50 to-indigo-50/60",
+    border: "border-blue-100 dark:border-blue-900/30",
+  },
+  {
+    name: "Smart Watch",
+    href: "/products?category=Watch",
+    image: "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=200&h=200&fit=crop",
+    bgGradient: "from-amber-50 to-orange-50/60",
+    border: "border-amber-100 dark:border-amber-900/30",
+  },
+  {
+    name: "Men's Wear",
+    href: "/products?category=Men's%20Fashion",
+    image: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=200&h=200&fit=crop",
+    bgGradient: "from-sky-50 to-blue-50/60",
+    border: "border-sky-100 dark:border-sky-900/30",
+  },
+  {
+    name: "Women's Wear",
+    href: "/products?category=Women's%20Fashion",
+    image: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=200&h=200&fit=crop",
+    bgGradient: "from-rose-50 to-pink-50/60",
+    border: "border-rose-100 dark:border-rose-900/30",
+  },
+  {
+    name: "Home Living",
+    href: "/products?category=Home%20%26%20Lifestyle",
+    image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=200&h=200&fit=crop",
+    bgGradient: "from-emerald-50 to-teal-50/50",
+    border: "border-emerald-100 dark:border-emerald-900/30",
+  },
+  {
+    name: "Pure Foods",
+    href: "/products?category=Foods",
+    image: "https://images.unsplash.com/photo-1608686207856-001b95cf60ca?w=200&h=200&fit=crop",
+    bgGradient: "from-amber-50 to-yellow-50/60",
+    border: "border-amber-100 dark:border-amber-900/30",
+  },
+  {
+    name: "Kids Zone",
+    href: "/products?category=Kids%20Zone",
+    image: "https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=200&h=200&fit=crop",
+    bgGradient: "from-purple-50 to-indigo-50/60",
+    border: "border-purple-100 dark:border-purple-900/30",
+  },
+  {
+    name: "More",
+    href: "/categories",
+    image: "",
+    bgGradient: "from-slate-50 to-zinc-50",
+    border: "border-slate-200/80 dark:border-slate-800/50",
+  },
+];
+
+function FlashSaleSectionComponent() {
   const [timeLeft, setTimeLeft] = useState({
-    hours: 5,
-    minutes: 23,
-    seconds: 45,
+    hours: 2,
+    minutes: 45,
+    seconds: 18,
   });
 
   useEffect(() => {
@@ -29,7 +92,7 @@ function FlashSaleSectionComponent({ products }: FlashSaleSectionProps) {
           minutes = 59;
           seconds = 59;
         } else {
-          return { hours: 5, minutes: 23, seconds: 45 };
+          return { hours: 2, minutes: 45, seconds: 18 };
         }
         
         return { hours, minutes, seconds };
@@ -39,72 +102,90 @@ function FlashSaleSectionComponent({ products }: FlashSaleSectionProps) {
     return () => clearInterval(timer);
   }, []);
 
-  const formatTime = (num: number) => num.toString().padStart(2, "0");
-
-  if (products.length === 0) return null;
+  const formatNum = (n: number) => n.toString().padStart(2, "0");
 
   return (
-    <section className="py-3 sm:py-5 overflow-hidden">
-      <div className="bg-card border rounded-2xl overflow-hidden shadow-sm app-fade-in">
-        {/* Header - Mobile optimized, app-like */}
-        <div className="bg-gradient-to-r from-sale via-red-500 to-orange-500 p-3 sm:p-4">
-          <div className="flex items-center justify-between gap-3">
-            {/* Left - Title */}
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                <Zap className="h-5 w-5 text-white fill-white animate-pulse-soft" />
-              </div>
-              <div>
-                <h2 className="text-base sm:text-xl font-bold text-white flex items-center gap-1.5">
-                  Flash Sale
-                  <span className="text-[8px] sm:text-[10px] bg-white/25 px-1.5 py-0.5 rounded-full font-bold">HOT</span>
-                </h2>
-                <p className="text-white/80 text-[10px] sm:text-xs hidden xs:block">Limited time offers!</p>
-              </div>
-            </div>
-            
-            {/* Right - Timer */}
-            <div className="flex items-center gap-1">
-              <Timer className="h-3.5 w-3.5 text-white/80 hidden xs:block shrink-0" />
-              <div className="flex items-center gap-0.5 sm:gap-1">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white flex items-center justify-center shadow">
-                  <span className="text-sale font-bold text-sm sm:text-lg">{formatTime(timeLeft.hours)}</span>
-                </div>
-                <span className="text-white font-bold text-sm sm:text-lg">:</span>
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white flex items-center justify-center shadow">
-                  <span className="text-sale font-bold text-sm sm:text-lg">{formatTime(timeLeft.minutes)}</span>
-                </div>
-                <span className="text-white font-bold text-sm sm:text-lg">:</span>
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white flex items-center justify-center shadow">
-                  <span className="text-sale font-bold text-sm sm:text-lg">{formatTime(timeLeft.seconds)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <section className="w-full px-3 sm:px-4 py-2 sm:py-3">
+      <div className="max-w-7xl mx-auto space-y-3 sm:space-y-4">
         
-        {/* Products Grid */}
-        <div className="p-2.5 sm:p-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-            {products.slice(0, 6).map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+        {/* Flash Sale Banner Strip */}
+        <div className="w-full bg-[#fff4ee] dark:bg-orange-950/20 border border-orange-200/70 dark:border-orange-900/40 rounded-2xl px-3 sm:px-4 py-2.5 flex items-center justify-between shadow-2xs">
+          
+          {/* Flash Sale Title */}
+          <div className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-orange-600 fill-orange-600 animate-pulse" />
+            <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+              Flash Sale
+            </h3>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="border-t px-3 py-2.5 flex items-center justify-between bg-muted/30">
-          <p className="text-[11px] sm:text-xs text-muted-foreground">
-            <span className="text-sale font-bold">{products.length}</span> items on sale
-          </p>
-          <Link 
-            to="/flash-sale" 
-            className="inline-flex items-center gap-1 text-primary hover:text-primary/80 font-bold text-[11px] sm:text-xs touch-manipulation press-scale"
+          {/* Live Countdown Timer */}
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300">
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Ends in
+            </span>
+            <div className="flex items-center gap-1">
+              <span className="min-w-[22px] h-[22px] rounded-md bg-orange-600 text-white text-[11px] font-black flex items-center justify-center shadow-xs">
+                {formatNum(timeLeft.hours)}
+              </span>
+              <span className="text-orange-600 font-black">:</span>
+              <span className="min-w-[22px] h-[22px] rounded-md bg-orange-600 text-white text-[11px] font-black flex items-center justify-center shadow-xs">
+                {formatNum(timeLeft.minutes)}
+              </span>
+              <span className="text-orange-600 font-black">:</span>
+              <span className="min-w-[22px] h-[22px] rounded-md bg-orange-600 text-white text-[11px] font-black flex items-center justify-center shadow-xs">
+                {formatNum(timeLeft.seconds)}
+              </span>
+            </div>
+          </div>
+
+          {/* View All Link */}
+          <Link
+            to="/products?filter=flash-sale"
+            className="text-xs sm:text-sm font-bold text-orange-600 hover:text-orange-700 flex items-center gap-0.5 transition-colors"
           >
-            View All
-            <ChevronRight className="h-3.5 w-3.5" />
+            View All →
           </Link>
         </div>
+
+        {/* 8 Quick Category Shortcut Cards (2 rows of 4 on mobile, 8 in a row on desktop) */}
+        <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 gap-2 sm:gap-3">
+          {QUICK_CATEGORIES.map((cat) => {
+            const isMore = cat.name === "More";
+            return (
+              <Link
+                key={cat.name}
+                to={cat.href}
+                className="flex flex-col items-center gap-1.5 group cursor-pointer"
+              >
+                {/* Rounded Square Category Box */}
+                <div
+                  className={`w-full aspect-square max-w-[76px] sm:max-w-[88px] rounded-2xl bg-gradient-to-b ${cat.bgGradient} dark:bg-slate-800/80 border ${cat.border} p-1.5 sm:p-2 flex items-center justify-center overflow-hidden transition-all duration-200 group-hover:scale-105 group-hover:shadow-md active:scale-95 shadow-2xs`}
+                >
+                  {isMore ? (
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-200/70 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
+                      <MoreHorizontal className="w-5 h-5" />
+                    </div>
+                  ) : (
+                    <img
+                      src={cat.image}
+                      alt={cat.name}
+                      className="w-full h-full object-cover rounded-xl transition-transform duration-300 group-hover:scale-110"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  )}
+                </div>
+
+                {/* Category Label */}
+                <span className="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 text-center line-clamp-1 group-hover:text-orange-600 transition-colors leading-tight">
+                  {cat.name}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+
       </div>
     </section>
   );

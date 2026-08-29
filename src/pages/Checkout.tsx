@@ -743,8 +743,6 @@ export default function Checkout() {
         city: shippingInfo.city,
         productName: primaryProductName
       });
-      setOrderPlaced(true);
-
       // Clear both carts in background
       clearCart().catch(() => {});
       clearCJCart();
@@ -766,6 +764,9 @@ export default function Checkout() {
         title: "অর্ডার সফলভাবে সম্পন্ন হয়েছে! 🎉", 
         description: `আপনার অর্ডার #${orderNumber} কনফার্ম করা হয়েছে।`
       });
+
+      // 🚀 Instant redirect to Order Details Page
+      navigate(`/orders/${orderId}`, { replace: true, state: { orderPlaced: true, orderNumber: orderNumber } });
     } catch (error: any) {
       console.error("Order error:", error);
       toast({ 

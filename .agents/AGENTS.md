@@ -1,3 +1,3 @@
 # Project Specific Rules
 
-- **Git Auto-Push**: Always commit and run `git push` after completing code updates or fixes for the user.
+- **Git Push Policy**: Do NOT run `git push` automatically. Only commit and push when the user explicitly instructs to do so.

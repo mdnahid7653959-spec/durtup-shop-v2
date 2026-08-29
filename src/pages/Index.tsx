@@ -2,12 +2,14 @@ import { memo, lazy, Suspense, useEffect, useState, useRef } from "react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { HeroBanner } from "@/components/home/HeroBanner";
-import { HeroBento } from "@/components/home/HeroBento";
+import { TrustBadges } from "@/components/home/TrustBadges";
+import { FlashSaleSection } from "@/components/home/FlashSaleSection";
+import { DealOfTheDaySection } from "@/components/home/DealOfTheDaySection";
+import { PopularCategoriesSection } from "@/components/home/PopularCategoriesSection";
 import { PromoBanners } from "@/components/home/PromoBanners";
 import { useHomeProducts } from "@/hooks/useHomeProducts";
 import { useCJSettings } from "@/hooks/useCJSettings";
 import { useLayoutConfig, useCustomSections, defaultSections, SectionConfig } from "@/hooks/useLayoutConfig";
-import { FlashSaleSection } from "@/components/home/FlashSaleSection";
 import { ProductSection } from "@/components/home/ProductSection";
 import { PersonalizedFeed } from "@/components/home/PersonalizedFeed";
 import { Flame, Sparkles, TrendingUp, ThumbsUp, Clock } from "lucide-react";
@@ -265,23 +267,15 @@ function SectionRenderer({
 
 const Index = () => {
   const { data, isLoading, isError } = useHomeProducts();
-  const { data: cjSettings, isLoading: cjSettingsLoading } = useCJSettings();
-  const { data: layoutSections } = useLayoutConfig();
-  const { data: customSections } = useCustomSections();
-  const cjSectionRef = useRef<HTMLElement>(null);
-  const cjInView = useInView(cjSectionRef);
 
-  const showCJProducts = !cjSettingsLoading && !!cjSettings && cjSettings.is_enabled !== false && cjSettings.show_on_homepage !== false;
-
-  const sections = layoutSections || defaultSections;
-
-  // Build a map of custom sections by ID
-  const customSectionsMap: Record<string, { type: string; config: Record<string, unknown> }> = {};
-  if (customSections) {
-    for (const cs of customSections) {
-      customSectionsMap[cs.id] = { type: cs.type, config: (cs.config || {}) as Record<string, unknown> };
-    }
-  }
+  // Combine products for Deal of the Day across all catalog categories for maximum variety
+  const dealProducts = [
+    ...(data?.trending || []),
+    ...(data?.featured || []),
+    ...(data?.flashSale || []),
+    ...(data?.latestProducts || []),
+    ...(data?.recommended || []),
+  ];
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -291,8 +285,11 @@ const Index = () => {
         url="https://durtup.shop"
         type="website"
       />
+      
+      {/* 1. Header with Top Notice, Logo, Search & Category Pills */}
       <Header />
-      <main className="flex-1 pb-20 md:pb-0">
+
+      <main className="flex-1 pb-20 md:pb-8 space-y-2 sm:space-y-4">
         {isError && (
           <section className="w-full px-3 sm:px-4 py-4">
             <div className="max-w-7xl mx-auto">
@@ -303,27 +300,51 @@ const Index = () => {
           </section>
         )}
 
-        {sections.map((section) => (
-          <SectionRenderer
-            key={section.id}
-            section={section}
-            data={data}
-            isLoading={isLoading}
-            showCJProducts={showCJProducts}
-            cjSectionRef={cjSectionRef}
-            cjInView={cjInView}
-            customSectionsMap={customSectionsMap}
-          />
-        ))}
+        {/* 2. Hero Banner (Sunset Gadget Showcase) */}
+        <HeroBanner />
 
-        {/* Endless Automatic Product Feed */}
-        <section className="w-full px-3 sm:px-4">
+        {/* 3. Trust & Service Feature Strip */}
+        <TrustBadges />
+
+        {/* 4. Flash Sale Header + 8 Quick Category Shortcut Cards */}
+        <FlashSaleSection />
+
+        {/* 5. Deal of the Day Product Carousel */}
+        {isLoading ? (
+          <SectionSkeleton />
+        ) : (
+          <DealOfTheDaySection products={dealProducts} />
+        )}
+
+        {/* 6. Popular Categories Showcase (4 Pastel Banners) */}
+        <PopularCategoriesSection />
+
+        {/* 7. Just Added / Fresh Products Section */}
+        {data?.latestProducts && data.latestProducts.length > 0 && (
+          <section className="w-full px-3 sm:px-4">
+            <div className="max-w-7xl mx-auto">
+              <ProductSection
+                title="Just Added"
+                subtitle="Fresh products"
+                products={data.latestProducts}
+                viewAllLink="/products?sort=newest"
+                icon={Clock}
+                iconBgColor="bg-gradient-to-br from-blue-500 to-cyan-500"
+                iconColor="text-white"
+              />
+            </div>
+          </section>
+        )}
+
+        {/* 8. Endless Automatic Product Feed */}
+        <section className="w-full px-3 sm:px-4 pt-2">
           <div className="max-w-7xl mx-auto">
             <InfiniteProductFeed />
           </div>
         </section>
 
       </main>
+
       <Footer />
     </div>
   );

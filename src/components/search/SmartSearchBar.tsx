@@ -141,48 +141,53 @@ export function SmartSearchBar({
   if (variant === "mobile") {
     return (
       <div className={cn("w-full relative", className)}>
-        <div className="h-10 pl-3.5 pr-1.5 flex items-center gap-1.5 rounded-full bg-background/95 border border-border/60 shadow-md text-left transition min-w-0">
+        <div className="h-11 pl-3.5 pr-1 flex items-center gap-1.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs text-left transition min-w-0 overflow-hidden focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20">
+          {/* Left search icon inside placeholder area */}
+          <Search className="h-4 w-4 text-slate-400 shrink-0 ml-0.5" />
+
           <button
             type="button"
             onClick={() => {
               onNavigate?.();
               navigate("/search");
             }}
-            className="flex-1 flex items-center gap-2 min-w-0 text-left cursor-text"
+            className="flex-1 flex items-center min-w-0 text-left cursor-text py-2 pl-1 pr-2"
             aria-label="Open search"
           >
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-            <span className="flex-1 min-w-0 truncate text-[13px] text-muted-foreground/70">
+            <span className="flex-1 min-w-0 truncate text-xs sm:text-[13px] text-slate-400 font-normal">
               {placeholder}
             </span>
           </button>
 
-          {/* Camera Button INSIDE Search Bar */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setImageSearchOpen(true);
-            }}
-            aria-label="Search with image"
-            title="ছবি দিয়ে খুঁজুন (Search with image)"
-            className="h-8 w-8 grid place-items-center rounded-full text-primary hover:bg-primary/10 active:scale-90 transition-all shrink-0 cursor-pointer"
-          >
-            <Camera className="h-4 w-4" />
-          </button>
+          {/* Right Action Icons Group (Camera & Search Action Button) */}
+          <div className="flex items-center gap-1 shrink-0 pr-0.5">
+            {/* Camera Button INSIDE Search Bar */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setImageSearchOpen(true);
+              }}
+              aria-label="Search with image"
+              title="ছবি দিয়ে খুঁজুন (Search with image)"
+              className="h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-slate-700 active:scale-90 transition-all shrink-0 cursor-pointer"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
 
-          {/* Search Action Button */}
-          <button
-            type="button"
-            onClick={() => {
-              onNavigate?.();
-              navigate("/search");
-            }}
-            aria-label="Search"
-            className="h-8 w-8 grid place-items-center rounded-full water-droplet-btn water-droplet-primary shrink-0 shadow-md active:scale-90 transition cursor-pointer"
-          >
-            <Search className="h-3.5 w-3.5" />
-          </button>
+            {/* Inset Orange Search Action Button */}
+            <button
+              type="button"
+              onClick={() => {
+                onNavigate?.();
+                navigate("/search");
+              }}
+              aria-label="Search"
+              className="h-8 w-8 rounded-full bg-orange-600 hover:bg-orange-500 text-white shrink-0 flex items-center justify-center shadow-xs active:scale-90 transition-transform cursor-pointer"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <ImageSearchModal
@@ -205,13 +210,14 @@ export function SmartSearchBar({
       >
         <div
           className={cn(
-            "group flex items-center bg-background/95 backdrop-blur border border-border/60",
-            "rounded-full shadow-lg shadow-black/5 transition-all duration-200 overflow-hidden",
-            "focus-within:border-primary/60 focus-within:shadow-xl focus-within:shadow-primary/10 focus-within:ring-2 focus-within:ring-primary/20",
-            variant === "desktop" ? "h-11 gap-2 pl-4 pr-1.5" : "h-10 gap-2 pl-3.5 pr-1"
+            "group flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700",
+            "rounded-full shadow-2xs transition-all duration-200 overflow-hidden",
+            "focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20",
+            "h-11 gap-1.5 pl-3.5 pr-1"
           )}
         >
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+          <Search className="h-4 w-4 text-slate-400 shrink-0 ml-0.5" />
+
           <input
             ref={inputRef}
             autoFocus={autoFocus}
@@ -229,10 +235,7 @@ export function SmartSearchBar({
             }}
             onFocus={() => setOpen(true)}
             onKeyDown={onKeyDown}
-            className={cn(
-              "flex-1 min-w-0 bg-transparent text-foreground placeholder:text-muted-foreground/70 outline-none border-0 leading-none [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none",
-              variant === "desktop" ? "text-sm" : "text-[13px]"
-            )}
+            className="flex-1 min-w-0 bg-transparent text-foreground placeholder:text-slate-400 text-sm outline-none border-0 leading-none pl-1 pr-2 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none font-medium"
           />
 
           {isFetching && hasQuery && (
@@ -254,29 +257,27 @@ export function SmartSearchBar({
             </button>
           )}
 
-          {/* Visual Product Search (Camera) Button */}
-          <button
-            type="button"
-            onClick={() => setImageSearchOpen(true)}
-            aria-label="Search by image"
-            title="ছবি দিয়ে খুঁজুন (Search by Image)"
-            className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all shrink-0 active:scale-90 flex items-center justify-center"
-          >
-            <Camera className="h-4 w-4 text-primary" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0 pr-0.5">
+            {/* Visual Product Search (Camera) Button */}
+            <button
+              type="button"
+              onClick={() => setImageSearchOpen(true)}
+              aria-label="Search by image"
+              title="ছবি দিয়ে খুঁজুন (Search by Image)"
+              className="h-8 w-8 rounded-full text-slate-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-slate-700 transition-all shrink-0 active:scale-90 flex items-center justify-center cursor-pointer"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
 
-          <button
-            type="submit"
-            aria-label="Search"
-            className={cn(
-              "inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0",
-              "hover:bg-primary/90 active:scale-95 transition-all shadow-sm",
-              variant === "desktop" ? "h-8 px-3.5 text-xs font-semibold gap-1.5" : "h-8 w-8"
-            )}
-          >
-            <Search className={variant === "desktop" ? "h-4 w-4" : "h-3.5 w-3.5"} />
-            {variant === "desktop" && <span>Search</span>}
-          </button>
+            {/* Circular Orange Search Action Button */}
+            <button
+              type="submit"
+              aria-label="Search"
+              className="h-8 w-8 rounded-full bg-orange-600 hover:bg-orange-500 text-white shrink-0 flex items-center justify-center shadow-xs active:scale-90 transition-transform cursor-pointer"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </form>
 

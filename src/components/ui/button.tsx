@@ -9,14 +9,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "water-droplet-primary shadow-md active:scale-[0.96]",
-        hero: "water-droplet-primary text-base shadow-lg hover:shadow-orange-500/40 hover:scale-[1.03] active:scale-[0.96]",
+        default: "water-droplet-crystal shadow-md active:scale-[0.96]",
+        hero: "water-droplet-crystal text-base shadow-lg hover:scale-[1.03] active:scale-[0.96]",
+        primary: "water-droplet-primary shadow-md active:scale-[0.96]",
         sale: "water-droplet-sale shadow-md active:scale-[0.96]",
         destructive: "water-droplet-sale shadow-md active:scale-[0.96]",
-        outline: "water-droplet-crystal border-slate-200/90 dark:border-white/20 active:scale-[0.96]",
+        outline: "water-droplet-crystal active:scale-[0.96]",
         secondary: "water-droplet-crystal active:scale-[0.96]",
-        ghost: "!rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-foreground !backdrop-blur-none !shadow-none !border-none before:!hidden after:!hidden",
-        link: "text-primary underline-offset-4 hover:underline !rounded-none !shadow-none !border-none !backdrop-blur-none before:!hidden after:!hidden",
+        ghost: "!rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-foreground !backdrop-blur-none !shadow-none !border-none before:!hidden",
+        link: "text-primary underline-offset-4 hover:underline !rounded-none !shadow-none !border-none !backdrop-blur-none before:!hidden",
       },
       size: {
         default: "h-10 px-5 py-2 rounded-full",
