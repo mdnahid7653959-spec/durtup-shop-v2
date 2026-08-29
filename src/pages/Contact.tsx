@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SEOHead } from "@/components/SEOHead";
 import { Mail, Phone, MapPin, MessageCircle, Clock, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,19 +13,28 @@ export default function Contact() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Message sent! We'll get back to you within 24 hours.");
+    toast.success("Message sent! Our support team will contact you shortly.");
     setForm({ name: "", email: "", subject: "", message: "" });
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="Contact Us - Durtup.shop Customer Support"
+        description="Get in touch with Durtup.shop support team. We provide customer assistance for orders, returns, and delivery across Bangladesh."
+        url="https://durtup.shop/contact"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Contact Us", url: "/contact" },
+        ]}
+      />
       <Header />
       <main className="flex-1">
         <div className="bg-gradient-to-r from-primary to-orange-500 text-white py-16">
           <div className="container text-center">
             <MessageCircle className="h-16 w-16 mx-auto mb-4" />
-            <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
-            <p className="text-lg opacity-90">We're here to help 24/7</p>
+            <h1 className="text-3xl md:text-5xl font-bold mb-3">Contact Durtup.shop</h1>
+            <p className="text-base sm:text-lg opacity-90">We're here to assist you with your orders and inquiries</p>
           </div>
         </div>
 
@@ -32,28 +42,27 @@ export default function Contact() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Contact Info */}
             <div className="space-y-6">
-              <div className="p-6 bg-card border rounded-xl">
+              <div className="p-6 bg-card border rounded-xl shadow-sm">
                 <Phone className="h-8 w-8 text-primary mb-3" />
-                <h3 className="font-semibold mb-1">Phone</h3>
-                <p className="text-muted-foreground">+1 (800) 123-4567</p>
-                <p className="text-sm text-muted-foreground mt-1">Mon-Fri 9am-6pm EST</p>
+                <h3 className="font-semibold mb-1">Phone & WhatsApp Support</h3>
+                <p className="text-muted-foreground font-medium">+880 1622-530550</p>
+                <p className="text-xs text-muted-foreground mt-1">Everyday 9:00 AM - 10:00 PM</p>
               </div>
-              <div className="p-6 bg-card border rounded-xl">
+              <div className="p-6 bg-card border rounded-xl shadow-sm">
                 <Mail className="h-8 w-8 text-primary mb-3" />
-                <h3 className="font-semibold mb-1">Email</h3>
-                <p className="text-muted-foreground">support@megamart.com</p>
-                <p className="text-sm text-muted-foreground mt-1">Response within 24 hours</p>
+                <h3 className="font-semibold mb-1">Email Support</h3>
+                <p className="text-muted-foreground font-medium">support@durtup.shop</p>
+                <p className="text-xs text-muted-foreground mt-1">Response within 2-4 hours</p>
               </div>
-              <div className="p-6 bg-card border rounded-xl">
+              <div className="p-6 bg-card border rounded-xl shadow-sm">
                 <MapPin className="h-8 w-8 text-primary mb-3" />
-                <h3 className="font-semibold mb-1">Address</h3>
-                <p className="text-muted-foreground">123 Commerce Street<br />New York, NY 10001</p>
+                <h3 className="font-semibold mb-1">Office Address</h3>
+                <p className="text-muted-foreground font-medium">Dhanmondi, Dhaka - 1209<br />Bangladesh</p>
               </div>
-              <div className="p-6 bg-card border rounded-xl">
+              <div className="p-6 bg-card border rounded-xl shadow-sm">
                 <Clock className="h-8 w-8 text-primary mb-3" />
-                <h3 className="font-semibold mb-1">Live Chat</h3>
-                <p className="text-muted-foreground">Available 24/7</p>
-                <Button size="sm" className="mt-2">Start Chat</Button>
+                <h3 className="font-semibold mb-1">Direct Support</h3>
+                <p className="text-muted-foreground">Order & Delivery Assistance</p>
               </div>
             </div>
 

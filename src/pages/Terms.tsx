@@ -1,10 +1,20 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SEOHead } from "@/components/SEOHead";
 import { FileText, CheckCircle, AlertCircle, Scale } from "lucide-react";
 
 export default function Terms() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="Terms of Service - Durtup.shop"
+        description="Read Durtup.shop terms and conditions for ordering, delivery, warranties, and platform usage in Bangladesh."
+        url="https://durtup.shop/terms"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Terms of Service", url: "/terms" },
+        ]}
+      />
       <Header />
       <main className="flex-1">
         <div className="bg-gradient-to-r from-slate-700 to-slate-900 text-white py-16">

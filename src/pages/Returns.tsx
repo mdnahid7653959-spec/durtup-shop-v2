@@ -1,23 +1,33 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SEOHead } from "@/components/SEOHead";
 import { RotateCcw, Package, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const steps = [
-  { step: 1, title: "Request Return", desc: "Submit a return request within 30 days of delivery" },
-  { step: 2, title: "Ship Item Back", desc: "Pack the item and ship it using the prepaid label" },
-  { step: 3, title: "Get Refund", desc: "Receive your refund within 5-7 business days" },
+  { step: 1, title: "Request Return", desc: "Submit a return request within 7 days of delivery" },
+  { step: 2, title: "Handover Parcel", desc: "Pack the item safely and handover to the courier" },
+  { step: 3, title: "Get Instant Refund", desc: "Receive your refund via bKash/Nagad or bank within 3-5 business days" },
 ];
 
 const policies = [
-  { icon: CheckCircle, title: "30-Day Returns", desc: "Return most items within 30 days of delivery for a full refund" },
-  { icon: Package, title: "Free Return Shipping", desc: "We provide prepaid shipping labels for all eligible returns" },
-  { icon: Clock, title: "Fast Refunds", desc: "Refunds processed within 5-7 business days after we receive the item" },
+  { icon: CheckCircle, title: "7-Day Easy Return", desc: "Return damaged or defective items within 7 days of delivery for a replacement or refund" },
+  { icon: Package, title: "Hassle-Free Pickup", desc: "Easy doorstep pickup support across Bangladesh" },
+  { icon: Clock, title: "Fast bKash Refund", desc: "Refunds processed directly to your mobile wallet within 3-5 business days" },
 ];
 
 export default function Returns() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="Return & Refund Policy - Durtup.shop"
+        description="Check Durtup.shop easy 7-day return and refund policy. Learn how to return damaged or incorrect products in Bangladesh."
+        url="https://durtup.shop/returns"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Returns & Refunds", url: "/returns" },
+        ]}
+      />
       <Header />
       <main className="flex-1">
         <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-16">

@@ -24,6 +24,8 @@ import { extractProductVariants, getColorHex, sortVariantValues, type ProductVar
 import { db } from "@/integrations/firebase/client";
 import { collection, getDocs } from "firebase/firestore";
 import { ProductZoomViewer } from "@/components/products/ProductZoomViewer";
+import { SEOHead } from "@/components/SEOHead";
+import { generateProductSEOTitle, generateProductSEODescription, DEFAULT_BANGLADESH_PRODUCT_FAQS } from "@/utils/seoHelper";
 
 interface ProductImage {
   id: string;
@@ -908,8 +910,35 @@ export default function ProductDetail() {
   };
 
   const inWishlist = product ? isInWishlist(product.id) : false;
+  const fallbackFormattedName = slug ? slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Product";
+  const seoTitle = product ? generateProductSEOTitle(product) : `${fallbackFormattedName} Price in Bangladesh | Durtup.shop`;
+  const seoDesc = product ? generateProductSEODescription(product) : `Buy ${fallbackFormattedName} online in Bangladesh at Durtup.shop with Cash on Delivery and fast home delivery.`;
+  const seoUrl = `https://durtup.shop/product/${product?.slug || slug || ""}`;
+  const seoImage = images[0] || "https://durtup.shop/icon-512.png";
+
   if (loading) {
-    return <div className="min-h-screen flex flex-col bg-background">
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <SEOHead
+          title={seoTitle}
+          description={seoDesc}
+          image={seoImage}
+          url={seoUrl}
+          type="product"
+          product={{
+            id: slug || "product",
+            name: fallbackFormattedName,
+            slug: slug,
+            image: seoImage,
+            regular_price: 1000,
+          }}
+          breadcrumbs={[
+            { name: "Home", url: "/" },
+            { name: "Products", url: "/products" },
+            { name: fallbackFormattedName, url: `/product/${slug}` }
+          ]}
+          faqs={DEFAULT_BANGLADESH_PRODUCT_FAQS}
+        />
         <div className="hidden md:block"><Header /></div>
         <MobileProductTopBar />
         <main className="flex-1 container py-4 sm:py-8 pb-20 md:pb-8">
@@ -925,10 +954,17 @@ export default function ProductDetail() {
           </div>
         </main>
         <Footer />
-      </div>;
+      </div>
+    );
   }
   if (!product) {
-    return <div className="min-h-screen flex flex-col bg-background">
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <SEOHead
+          title={`Product Not Found | Durtup.shop`}
+          description="The product you are looking for is currently unavailable. Browse thousands of other deals at Durtup.shop."
+          noindex={true}
+        />
         <div className="hidden md:block"><Header /></div>
         <MobileProductTopBar />
         <main className="flex-1 container py-8 pb-20 md:pb-8">
@@ -941,23 +977,55 @@ export default function ProductDetail() {
           </div>
         </main>
         <Footer />
-      </div>;
+      </div>
+    );
   }
   const price = product.discount_price || product.regular_price;
   const discount = product.discount_price ? Math.round((1 - product.discount_price / product.regular_price) * 100) : 0;
   return <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title={generateProductSEOTitle(product)}
+        description={generateProductSEODescription(product)}
+        image={images[0]}
+        url={`https://durtup.shop/product/${product.slug || product.id}`}
+        type="product"
+        product={{
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          short_description: product.short_description,
+          description: product.description,
+          regular_price: product.regular_price,
+          discount_price: product.discount_price,
+          stock_quantity: product.stock_quantity,
+          rating_average: product.rating_average,
+          rating_count: product.rating_count,
+          brand: (product as any).brand_name || "Durtup",
+          category: (product as any).category_name || "Products",
+          image: images[0],
+          images: images,
+          free_shipping: product.free_shipping,
+          warranty_info: product.warranty_info,
+        }}
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Products", url: "/products" },
+          { name: product.name, url: `/product/${product.slug || product.id}` }
+        ]}
+        faqs={DEFAULT_BANGLADESH_PRODUCT_FAQS}
+      />
       <div className="hidden md:block"><Header /></div>
       <MobileProductTopBar />
 
       <main className="flex-1 pb-40 md:pb-8 w-full max-w-full overflow-hidden">
         <div className="container py-4 sm:py-8 w-full max-w-full">
-          {/* Breadcrumb - Hidden on mobile */}
-          <nav className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground mb-6 max-w-full overflow-hidden">
+          {/* Breadcrumb - Clean semantic navigation */}
+          <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground mb-6 max-w-full overflow-hidden">
             <Link to="/" className="hover:text-primary shrink-0">Home</Link>
             <span>/</span>
             <Link to="/products" className="hover:text-primary shrink-0">Products</Link>
             <span>/</span>
-            <span className="text-foreground line-clamp-1 truncate">{product.name}</span>
+            <span className="text-foreground line-clamp-1 truncate font-medium">{product.name}</span>
           </nav>
 
           <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 w-full max-w-full min-w-0">

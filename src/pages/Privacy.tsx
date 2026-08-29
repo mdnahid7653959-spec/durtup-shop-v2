@@ -1,10 +1,20 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SEOHead } from "@/components/SEOHead";
 import { Shield, Eye, Lock, Database, UserCheck, Mail } from "lucide-react";
 
 export default function Privacy() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="Privacy Policy - Durtup.shop"
+        description="Read Durtup.shop privacy policy and learn how we protect your personal information and transaction security."
+        url="https://durtup.shop/privacy"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Privacy Policy", url: "/privacy" },
+        ]}
+      />
       <Header />
       <main className="flex-1">
         <div className="bg-gradient-to-r from-slate-700 to-slate-900 text-white py-16">

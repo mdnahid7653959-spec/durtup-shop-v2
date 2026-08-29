@@ -7,10 +7,9 @@ import { ProductCard, type Product } from "@/components/products/ProductCard";
 import { CombinedProductCard } from "@/components/products/CombinedProductCard";
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight, Globe, Loader2 } from "lucide-react";
-import { useCJSettings, calculateCJPrice, mapCJCategory, useCJCategoryMappings } from "@/hooks/useCJSettings";
-import type { CombinedProduct } from "@/hooks/useCombinedSearch";
-
 import { getCachedMohasagorProducts, filterProductsByCategory } from "@/utils/mohasagorCache";
+import { SEOHead } from "@/components/SEOHead";
+import { generateCategorySEOTitle, generateCategorySEODescription, DEFAULT_BANGLADESH_PRODUCT_FAQS } from "@/utils/seoHelper";
 
 interface Category {
   id: string;
@@ -208,11 +207,29 @@ export default function CategoryPage() {
 
   const totalCount = products.length + cjProducts.length;
 
+  const categoryName = category?.name || (slug ? slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Products");
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
+        <SEOHead
+          title={generateCategorySEOTitle({ name: categoryName, slug: slug || "" })}
+          description={generateCategorySEODescription({ name: categoryName, slug: slug || "" })}
+          url={`https://durtup.shop/category/${slug || ""}`}
+          category={{ name: categoryName, slug: slug || "" }}
+          breadcrumbs={[
+            { name: "Home", url: "/" },
+            { name: "Categories", url: "/categories" },
+            { name: categoryName, url: `/category/${slug || ""}` }
+          ]}
+          itemList={[
+            { name: `${categoryName} Best Sellers`, url: `/category/${slug || ""}` }
+          ]}
+          faqs={DEFAULT_BANGLADESH_PRODUCT_FAQS}
+        />
         <Header />
-        <main className="flex-1 flex items-center justify-center pb-20">
+        <main className="flex-1 flex flex-col items-center justify-center pb-20">
+          <h1 className="sr-only">{categoryName} - Online Shopping in Bangladesh</h1>
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </main>
       </div>
@@ -221,14 +238,34 @@ export default function CategoryPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
+      <SEOHead
+        title={generateCategorySEOTitle({ name: category?.name || "Products", slug: slug || "" })}
+        description={generateCategorySEODescription({ name: category?.name || "Products", slug: slug || "" })}
+        url={`https://durtup.shop/category/${slug || ""}`}
+        category={{ name: category?.name || "Products", slug: slug || "" }}
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Categories", url: "/categories" },
+          { name: category?.name || "Category", url: `/category/${slug || ""}` }
+        ]}
+        itemList={products.slice(0, 16).map(p => ({
+          name: p.name,
+          url: `/product/${p.slug || p.id}`,
+          image: p.image,
+          price: p.price,
+        }))}
+        faqs={DEFAULT_BANGLADESH_PRODUCT_FAQS}
+      />
       <Header />
       <main className="flex-1 pb-20 md:pb-0">
         <div className="px-3 sm:container py-4 sm:py-8">
-          {/* Breadcrumb - Hidden on mobile */}
-          <nav className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground mb-6">
+          {/* Breadcrumb - Clean semantic navigation */}
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-muted-foreground mb-4 sm:mb-6">
             <Link to="/" className="hover:text-primary">Home</Link>
             <ChevronRight className="h-4 w-4" />
-            <span className="text-foreground">{category?.name || "Category"}</span>
+            <Link to="/categories" className="hover:text-primary">Categories</Link>
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-foreground font-medium">{category?.name || "Category"}</span>
           </nav>
 
           {/* Category Header - Compact on mobile */}

@@ -225,7 +225,7 @@ export function CJTrendingProducts() {
 
 // BDT conversion
 const USD_TO_BDT = 120;
-const PROFIT_MARGIN = 1.3; // 30% margin
+const PROFIT_MARGIN = 1.0; // Exact API conversion (0% margin)
 const CJProductCard = memo(function CJProductCard({
   product
 }: {

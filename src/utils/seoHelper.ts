@@ -1,0 +1,418 @@
+/**
+ * Durtup.shop — SEO & Structured Data Master Helper
+ * Generates dynamic, high-converting, Google-compliant SEO metadata,
+ * Bangladesh buying intent keywords, Schema.org JSON-LD structured data, and SEO scores.
+ */
+
+export interface ProductSEOData {
+  id?: string;
+  name: string;
+  slug?: string;
+  short_description?: string | null;
+  description?: string | null;
+  regular_price?: number;
+  discount_price?: number | null;
+  price?: number;
+  stock_quantity?: number;
+  rating_average?: number;
+  rating_count?: number;
+  sku?: string;
+  brand?: string;
+  category?: string;
+  category_name?: string;
+  image?: string;
+  images?: string[];
+  product_images?: Array<{ image_url: string }>;
+  warranty_info?: string | null;
+  free_shipping?: boolean;
+}
+
+export interface CategorySEOData {
+  id?: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  productCount?: number;
+}
+
+export interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+export interface SEOHealthScoreResult {
+  score: number; // 0 to 100
+  grade: "A+" | "A" | "B" | "C" | "Needs Improvement";
+  passedChecks: string[];
+  warnings: string[];
+  suggestions: string[];
+}
+
+const SITE_NAME = "Durtup.shop";
+const BASE_URL = "https://durtup.shop";
+const DEFAULT_CURRENCY = "BDT";
+
+/**
+ * Generates an SEO-optimized title for products targeting Bangladesh search intent
+ * Format: [Product Name] Price in Bangladesh – [Key Spec/Benefit] | Durtup.shop
+ */
+export function generateProductSEOTitle(product: ProductSEOData): string {
+  const name = (product.name || "Product").trim();
+  const brand = product.brand ? `${product.brand} ` : "";
+  const price = product.discount_price || product.regular_price || product.price;
+  
+  if (name.toLowerCase().includes("price in bangladesh") || name.toLowerCase().includes("durtup")) {
+    return `${name} | ${SITE_NAME}`;
+  }
+
+  // Add category or price hint if title is short
+  if (name.length < 35 && price) {
+    return `${name} Price in Bangladesh (৳${price.toLocaleString("en-BD")}) | ${SITE_NAME}`;
+  }
+
+  return `${name} Price in Bangladesh | ${SITE_NAME}`;
+}
+
+/**
+ * Generates a high-converting, natural meta description for product pages
+ */
+export function generateProductSEODescription(product: ProductSEOData): string {
+  const name = (product.name || "Product").trim();
+  const price = product.discount_price || product.regular_price || product.price;
+  const priceText = price ? `at just ৳${price.toLocaleString("en-BD")}` : "at the best price";
+  const rawDesc = (product.short_description || product.description || "").replace(/<[^>]*>?/gm, "").trim();
+  
+  let snippet = "";
+  if (rawDesc.length > 20) {
+    snippet = rawDesc.slice(0, 90).trim() + "... ";
+  }
+
+  const stockText = (product.stock_quantity ?? 1) > 0 ? "100% authentic, fast home delivery" : "Check availability";
+  const warrantyText = product.warranty_info ? ` with ${product.warranty_info}` : "";
+
+  const desc = `Buy ${name} ${priceText} in Bangladesh. ${snippet}${stockText}${warrantyText} & Cash on Delivery available at ${SITE_NAME}.`;
+  return desc.slice(0, 160);
+}
+
+/**
+ * Generates SEO metadata for category landing pages
+ */
+export function generateCategorySEOTitle(category: CategorySEOData): string {
+  const name = category.name || "Products";
+  return `Buy ${name} in Bangladesh – Best Prices & Offers | ${SITE_NAME}`;
+}
+
+export function generateCategorySEODescription(category: CategorySEOData): string {
+  const name = category.name || "Products";
+  return `Explore top quality ${name} in Bangladesh at ${SITE_NAME}. Cash on Delivery, genuine warranty, fast shipping across Dhaka & all BD districts. Shop now!`;
+}
+
+/**
+ * Builds Schema.org Product JSON-LD
+ */
+export function buildProductJsonLd(product: ProductSEOData, canonicalUrl: string): object {
+  const price = product.discount_price || product.regular_price || product.price || 0;
+  const inStock = (product.stock_quantity ?? 1) > 0;
+  
+  const imgList: string[] = [];
+  if (product.image) imgList.push(product.image);
+  if (product.images && Array.isArray(product.images)) {
+    product.images.forEach(img => { if (img && !imgList.includes(img)) imgList.push(img); });
+  }
+  if (product.product_images && Array.isArray(product.product_images)) {
+    product.product_images.forEach(img => {
+      const url = typeof img === "string" ? img : img.image_url;
+      if (url && !imgList.includes(url)) imgList.push(url);
+    });
+  }
+  if (imgList.length === 0) {
+    imgList.push(`${BASE_URL}/icon-512.png`);
+  }
+
+  const schema: any = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: product.name,
+    image: imgList,
+    description: generateProductSEODescription(product),
+    sku: product.sku || product.id || `DURTUP-${product.name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toUpperCase()}`,
+    mpn: product.id || product.sku,
+    brand: {
+      "@type": "Brand",
+      name: product.brand || "Durtup",
+    },
+    offers: {
+      "@type": "Offer",
+      url: canonicalUrl,
+      priceCurrency: DEFAULT_CURRENCY,
+      price: price.toString(),
+      priceValidUntil: "2027-12-31",
+      itemCondition: "https://schema.org/NewCondition",
+      availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      seller: {
+        "@type": "Organization",
+        name: SITE_NAME,
+        url: BASE_URL,
+      },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: product.free_shipping ? "0" : "60",
+          currency: DEFAULT_CURRENCY,
+        },
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          businessDays: {
+            "@type": "OpeningHoursSpecification",
+            dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+          },
+          transitTime: {
+            "@type": "QuantitativeValue",
+            minValue: 1,
+            maxValue: 3,
+            unitCode: "d"
+          }
+        }
+      }
+    },
+  };
+
+  // Only include real aggregateRating if positive rating and count exist
+  if (product.rating_average && product.rating_average > 0 && product.rating_count && product.rating_count > 0) {
+    schema.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: product.rating_average.toFixed(1),
+      reviewCount: product.rating_count,
+      bestRating: "5",
+      worstRating: "1",
+    };
+  }
+
+  return schema;
+}
+
+/**
+ * Builds Schema.org BreadcrumbList JSON-LD
+ */
+export function buildBreadcrumbJsonLd(items: Array<{ name: string; url: string }>): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: item.url.startsWith("http") ? item.url : `${BASE_URL}${item.url}`,
+    })),
+  };
+}
+
+/**
+ * Builds Schema.org ItemList JSON-LD for category/listing pages
+ */
+export function buildItemListJsonLd(name: string, items: Array<{ name: string; url: string; image?: string; price?: number }>): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name,
+    numberOfItems: items.length,
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      url: item.url.startsWith("http") ? item.url : `${BASE_URL}${item.url}`,
+      image: item.image,
+    })),
+  };
+}
+
+/**
+ * Builds Schema.org FAQPage JSON-LD
+ */
+export function buildFAQJsonLd(faqs: FAQItem[]): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  };
+}
+
+/**
+ * Builds Schema.org Organization & WebSite JSON-LD
+ */
+export function buildOrganizationJsonLd(): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: BASE_URL,
+    logo: `${BASE_URL}/icon-512.png`,
+    description: "Bangladesh's leading e-commerce platform offering top quality electronics, fashion, lifestyle products with cash on delivery.",
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: "+8801622530550",
+      contactType: "customer service",
+      areaServed: "BD",
+      availableLanguage: ["Bangla", "English"],
+    },
+    sameAs: [
+      "https://facebook.com/durtupshop",
+    ],
+  };
+}
+
+export function buildWebSiteJsonLd(): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: BASE_URL,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${BASE_URL}/products?search={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+}
+
+/**
+ * Default Genuine Bangladesh FAQs for Products & Categories
+ */
+export const DEFAULT_BANGLADESH_PRODUCT_FAQS: FAQItem[] = [
+  {
+    question: "এই পণ্যটি কি সারা বাংলাদেশে হোম ডেলিভারি পাওয়া যায়?",
+    answer: "হ্যাঁ, Durtup.shop থেকে ঢাকা সহ বাংলাদেশের যেকোনো জেলা ও উপজেলায় দ্রুত হোম ডেলিভারি দেওয়া হয়।",
+  },
+  {
+    question: "ক্যাশ অন ডেলিভারি (Cash on Delivery) সুবিধা আছে কি?",
+    answer: "হ্যাঁ, আপনি কোনো অগ্রিম পেমেন্ট ছাড়াই পণ্য হাতে পেয়ে ডেলিভারি ম্যানকে টাকা পরিশোধ করতে পারবেন।",
+  },
+  {
+    question: "ডেলিভারি পেতে কতদিন সময় লাগে?",
+    answer: "ঢাকা সিটির ভেতরে ১-২ দিন এবং ঢাকার বাইরে ২-৩ কার্যদিবসের মধ্যে পার্সেল ডেলিভারি সম্পন্ন হয়।",
+  },
+  {
+    question: "পণ্যটিতে কোনো সমস্যা থাকলে কি রিটার্ন বা এক্সচেঞ্জ করা যাবে?",
+    answer: "হ্যাঁ, পণ্য গ্রহণের পর কোনো সমস্যা পেলে ৭ দিনের মধ্যে আমাদের রিটার্ন পলিসি অনুযায়ী সহজেই রিপ্লেসমেন্ট বা রিফান্ড পাবেন।",
+  },
+];
+
+/**
+ * Practical Internal SEO Health Score Calculator (0 - 100%)
+ */
+export function calculateSEOHealthScore(params: {
+  title?: string;
+  description?: string;
+  slug?: string;
+  hasImage?: boolean;
+  hasSchema?: boolean;
+  contentLength?: number;
+  focusKeyword?: string;
+}): SEOHealthScoreResult {
+  let score = 0;
+  const passed: string[] = [];
+  const warnings: string[] = [];
+  const suggestions: string[] = [];
+
+  const {
+    title = "",
+    description = "",
+    slug = "",
+    hasImage = false,
+    hasSchema = false,
+    contentLength = 0,
+    focusKeyword = "",
+  } = params;
+
+  // 1. Title Check (25 pts)
+  const titleLen = title.trim().length;
+  if (titleLen >= 30 && titleLen <= 65) {
+    score += 25;
+    passed.push("Title length is optimal (30-65 chars).");
+  } else if (titleLen > 0) {
+    score += 15;
+    warnings.push(titleLen < 30 ? "Title is slightly short." : "Title exceeds 65 chars and may be truncated on Google.");
+  } else {
+    suggestions.push("Add a descriptive SEO title.");
+  }
+
+  // 2. Meta Description Check (20 pts)
+  const descLen = description.trim().length;
+  if (descLen >= 110 && descLen <= 160) {
+    score += 20;
+    passed.push("Meta description length is ideal (110-160 chars).");
+  } else if (descLen > 0) {
+    score += 10;
+    warnings.push(descLen < 110 ? "Meta description is too short." : "Meta description exceeds 160 chars.");
+  } else {
+    suggestions.push("Add a high-converting meta description.");
+  }
+
+  // 3. Slug / URL Quality (15 pts)
+  if (slug && /^[a-z0-9-]+$/.test(slug)) {
+    score += 15;
+    passed.push("URL slug is clean and SEO-friendly.");
+  } else if (slug) {
+    score += 8;
+    warnings.push("Slug contains uppercase letters or special characters.");
+  } else {
+    suggestions.push("Ensure a clean lowercase slug is generated.");
+  }
+
+  // 4. Product Image Presence (15 pts)
+  if (hasImage) {
+    score += 15;
+    passed.push("Product image & OpenGraph visuals are ready.");
+  } else {
+    suggestions.push("Upload at least one high-resolution product image.");
+  }
+
+  // 5. Structured Data / Schema (15 pts)
+  if (hasSchema) {
+    score += 15;
+    passed.push("Schema.org Product & BreadcrumbList structured data configured.");
+  } else {
+    suggestions.push("Enable JSON-LD structured data.");
+  }
+
+  // 6. Content Depth / Description length (10 pts)
+  if (contentLength >= 100) {
+    score += 10;
+    passed.push("Product description provides sufficient details.");
+  } else if (contentLength > 0) {
+    score += 5;
+    warnings.push("Product description is brief. Adding more specifications improves search rankings.");
+  } else {
+    suggestions.push("Write a clear product description with specifications.");
+  }
+
+  // Focus keyword bonus check
+  if (focusKeyword && title.toLowerCase().includes(focusKeyword.toLowerCase())) {
+    passed.push(`Title includes focus keyword: "${focusKeyword}"`);
+  }
+
+  let grade: SEOHealthScoreResult["grade"] = "Needs Improvement";
+  if (score >= 90) grade = "A+";
+  else if (score >= 75) grade = "A";
+  else if (score >= 60) grade = "B";
+  else if (score >= 40) grade = "C";
+
+  return {
+    score,
+    grade,
+    passedChecks: passed,
+    warnings,
+    suggestions,
+  };
+}

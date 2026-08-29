@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Save, ArrowLeft, Palette, Loader2, Package, Image as ImageIcon, Video } from "lucide-react";
+import { Save, ArrowLeft, Palette, Loader2, Package, Image as ImageIcon, Video, Sparkles, Globe, CheckCircle2, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { calculateSEOHealthScore, generateProductSEOTitle, generateProductSEODescription } from "@/utils/seoHelper";
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
 import { db } from "@/integrations/firebase/client";
@@ -1227,50 +1229,197 @@ const defaultBrands: Brand[] = [
 
           {/* SEO Tab */}
           <TabsContent value="seo" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>SEO</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="meta_title">Meta Title</Label>
-                  <Input
-                    id="meta_title"
-                    value={form.meta_title}
-                    onChange={(e) => setForm({ ...form, meta_title: e.target.value })}
-                    placeholder="SEO title"
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {form.meta_title.length}/60 characters
-                  </p>
+            {(() => {
+              const currentTitle = form.meta_title || (form.name ? generateProductSEOTitle({ name: form.name, price: Number(form.discount_price || form.regular_price || 0) }) : "");
+              const currentDesc = form.meta_description || (form.name ? generateProductSEODescription({ name: form.name, short_description: form.short_description, description: form.description, price: Number(form.discount_price || form.regular_price || 0) }) : "");
+              const currentSlug = form.slug || (form.name ? form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") : "");
+              
+              const seoAudit = calculateSEOHealthScore({
+                title: currentTitle,
+                description: currentDesc,
+                slug: currentSlug,
+                hasImage: images.length > 0,
+                hasSchema: true,
+                contentLength: (form.description || "").length,
+                focusKeyword: form.meta_keywords ? form.meta_keywords.split(",")[0].trim() : "",
+              });
+
+              return (
+                <div className="grid lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 space-y-6">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between pb-3">
+                        <div>
+                          <CardTitle className="text-lg font-bold">SEO & Search Visibility</CardTitle>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Customize Google metadata, URL slug, and keywords for Bangladesh search intent.
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (!form.name) {
+                              toast({ title: "Product name required", description: "Please enter product name first", variant: "destructive" });
+                              return;
+                            }
+                            const genTitle = generateProductSEOTitle({ name: form.name, price: Number(form.discount_price || form.regular_price || 0) });
+                            const genDesc = generateProductSEODescription({ name: form.name, short_description: form.short_description, description: form.description, price: Number(form.discount_price || form.regular_price || 0) });
+                            const genSlug = form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+                            setForm({
+                              ...form,
+                              meta_title: genTitle,
+                              meta_description: genDesc,
+                              slug: form.slug || genSlug,
+                              meta_keywords: `${form.name.toLowerCase()}, ${form.name.toLowerCase()} price in bangladesh, buy online bd, durtup`,
+                            });
+                            toast({ title: "SEO Meta Generated", description: "Optimized for Google & Bangladesh buyers." });
+                          }}
+                          className="text-xs gap-1.5 h-8 font-semibold bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary"
+                        >
+                          <Sparkles className="h-3.5 w-3.5" /> Auto-Generate SEO Meta
+                        </Button>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor="meta_title">Meta Title (SEO Header)</Label>
+                            <span className={cn("text-[11px] font-mono", form.meta_title.length > 65 ? "text-destructive font-bold" : "text-muted-foreground")}>
+                              {form.meta_title.length}/65 characters
+                            </span>
+                          </div>
+                          <Input
+                            id="meta_title"
+                            value={form.meta_title}
+                            onChange={(e) => setForm({ ...form, meta_title: e.target.value })}
+                            placeholder={currentTitle || "e.g., T900 Ultra Smartwatch Price in Bangladesh | Durtup.shop"}
+                            className="mt-1.5"
+                          />
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor="meta_description">Meta Description (Snippet)</Label>
+                            <span className={cn("text-[11px] font-mono", form.meta_description.length > 160 ? "text-destructive font-bold" : "text-muted-foreground")}>
+                              {form.meta_description.length}/160 characters
+                            </span>
+                          </div>
+                          <Textarea
+                            id="meta_description"
+                            value={form.meta_description}
+                            onChange={(e) => setForm({ ...form, meta_description: e.target.value })}
+                            placeholder={currentDesc || "e.g., Buy T900 Ultra Smartwatch at best price in Bangladesh with cash on delivery..."}
+                            rows={3}
+                            className="mt-1.5"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="meta_keywords">Meta Keywords & Focus Search Intent</Label>
+                          <Input
+                            id="meta_keywords"
+                            value={form.meta_keywords}
+                            onChange={(e) => setForm({ ...form, meta_keywords: e.target.value })}
+                            placeholder="smart watch, price in bangladesh, online shopping bd"
+                            className="mt-1.5"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Live Google SERP Snippet Preview */}
+                    <Card className="bg-slate-900 text-white border-slate-800 shadow-xl overflow-hidden">
+                      <CardHeader className="pb-3 border-b border-slate-800">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-slate-300">
+                            <Globe className="h-4 w-4 text-blue-400" /> Google Search Result Preview
+                          </CardTitle>
+                          <Badge variant="outline" className="text-[10px] text-slate-400 border-slate-700 uppercase">
+                            SERP Snippet
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-bold text-orange-400">
+                            D
+                          </div>
+                          <div className="text-xs text-slate-400 flex items-center gap-1 font-mono">
+                            <span>https://durtup.shop</span>
+                            <span>›</span>
+                            <span>product</span>
+                            <span>›</span>
+                            <span className="text-slate-300">{currentSlug || "product-slug"}</span>
+                          </div>
+                        </div>
+
+                        <h3 className="text-base font-medium text-blue-400 hover:underline cursor-pointer line-clamp-1 leading-snug">
+                          {currentTitle || "Product Name Price in Bangladesh | Durtup.shop"}
+                        </h3>
+
+                        <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed font-sans">
+                          {currentDesc || "Buy product at best price in Bangladesh with cash on delivery & warranty at Durtup.shop."}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* SEO Health Score Column */}
+                  <div className="space-y-6">
+                    <Card className="border shadow-sm">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                          <span>SEO Health Score</span>
+                          <Badge className={cn("text-xs font-black px-2 py-0.5", seoAudit.score >= 80 ? "bg-emerald-500 text-white" : seoAudit.score >= 60 ? "bg-amber-500 text-white" : "bg-red-500 text-white")}>
+                            {seoAudit.score}/100 ({seoAudit.grade})
+                          </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {/* Progress Bar */}
+                        <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+                          <div
+                            className={cn("h-full transition-all duration-300", seoAudit.score >= 80 ? "bg-emerald-500" : seoAudit.score >= 60 ? "bg-amber-500" : "bg-red-500")}
+                            style={{ width: `${seoAudit.score}%` }}
+                          />
+                        </div>
+
+                        {/* Passed checks */}
+                        <div className="space-y-1.5 pt-2">
+                          <h5 className="text-xs font-bold text-foreground">Passed Checks:</h5>
+                          {seoAudit.passedChecks.map((chk, i) => (
+                            <div key={i} className="flex items-start gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                              <span>{chk}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Warnings / Suggestions */}
+                        {(seoAudit.warnings.length > 0 || seoAudit.suggestions.length > 0) && (
+                          <div className="space-y-1.5 pt-2 border-t">
+                            <h5 className="text-xs font-bold text-amber-600 dark:text-amber-400">Recommendations:</h5>
+                            {seoAudit.warnings.map((w, i) => (
+                              <div key={i} className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                                <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                <span>{w}</span>
+                              </div>
+                            ))}
+                            {seoAudit.suggestions.map((s, i) => (
+                              <div key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground shrink-0 mt-1.5" />
+                                <span>{s}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="meta_description">Meta Description</Label>
-                  <Textarea
-                    id="meta_description"
-                    value={form.meta_description}
-                    onChange={(e) => setForm({ ...form, meta_description: e.target.value })}
-                    placeholder="SEO description"
-                    rows={2}
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {form.meta_description.length}/160 characters
-                  </p>
-                </div>
-                <div>
-                  <Label htmlFor="meta_keywords">Meta Keywords</Label>
-                  <Input
-                    id="meta_keywords"
-                    value={form.meta_keywords}
-                    onChange={(e) => setForm({ ...form, meta_keywords: e.target.value })}
-                    placeholder="keyword1, keyword2, keyword3"
-                    className="mt-1"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+              );
+            })()}
           </TabsContent>
         </Tabs>
       </form>

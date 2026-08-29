@@ -269,7 +269,7 @@ function buildSections(products: Product[]) {
 
 import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
 
-const CACHE_KEY = "mohasagor_cached_home_products_v11";
+const CACHE_KEY = "mohasagor_cached_home_products_v12";
 const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes 
 
 function preloadImages(products: Product[]) {

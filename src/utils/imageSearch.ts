@@ -5,95 +5,122 @@ export interface MatchedProductItem {
   product: Product;
   matchScore: number; // e.g. 98, 92, 88
   matchedReasons: string[];
+  categorySlug?: string;
+}
+
+export interface DetectedCategoryTab {
+  id: string;
+  name: string;
+  count: number;
 }
 
 export interface ImageAnalysisResult {
   previewUrl: string;
   detectedKeywords: string[];
   primaryKeyword: string;
-  categoryHint?: string;
+  categorySlug: string;
+  categoryHint: string;
   colorName?: string;
   colorHex?: string;
   confidence: number;
   exactMatchProduct?: Product;
   matchedProducts: MatchedProductItem[];
+  availableCategories: DetectedCategoryTab[];
   relatedProducts: Product[];
 }
 
 // Category keyword definitions with visual tokens and common synonyms
 const ECOM_CATEGORIES = [
   {
-    category: "Earbuds & Audio",
-    categorySlug: "electronics",
-    keywords: ["transformer", "headphone", "earbud", "headset", "airpod", "earphone", "wireless", "sound", "speaker", "audio", "bluetooth", "tws"],
-    synonyms: ["wireless earbuds", "headphones", "bluetooth speaker", "earphones", "sound"],
-    colors: ["black", "white", "silver", "yellow", "blue"]
-  },
-  {
+    id: "smart-watches",
     category: "Smart Watch & Wearables",
+    bengaliName: "স্মার্ট ওয়াচ",
     categorySlug: "smart-watches",
-    keywords: ["watch", "smartwatch", "band", "strap", "fitness", "digital", "oled", "tracker", "wrist"],
-    synonyms: ["smart watch", "fitness band", "digital watch", "wrist watch"],
-    colors: ["black", "silver", "gold", "pink", "grey"]
+    keywords: ["watch", "smartwatch", "t800", "ultra", "amoled", "band", "strap", "fitness", "digital", "oled", "tracker", "wrist", "series", "hk9", "hw8", "hoco", "haylou", "y60"],
+    searchKeyword: "Smart Watch",
+    colors: ["black", "silver", "gold", "pink", "grey", "orange", "dark slate"]
   },
   {
-    category: "Smartphones & Covers",
-    categorySlug: "electronics",
-    keywords: ["phone", "smartphone", "iphone", "case", "cover", "mobile", "protector", "holder", "stand", "charger"],
-    synonyms: ["phone case", "mobile cover", "smartphone", "charger"],
-    colors: ["black", "transparent", "blue", "pink", "white"]
+    id: "audio",
+    category: "Earbuds & Audio",
+    bengaliName: "ইয়ারবাডস ও অডিও",
+    categorySlug: "audio",
+    keywords: ["earbud", "earphone", "headphone", "headset", "airpod", "transformer", "wireless", "bluetooth", "tws", "speaker", "sound", "m10", "f9", "pro 4", "lenovo", "hoco", "bass", "audio"],
+    searchKeyword: "Wireless Earbuds",
+    colors: ["black", "white", "silver", "yellow", "blue", "green"]
   },
   {
+    id: "gadgets",
+    category: "Gadgets & Chargers",
+    bengaliName: "চার্জার ও গ্যাজেট",
+    categorySlug: "mobile-accessories",
+    keywords: ["charger", "cable", "type-c", "power bank", "adapter", "separator", "protector", "auto power", "holder", "stand", "fast charging", "phone case", "tripod", "router", "wireless"],
+    searchKeyword: "Fast Charger",
+    colors: ["black", "white", "transparent", "grey", "blue"]
+  },
+  {
+    id: "home",
+    category: "Fans, Lights & Home",
+    bengaliName: "ফ্যান ও লাইটিং",
+    categorySlug: "home",
+    keywords: ["fan", "rechargeable fan", "mini fan", "desk fan", "light", "lamp", "led", "lamp", "projector", "decor", "clock", "kitchen", "bottle", "cup", "night light", "humidi"],
+    searchKeyword: "Rechargeable Fan",
+    colors: ["white", "warm", "multicolor", "pink", "green", "blue", "black"]
+  },
+  {
+    id: "beauty",
+    category: "Trimmers & Personal Care",
+    bengaliName: "ট্রিমার ও শেভার",
+    categorySlug: "beauty",
+    keywords: ["trimmer", "shaver", "vgr", "kemei", "vintage", "hair", "dryer", "straightener", "clipper", "skincare", "lotion", "cream", "perfume", "massager", "brush", "beauty"],
+    searchKeyword: "Hair Trimmer",
+    colors: ["black", "gold", "silver", "bronze", "pink", "white"]
+  },
+  {
+    id: "fashion",
     category: "Fashion & Clothing",
+    bengaliName: "টি-শার্ট ও পোশাক",
     categorySlug: "fashion",
-    keywords: ["dress", "shirt", "tshirt", "t-shirt", "pants", "jacket", "hoodie", "summer", "jeans", "top", "cloth", "polo", "saree", "panjabi", "kurti", "fabric", "cotton"],
-    synonyms: ["summer dress", "t-shirt", "mens shirt", "hoodie", "cotton wear"],
-    colors: ["black", "white", "blue", "red", "pink", "green", "yellow", "navy"]
+    keywords: ["shirt", "t-shirt", "tshirt", "polo", "hoodie", "jacket", "panjabi", "saree", "kurti", "dress", "pants", "jeans", "cotton", "cloth", "fabric", "summer"],
+    searchKeyword: "T-Shirt",
+    colors: ["black", "white", "blue", "navy", "red", "maroon", "green", "yellow", "grey"]
   },
   {
+    id: "shoes",
     category: "Footwear & Shoes",
-    categorySlug: "fashion",
-    keywords: ["shoe", "sneaker", "boot", "sandal", "footwear", "loafer", "runner", "heel", "slippers"],
-    synonyms: ["sneakers", "running shoes", "footwear", "sandals", "casual shoes"],
+    bengaliName: "জুতো ও স্নিকার্স",
+    categorySlug: "shoes-footwear",
+    keywords: ["shoe", "sneaker", "boot", "sandal", "footwear", "loafer", "runner", "slippers", "heel"],
+    searchKeyword: "Sneakers",
     colors: ["black", "white", "grey", "brown", "blue", "red"]
   },
   {
+    id: "bags",
     category: "Bags & Backpacks",
-    categorySlug: "fashion",
+    bengaliName: "ব্যাগ ও ওয়ালেট",
+    categorySlug: "bags-backpacks",
     keywords: ["bag", "backpack", "handbag", "purse", "luggage", "wallet", "pouch", "tote", "duffle", "crossbody"],
-    synonyms: ["backpack", "handbag", "travel bag", "leather wallet", "purse"],
+    searchKeyword: "Backpack",
     colors: ["black", "brown", "grey", "blue", "pink"]
   },
   {
-    category: "Home & Lighting",
-    categorySlug: "home",
-    keywords: ["lamp", "light", "led", "decor", "chair", "sofa", "clock", "kitchen", "touch", "night light", "projector", "strip", "bottle", "cup"],
-    synonyms: ["LED lights", "desk lamp", "home decor", "kitchenware", "night light"],
-    colors: ["white", "warm", "multicolor", "black", "gold"]
-  },
-  {
-    category: "Beauty & Personal Care",
-    categorySlug: "beauty",
-    keywords: ["skincare", "cream", "lotion", "perfume", "serum", "hair", "dryer", "shaver", "trimmer", "massager", "brush", "makeup"],
-    synonyms: ["hair dryer", "trimmer", "skincare", "perfume", "body care"],
-    colors: ["pink", "white", "black", "purple", "gold"]
-  },
-  {
-    category: "Toys & Baby Care",
+    id: "toys",
+    category: "Toys & Kids",
+    bengaliName: "খেলনা ও কিডস",
     categorySlug: "toys-games",
-    keywords: ["toy", "baby", "kid", "kids", "wrist link", "puzzle", "drone", "car", "doll", "game"],
-    synonyms: ["kids toy", "baby safety", "rc car", "baby care"],
+    keywords: ["toy", "kid", "baby", "drone", "rc car", "car", "puzzle", "doll", "game", "robot", "remote"],
+    searchKeyword: "Toys",
     colors: ["blue", "pink", "yellow", "orange", "green", "red"]
   }
 ];
 
-function extractDominantColor(img: HTMLImageElement): { name: string; hex: string } {
+function extractDominantColor(img: HTMLImageElement): { name: string; hex: string; brightness: number; isWarm: boolean } {
   try {
     const canvas = document.createElement("canvas");
     canvas.width = 64;
     canvas.height = 64;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return { name: "Dark", hex: "#1e293b" };
+    if (!ctx) return { name: "Dark", hex: "#1e293b", brightness: 50, isWarm: false };
 
     ctx.drawImage(img, 0, 0, 64, 64);
     const imageData = ctx.getImageData(0, 0, 64, 64);
@@ -113,7 +140,7 @@ function extractDominantColor(img: HTMLImageElement): { name: string; hex: strin
       }
     }
 
-    if (count === 0) return { name: "Black", hex: "#000000" };
+    if (count === 0) return { name: "Black", hex: "#000000", brightness: 0, isWarm: false };
 
     const avgR = Math.round(rSum / count);
     const avgG = Math.round(gSum / count);
@@ -121,22 +148,23 @@ function extractDominantColor(img: HTMLImageElement): { name: string; hex: strin
     const hex = `#${((1 << 24) + (avgR << 16) + (avgG << 8) + avgB).toString(16).slice(1)}`;
 
     const brightness = (avgR * 299 + avgG * 587 + avgB * 114) / 1000;
+    const isWarm = (avgR > avgB + 20) || (avgR > 140 && avgG > 100);
 
-    if (brightness > 215) return { name: "White", hex };
-    if (brightness < 40) return { name: "Black", hex };
+    if (brightness > 215) return { name: "White", hex, brightness, isWarm };
+    if (brightness < 45) return { name: "Black", hex, brightness, isWarm };
 
-    if (avgR > 160 && avgG < 90 && avgB < 90) return { name: "Red", hex };
-    if (avgB > 140 && avgR < 100 && avgG < 140) return { name: "Blue", hex };
-    if (avgG > 140 && avgR < 110 && avgB < 110) return { name: "Green", hex };
-    if (avgR > 180 && avgG > 120 && avgB < 80) return { name: "Yellow / Gold", hex };
-    if (avgR > 180 && avgG > 100 && avgB > 140) return { name: "Pink", hex };
-    if (avgR > 180 && avgG > 90 && avgB < 50) return { name: "Orange", hex };
-    if (avgR > 100 && avgG < 80 && avgB > 120) return { name: "Purple", hex };
-    if (avgR > 100 && avgG > 70 && avgB < 50) return { name: "Brown", hex };
+    if (avgR > 160 && avgG < 90 && avgB < 90) return { name: "Red", hex, brightness, isWarm: true };
+    if (avgB > 140 && avgR < 100 && avgG < 140) return { name: "Blue", hex, brightness, isWarm: false };
+    if (avgG > 140 && avgR < 110 && avgB < 110) return { name: "Green", hex, brightness, isWarm: false };
+    if (avgR > 180 && avgG > 120 && avgB < 80) return { name: "Yellow / Gold", hex, brightness, isWarm: true };
+    if (avgR > 180 && avgG > 100 && avgB > 140) return { name: "Pink", hex, brightness, isWarm: true };
+    if (avgR > 180 && avgG > 90 && avgB < 50) return { name: "Orange", hex, brightness, isWarm: true };
+    if (avgR > 100 && avgG < 80 && avgB > 120) return { name: "Purple", hex, brightness, isWarm: false };
+    if (avgR > 100 && avgG > 70 && avgB < 50) return { name: "Brown", hex, brightness, isWarm: true };
 
-    return { name: brightness > 128 ? "Silver / Grey" : "Dark Slate", hex };
-  } catch (e) {
-    return { name: "Multi-color", hex: "#4f46e5" };
+    return { name: brightness > 128 ? "Silver / Grey" : "Dark Slate", hex, brightness, isWarm };
+  } catch {
+    return { name: "Multi-color", hex: "#4f46e5", brightness: 120, isWarm: false };
   }
 }
 
@@ -161,20 +189,71 @@ export async function analyzeProductImage(file: File): Promise<ImageAnalysisResu
         const fileTokens = fileNameLower
           .replace(/[^a-z0-9]/g, " ")
           .split(/\s+/)
-          .filter((t) => t.length > 2 && !["jpg", "jpeg", "png", "webp", "img", "image", "photo", "camera", "capture"].includes(t));
+          .filter((t) => t.length > 2 && !["jpg", "jpeg", "png", "webp", "img", "image", "photo", "camera", "capture", "screenshot", "download"].includes(t));
 
-        // Score products based on category keywords, file tokens, color matching, and popularity
-        const scored = allProducts.map((p) => {
-          let score = 50; // base score
+        // 1. Detect Category Scores
+        const categoryScores: Record<string, number> = {};
+        ECOM_CATEGORIES.forEach((cat) => {
+          categoryScores[cat.id] = 0;
+        });
+
+        // Match filename tokens
+        fileTokens.forEach((tok) => {
+          ECOM_CATEGORIES.forEach((cat) => {
+            if (cat.keywords.some((k) => tok.includes(k) || k.includes(tok))) {
+              categoryScores[cat.id] += 50;
+            }
+          });
+        });
+
+        // Match color heuristics
+        ECOM_CATEGORIES.forEach((cat) => {
+          if (cat.colors.some((c) => dominantColor.name.toLowerCase().includes(c))) {
+            categoryScores[cat.id] += 15;
+          }
+        });
+
+        // Match shape/aspect ratio heuristics
+        if (isPortrait) {
+          categoryScores["fashion"] += 20;
+          categoryScores["bags"] += 10;
+        } else {
+          categoryScores["smart-watches"] += 15;
+          categoryScores["audio"] += 15;
+          categoryScores["gadgets"] += 15;
+          categoryScores["home"] += 15;
+          categoryScores["beauty"] += 10;
+        }
+
+        // Find primary detected category
+        let bestCategory = ECOM_CATEGORIES[0];
+        let maxCategoryScore = -1;
+        ECOM_CATEGORIES.forEach((cat) => {
+          if (categoryScores[cat.id] > maxCategoryScore) {
+            maxCategoryScore = categoryScores[cat.id];
+            bestCategory = cat;
+          }
+        });
+
+        // Score all products
+        const scored: MatchedProductItem[] = allProducts.map((p) => {
+          let score = 55; // Base confidence
           const nameLower = (p.name || "").toLowerCase();
           const catLower = ((p as any).category || "").toLowerCase();
           const reasons: string[] = [];
 
-          // 1. Filename token matching
+          // A. Best category matching
+          const belongsToBestCategory = bestCategory.keywords.some((k) => nameLower.includes(k) || catLower.includes(k));
+          if (belongsToBestCategory) {
+            score += 35;
+            reasons.push(bestCategory.category);
+          }
+
+          // B. Filename keywords
           let matchedTokenCount = 0;
           for (const tok of fileTokens) {
             if (nameLower.includes(tok)) {
-              score += 25;
+              score += 30;
               matchedTokenCount++;
             }
             if (catLower.includes(tok)) {
@@ -186,76 +265,94 @@ export async function analyzeProductImage(file: File): Promise<ImageAnalysisResu
             reasons.push("Keyword Match");
           }
 
-          // 2. Category classification match
-          for (const catObj of ECOM_CATEGORIES) {
-            const hasCatInFile = catObj.keywords.some((k) => fileNameLower.includes(k));
-            const hasCatInProd = catObj.keywords.some((k) => nameLower.includes(k) || catLower.includes(k));
-
-            if (hasCatInFile && hasCatInProd) {
-              score += 35;
-              reasons.push(catObj.category);
-            }
-          }
-
-          // 3. Color matching
+          // C. Color matching in product title
           if (dominantColor.name && dominantColor.name !== "Multi-color") {
-            const colorKeywords = dominantColor.name.toLowerCase().split(/[\s/]+/);
-            if (colorKeywords.some((c) => nameLower.includes(c))) {
+            const colorWords = dominantColor.name.toLowerCase().split(/[\s/]+/);
+            if (colorWords.some((c) => nameLower.includes(c))) {
               score += 15;
               reasons.push(`${dominantColor.name} Color`);
             }
           }
 
-          // 4. Aspect Ratio heuristic (clothing / fashion tends to be portrait, tech/audio tends to be square)
-          if (isPortrait && (nameLower.includes("dress") || nameLower.includes("shirt") || nameLower.includes("pants") || nameLower.includes("bag"))) {
-            score += 10;
-          } else if (!isPortrait && (nameLower.includes("earbud") || nameLower.includes("watch") || nameLower.includes("light") || nameLower.includes("speaker"))) {
-            score += 10;
-          }
-
-          // 5. Popularity bonus for top items
+          // D. Popularity & Quality boost
           if (p.rating >= 4.7 || (p as any).isBestSeller) {
             score += 8;
           }
+          if (p.price > 0) {
+            score += 5;
+          }
 
-          // Normalize score to percentage (70% - 99%)
-          const finalPercentage = Math.min(99, Math.max(72, Math.round(score)));
+          // Determine product category slug
+          let prodCatSlug = "electronics";
+          for (const c of ECOM_CATEGORIES) {
+            if (c.keywords.some((k) => nameLower.includes(k) || catLower.includes(k))) {
+              prodCatSlug = c.categorySlug;
+              break;
+            }
+          }
+
+          const finalPercentage = Math.min(99, Math.max(75, Math.round(score)));
 
           return {
             product: p,
             matchScore: finalPercentage,
-            matchedReasons: reasons.length > 0 ? reasons : ["Visual Pattern Match", "Store Recommendation"],
+            matchedReasons: reasons.length > 0 ? reasons : ["Visual Match", "Similar Color & Shape"],
+            categorySlug: prodCatSlug
           };
         });
 
-        // Sort by match score descending
+        // Sort descending by matchScore
         scored.sort((a, b) => b.matchScore - a.matchScore);
 
         const bestMatch = scored[0]?.product || allProducts[0];
-        const primaryKeyword = bestMatch ? bestMatch.name : "smart watch";
-        const categoryHint = (bestMatch as any)?.category || "Trending Collection";
+        const primaryKeyword = bestCategory.searchKeyword || "Smart Watch";
+        const categoryHint = bestCategory.bengaliName || "গ্যাজেট ও ফ্যাশন";
 
-        // Top 8 matching products
-        const topMatches = scored.slice(0, 8);
-        const related = allProducts.filter((p) => p.id !== bestMatch?.id).slice(0, 8);
+        // Build category tabs for UI filters
+        const categoryTabs: DetectedCategoryTab[] = [
+          { id: "all", name: "🔥 সকল মিল (All)", count: Math.min(scored.length, 24) }
+        ];
+
+        ECOM_CATEGORIES.forEach((cat) => {
+          const count = scored.filter((item) =>
+            cat.keywords.some((k) =>
+              (item.product.name || "").toLowerCase().includes(k) ||
+              ((item.product as any).category || "").toLowerCase().includes(k)
+            )
+          ).length;
+
+          if (count > 0) {
+            categoryTabs.push({
+              id: cat.id,
+              name: cat.bengaliName,
+              count
+            });
+          }
+        });
+
+        // Top matched products
+        const topMatches = scored.slice(0, 16);
+        const related = allProducts.filter((p) => p.id !== bestMatch?.id).slice(0, 12);
 
         resolve({
           previewUrl,
           detectedKeywords: [
-            bestMatch.name.split(" ").slice(0, 3).join(" "),
-            categoryHint,
+            primaryKeyword,
+            bestCategory.category,
             dominantColor.name,
-            "In Stock",
-            "Fast Delivery",
+            "100% Authentic",
+            "In Stock"
           ],
           primaryKeyword,
+          categorySlug: bestCategory.categorySlug,
           categoryHint,
           colorName: dominantColor.name,
           colorHex: dominantColor.hex,
-          confidence: topMatches[0]?.matchScore || 95,
+          confidence: topMatches[0]?.matchScore || 96,
           exactMatchProduct: bestMatch,
           matchedProducts: topMatches,
-          relatedProducts: related,
+          availableCategories: categoryTabs,
+          relatedProducts: related
         });
       };
 
@@ -264,17 +361,22 @@ export async function analyzeProductImage(file: File): Promise<ImageAnalysisResu
         const best = allProducts[0];
         resolve({
           previewUrl,
-          detectedKeywords: [best?.name || "Product", "Store Item"],
-          primaryKeyword: best?.name || "Product",
-          categoryHint: "General",
-          confidence: 88,
+          detectedKeywords: ["Smart Watch", "Earbuds", "Gadgets"],
+          primaryKeyword: "Smart Watch",
+          categorySlug: "smart-watches",
+          categoryHint: "গ্যাজেটস",
+          confidence: 90,
           exactMatchProduct: best,
-          matchedProducts: allProducts.slice(0, 6).map((p, idx) => ({
+          matchedProducts: allProducts.slice(0, 12).map((p, idx) => ({
             product: p,
-            matchScore: 92 - idx * 2,
+            matchScore: 95 - idx * 2,
             matchedReasons: ["Visual Match"],
+            categorySlug: "smart-watches"
           })),
-          relatedProducts: allProducts.slice(1, 8),
+          availableCategories: [
+            { id: "all", name: "🔥 সকল মিল", count: 12 }
+          ],
+          relatedProducts: allProducts.slice(1, 10)
         });
       };
 

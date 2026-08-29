@@ -1,11 +1,61 @@
+# Googlebot and standard crawler directives for Durtup.shop
 User-agent: *
-Disallow: /admin
-Disallow: /admin/
-Disallow: /admin/*
-Disallow: /nahid/
 Allow: /
+Allow: /product/
+Allow: /products/
+Allow: /category/
+Allow: /categories/
+Allow: /flash-sale
+Allow: /new-arrivals
+Allow: /free-shipping
+Allow: /about
+Allow: /contact
+Allow: /help
+Allow: /shipping
+Allow: /returns
+Allow: /privacy
+Allow: /terms
+Allow: /seller
+
+# Allow critical static assets for complete rendering & Core Web Vitals
 Allow: /favicon.ico
 Allow: /favicon*.png
 Allow: /icon-*.png
 Allow: /apple-touch-icon*.png
 Allow: /manifest.json
+Allow: /*.js$
+Allow: /*.css$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.webp$
+Allow: /*.svg$
+
+# Disallow private user, checkout, administrative, and duplicate facet paths
+Disallow: /admin/
+Disallow: /admin*
+Disallow: /staff/
+Disallow: /staff*
+Disallow: /seller/dashboard
+Disallow: /seller/orders
+Disallow: /seller/settings
+Disallow: /account
+Disallow: /profile
+Disallow: /cart
+Disallow: /checkout
+Disallow: /payment/callback
+Disallow: /orders
+Disallow: /wishlist
+Disallow: /wallet
+Disallow: /vouchers
+Disallow: /notifications
+Disallow: /messages
+Disallow: /search
+Disallow: /search?*
+Disallow: /api/
+Disallow: /*?*filter=
+Disallow: /*?*minPrice=
+Disallow: /*?*maxPrice=
+
+# XML Sitemap Index
+Sitemap: https://durtup.shop/sitemap.xml

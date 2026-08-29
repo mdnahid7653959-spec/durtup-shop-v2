@@ -137,40 +137,53 @@ export function SmartSearchBar({
 
   const showDropdown =
     open && (hasQuery ? true : rows.length > 0);
-  // Mobile: tap opens dedicated /search page for a richer experience + 1-tap Camera search
+  // Mobile: tap opens dedicated /search page for a richer experience + 1-tap Camera search INSIDE bar
   if (variant === "mobile") {
     return (
-      <div className={cn("w-full flex items-center gap-1.5", className)}>
-        <button
-          type="button"
-          onClick={() => {
-            onNavigate?.();
-            navigate("/search");
-          }}
-          aria-label="Open search"
-          className="flex-1 h-10 pl-3.5 pr-2 flex items-center gap-2 rounded-full bg-background/95 border border-border/60 shadow-lg shadow-black/5 text-left active:scale-[0.99] transition min-w-0"
-        >
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-          <span className="flex-1 min-w-0 truncate text-[13px] text-muted-foreground/70">
-            {placeholder}
-          </span>
-          <span
-            aria-hidden
-            className="h-7 w-7 grid place-items-center rounded-full bg-primary text-primary-foreground shrink-0"
+      <div className={cn("w-full relative", className)}>
+        <div className="h-10 pl-3.5 pr-1.5 flex items-center gap-1.5 rounded-full bg-background/95 border border-border/60 shadow-md text-left transition min-w-0">
+          <button
+            type="button"
+            onClick={() => {
+              onNavigate?.();
+              navigate("/search");
+            }}
+            className="flex-1 flex items-center gap-2 min-w-0 text-left cursor-text"
+            aria-label="Open search"
+          >
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+            <span className="flex-1 min-w-0 truncate text-[13px] text-muted-foreground/70">
+              {placeholder}
+            </span>
+          </button>
+
+          {/* Camera Button INSIDE Search Bar */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setImageSearchOpen(true);
+            }}
+            aria-label="Search with image"
+            title="ছবি দিয়ে খুঁজুন (Search with image)"
+            className="h-8 w-8 grid place-items-center rounded-full text-primary hover:bg-primary/10 active:scale-90 transition-all shrink-0 cursor-pointer"
+          >
+            <Camera className="h-4 w-4" />
+          </button>
+
+          {/* Search Action Button */}
+          <button
+            type="button"
+            onClick={() => {
+              onNavigate?.();
+              navigate("/search");
+            }}
+            aria-label="Search"
+            className="h-7 w-7 grid place-items-center rounded-full bg-primary text-primary-foreground shrink-0 shadow-sm active:scale-95 transition cursor-pointer"
           >
             <Search className="h-3.5 w-3.5" />
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setImageSearchOpen(true)}
-          aria-label="Search with image"
-          title="ছবি দিয়ে খুঁজুন (Search with image)"
-          className="h-10 w-10 grid place-items-center rounded-full bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border border-primary/25 shrink-0 transition-all active:scale-95 shadow-sm"
-        >
-          <Camera className="h-4 w-4" />
-        </button>
+          </button>
+        </div>
 
         <ImageSearchModal
           open={imageSearchOpen}

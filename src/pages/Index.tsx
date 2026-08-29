@@ -12,6 +12,7 @@ import { ProductSection } from "@/components/home/ProductSection";
 import { PersonalizedFeed } from "@/components/home/PersonalizedFeed";
 import { Flame, Sparkles, TrendingUp, ThumbsUp, Clock } from "lucide-react";
 import { InfiniteProductFeed } from "@/components/home/InfiniteProductFeed";
+import { SEOHead } from "@/components/SEOHead";
 
 
 const CJTrendingProducts = lazy(() => import("@/components/home/CJTrendingProducts").then(m => ({ default: m.CJTrendingProducts })));
@@ -284,6 +285,12 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="Durtup.shop - Online Shopping in Bangladesh | Best Deals & Fast Delivery"
+        description="Discover millions of electronics, fashion, smart watches, earbuds and lifestyle products at best prices in Bangladesh. Enjoy Cash on Delivery, genuine warranty, and fast home delivery at Durtup.shop."
+        url="https://durtup.shop"
+        type="website"
+      />
       <Header />
       <main className="flex-1 pb-20 md:pb-0">
         {isError && (

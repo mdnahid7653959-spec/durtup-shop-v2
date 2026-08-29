@@ -12,9 +12,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
 import { ProductZoomViewer } from "@/components/products/ProductZoomViewer";
-// BDT conversion rate with profit margin
+import { SEOHead } from "@/components/SEOHead";
+import { generateProductSEOTitle, generateProductSEODescription, DEFAULT_BANGLADESH_PRODUCT_FAQS } from "@/utils/seoHelper";
+// BDT conversion rate with direct API price
 const USD_TO_BDT = 120;
-const PROFIT_MARGIN = 1.3; // 30% margin
+const PROFIT_MARGIN = 1.0; // Exact API conversion (0% margin)
 
 interface CJProductVariant {
   variantId: string;
@@ -248,6 +250,34 @@ export default function CJProductDetail() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
+      <SEOHead
+        title={generateProductSEOTitle({ name: product.nameEn || product.name, price: currentBdtPrice })}
+        description={generateProductSEODescription({ name: product.nameEn || product.name, description: product.descriptionEn || product.description, price: currentBdtPrice })}
+        image={images[0]}
+        url={`https://durtup.shop/product/cj/${product.id}`}
+        type="product"
+        product={{
+          id: product.id,
+          name: product.nameEn || product.name,
+          slug: `cj/${product.id}`,
+          short_description: product.descriptionEn || product.description,
+          description: product.descriptionEn || product.description,
+          regular_price: originalBdtPrice,
+          discount_price: currentBdtPrice,
+          price: currentBdtPrice,
+          stock_quantity: 50,
+          brand: "International Direct",
+          category: "CJ Products",
+          image: images[0],
+          images: images,
+        }}
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "CJ Products", url: "/products/cj" },
+          { name: product.nameEn || product.name, url: `/product/cj/${product.id}` }
+        ]}
+        faqs={DEFAULT_BANGLADESH_PRODUCT_FAQS}
+      />
       <Header />
       <main className="flex-1 pb-44 md:pb-8 overflow-x-hidden">
         <div className="w-full max-w-full px-3 sm:px-6 lg:container py-3 sm:py-6 overflow-x-hidden">

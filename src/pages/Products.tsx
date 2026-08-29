@@ -131,8 +131,14 @@ export default function Products() {
   return (
     <div className="min-h-screen flex flex-col bg-background overflow-hidden">
       <SEOHead 
-        title={`${pageHeading} - MegaMart`}
-        description="Browse our wide selection of products at the best prices."
+        title={`${pageHeading} in Bangladesh | Durtup.shop`}
+        description={`Explore ${pageHeading} online at Durtup.shop. Best prices in Bangladesh, Cash on Delivery, genuine quality, and fast home delivery.`}
+        url={hasFilters ? undefined : "https://durtup.shop/products"}
+        noindex={Boolean(params.search || (hasFilters && (minPrice || maxPrice)))}
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Products", url: "/products" }
+        ]}
       />
       <Header />
       <main className="flex-1 max-w-full overflow-hidden">

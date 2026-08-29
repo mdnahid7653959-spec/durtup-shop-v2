@@ -49,9 +49,9 @@ const selected = rawData.slice(0, 120).map((p, idx) => {
   const rawPrice = parseFloat(p.price) || parseFloat(p.sale_price) || 0;
   const rawRegularPrice = parseFloat(p.regular_price) || 0;
 
-  // Margin calculation: same as calculateProductPrice (+160 TK fixed profit margin)
-  let price = Math.round(rawPrice + 160);
-  let originalPrice = rawRegularPrice > price ? Math.round(rawRegularPrice) : Math.round(price * 1.35);
+  // Direct exact API price without profit margin
+  let price = Math.round(rawPrice);
+  let originalPrice = rawRegularPrice > price ? Math.round(rawRegularPrice) : undefined;
 
   return {
     id: String(p.id || `seed-${idx}`),

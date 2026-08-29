@@ -9,26 +9,31 @@ export interface PricingMarginConfig {
 }
 
 export const DEFAULT_PRICING_MARGIN_CONFIG: PricingMarginConfig = {
-  enabled: true, // Margin active
+  enabled: false, // Margin disabled by default (direct API prices)
   type: 'fixed', // Fixed amount ৳
-  marginValue: 160, // ৳160 added to every product
-  regularPriceMarkupPercent: 35,
+  marginValue: 0, // ৳0 profit margin added (exact API price)
+  regularPriceMarkupPercent: 0,
   roundTo99: false,
 };
 
-const STORAGE_KEY = "darzo_pricing_margin_config_v3";
+const STORAGE_KEY = "darzo_pricing_margin_config_v4";
 
 export function getPricingMarginConfig(): PricingMarginConfig {
   if (typeof window === "undefined") return DEFAULT_PRICING_MARGIN_CONFIG;
   try {
+    // Clear legacy cache keys with old 160 margin if any
+    localStorage.removeItem("darzo_pricing_margin_config_v3");
+    localStorage.removeItem("darzo_pricing_margin_config_v2");
+    localStorage.removeItem("darzo_pricing_margin_config_v1");
+
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
         enabled: Boolean(parsed.enabled),
         type: parsed.type === 'percentage' ? 'percentage' : 'fixed',
-        marginValue: Number(parsed.marginValue) !== undefined && !isNaN(Number(parsed.marginValue)) ? Number(parsed.marginValue) : 160,
-        regularPriceMarkupPercent: Number(parsed.regularPriceMarkupPercent) || 35,
+        marginValue: Number(parsed.marginValue) !== undefined && !isNaN(Number(parsed.marginValue)) ? Number(parsed.marginValue) : 0,
+        regularPriceMarkupPercent: Number(parsed.regularPriceMarkupPercent) || 0,
         roundTo99: Boolean(parsed.roundTo99),
       };
     }
@@ -69,9 +74,10 @@ export function calculateProductPrice(
   let regPrice = 0;
   if (rawRegularPrice && rawRegularPrice > finalPrice) {
     regPrice = Math.round(rawRegularPrice);
+  } else if (cfg.regularPriceMarkupPercent > 0) {
+    regPrice = Math.round(finalPrice * (1 + cfg.regularPriceMarkupPercent / 100));
   } else {
-    const markupPct = cfg.regularPriceMarkupPercent > 0 ? cfg.regularPriceMarkupPercent : 35;
-    regPrice = Math.round(finalPrice * (1 + markupPct / 100));
+    regPrice = finalPrice;
   }
 
   return {
@@ -89,7 +95,10 @@ export async function savePricingMarginConfig(newConfig: PricingMarginConfig): P
       // Invalidate existing caches so prices recalculate everywhere
       localStorage.removeItem("mohasagor_products_master_cache_v11");
       localStorage.removeItem("mohasagor_products_master_cache_v12");
+      localStorage.removeItem("mohasagor_products_master_cache_v13");
       localStorage.removeItem("mohasagor_cached_home_products_v5");
+      localStorage.removeItem("mohasagor_cached_home_products_v11");
+      localStorage.removeItem("mohasagor_cached_home_products_v12");
       window.dispatchEvent(new CustomEvent("pricing_margin_updated", { detail: newConfig }));
     }
 
@@ -118,9 +127,9 @@ export async function syncPricingMarginFromDb(): Promise<PricingMarginConfig> {
     if (data && data.value) {
       const cfg: PricingMarginConfig = {
         enabled: Boolean(data.value.enabled),
-        type: data.value.type === 'fixed' ? 'fixed' : 'percentage',
+        type: data.value.type === 'percentage' ? 'percentage' : 'fixed',
         marginValue: Number(data.value.marginValue) || 0,
-        regularPriceMarkupPercent: Number(data.value.regularPriceMarkupPercent) || 35,
+        regularPriceMarkupPercent: Number(data.value.regularPriceMarkupPercent) || 0,
         roundTo99: Boolean(data.value.roundTo99),
       };
       if (typeof window !== "undefined") {

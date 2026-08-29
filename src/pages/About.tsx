@@ -1,29 +1,39 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SEOHead } from "@/components/SEOHead";
 import { Building2, Users, Globe, Award, Target, Heart } from "lucide-react";
 
 const stats = [
-  { label: "Products", value: "10M+" },
-  { label: "Customers", value: "50M+" },
-  { label: "Countries", value: "200+" },
-  { label: "Sellers", value: "100K+" },
+  { label: "Products", value: "100K+" },
+  { label: "Happy Customers", value: "50K+" },
+  { label: "Districts Covered", value: "64/64" },
+  { label: "Verified Sellers", value: "500+" },
 ];
 
 const values = [
   { icon: Target, title: "Customer First", desc: "Every decision we make starts with our customers in mind" },
-  { icon: Award, title: "Quality Assured", desc: "We partner only with trusted sellers and brands" },
-  { icon: Heart, title: "Community Driven", desc: "Building a global community of shoppers and sellers" },
+  { icon: Award, title: "Quality Assured", desc: "We partner only with trusted suppliers and genuine brands" },
+  { icon: Heart, title: "Fast Delivery & COD", desc: "Reliable Cash on Delivery across all 64 districts in Bangladesh" },
 ];
 
 export default function About() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="About Us - Durtup.shop | Bangladesh's Modern E-Commerce Platform"
+        description="Learn about Durtup.shop, Bangladesh's trusted e-commerce marketplace offering millions of quality products with fast home delivery and cash on delivery."
+        url="https://durtup.shop/about"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "About Us", url: "/about" },
+        ]}
+      />
       <Header />
       <main className="flex-1">
-        <div className="bg-gradient-to-r from-primary to-orange-500 text-white py-20">
+        <div className="bg-gradient-to-r from-primary to-orange-500 text-white py-16 sm:py-20">
           <div className="container text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">About MegaMart</h1>
-            <p className="text-xl opacity-90 max-w-2xl mx-auto">Connecting millions of buyers and sellers around the world</p>
+            <h1 className="text-3xl md:text-5xl font-extrabold mb-4">About Durtup.shop</h1>
+            <p className="text-base sm:text-xl opacity-90 max-w-2xl mx-auto">Connecting millions of shoppers with top quality products across Bangladesh</p>
           </div>
         </div>
 
@@ -33,7 +43,7 @@ export default function About() {
             {stats.map((stat) => (
               <div key={stat.label} className="bg-card border rounded-xl p-6 text-center shadow-lg">
                 <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                <p className="text-muted-foreground">{stat.label}</p>
+                <p className="text-muted-foreground text-xs sm:text-sm mt-1">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -45,16 +55,13 @@ export default function About() {
             <div>
               <h2 className="text-3xl font-bold mb-6">Our Story</h2>
               <p className="text-muted-foreground mb-4">
-                Founded in 2020, MegaMart started with a simple mission: make global shopping accessible to everyone. 
-                We believed that great products shouldn't be limited by borders.
+                Durtup.shop started with a simple mission: make online shopping fast, reliable, and accessible for everyone in Bangladesh.
               </p>
               <p className="text-muted-foreground mb-4">
-                Today, we're one of the world's largest online marketplaces, connecting millions of buyers with 
-                hundreds of thousands of sellers across 200+ countries.
+                Today, we provide shoppers across all 64 districts in Bangladesh with genuine tech gadgets, smart watches, fashion, and home lifestyle products with 100% Cash on Delivery and dedicated customer support.
               </p>
               <p className="text-muted-foreground">
-                Our platform offers everything from electronics and fashion to home goods and beyond, 
-                all at competitive prices with reliable shipping worldwide.
+                Our platform offers cutting-edge AI search, instant 3-second checkout, and doorstep fulfillment with trusted courier partners.
               </p>
             </div>
             <div className="bg-gradient-to-br from-primary/20 to-orange-500/20 rounded-2xl p-8 flex items-center justify-center">
