@@ -408,6 +408,10 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
                       sold_count: Number(p.sold_count || 45),
                       in_stock: Number(p.stock_quantity ?? p.stock ?? 50) > 0,
                       status: p.status || "active",
+                      is_flash_sale: Boolean(p.is_flash_sale || p.isFlashSale),
+                      is_new_arrival: Boolean(p.is_new_arrival || p.isNew),
+                      is_best_seller: Boolean(p.is_best_seller || p.isBestSeller),
+                      is_featured: Boolean(p.is_featured || p.isFeatured),
                       short_description: p.short_description || p.shortDescription || "",
                       description: p.description || ""
                     });
@@ -451,6 +455,10 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
                 sold_count: Number(p.sold_count || 45),
                 in_stock: Number(p.stock_quantity ?? 50) > 0,
                 status: p.status || "active",
+                is_flash_sale: Boolean(p.is_flash_sale || p.isFlashSale),
+                is_new_arrival: Boolean(p.is_new_arrival || p.isNew),
+                is_best_seller: Boolean(p.is_best_seller || p.isBestSeller),
+                is_featured: Boolean(p.is_featured || p.isFeatured),
                 short_description: p.short_description || "",
                 description: p.description || ""
               });
@@ -766,13 +774,20 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
         const rawImage = p.image || primaryImage || firstImage || defaultImages[0];
         const image = getSmartProductImage(p.name, rawImage);
 
+        const hasExplicitDiscount = p.discount_price && Number(p.regular_price) > Number(p.discount_price);
+        const origP = hasExplicitDiscount
+          ? parseFloat(p.regular_price)
+          : p.originalPrice
+          ? parseFloat(p.originalPrice)
+          : undefined;
+
         scoredProducts.push({
           id: p.id,
           name: p.name,
           slug: p.slug || `product-${p.id}`,
           image,
           price: parseFloat(p.discount_price || p.regular_price || p.price) || 0,
-          originalPrice: p.discount_price ? parseFloat(p.regular_price) : undefined,
+          originalPrice: origP,
           rating: Number(p.rating_average) || 4.8,
           reviews: p.rating_count || 15,
           sold: p.sold_count || 40,
@@ -781,9 +796,10 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
           sellerId: p.seller_id,
           sellerName: p.seller_name,
           sku: p.sku,
-          isNew: p.is_new_arrival ?? false,
-          isBestSeller: p.is_best_seller ?? false,
-          isFeatured: p.is_featured ?? false,
+          isNew: Boolean(p.is_new_arrival ?? p.isNew ?? false),
+          isBestSeller: Boolean(p.is_best_seller ?? p.isBestSeller ?? false),
+          isFeatured: Boolean(p.is_featured ?? p.isFeatured ?? false),
+          isFlashSale: Boolean(p.is_flash_sale ?? p.isFlashSale ?? false),
           inStock: p.in_stock !== false,
           score,
           matchType

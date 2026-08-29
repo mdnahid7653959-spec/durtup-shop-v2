@@ -30,6 +30,7 @@ export interface SearchProductResult {
   isNew?: boolean;
   isBestSeller?: boolean;
   isFeatured?: boolean;
+  isFlashSale?: boolean;
   inStock?: boolean;
   score: number;
   matchType: "exact" | "sku" | "semantic" | "synonym" | "prefix" | "partial" | "fuzzy";

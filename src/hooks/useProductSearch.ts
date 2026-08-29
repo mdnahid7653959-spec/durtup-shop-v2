@@ -119,7 +119,7 @@ async function searchProducts(params: SearchParams) {
   } else if (params.filter === "new") {
     query = query.eq("is_new_arrival", true);
   } else if (params.filter === "flash-sale") {
-    query = query.eq("is_flash_sale", true);
+    query = query.or("is_flash_sale.eq.true,discount_price.not.is.null,is_best_seller.eq.true");
   } else if (params.filter === "free-shipping") {
     query = query.eq("free_shipping", true);
   }

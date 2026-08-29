@@ -350,6 +350,31 @@ export default function Products() {
                 </Button>
               </div>
 
+              {/* Flash Sale Exciting Deal Banner */}
+              {currentFilter === "flash-sale" && (
+                <div className="mb-5 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-red-600 via-orange-600 to-amber-500 text-white shadow-lg relative overflow-hidden animate-in fade-in duration-200">
+                  <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+                  <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-black tracking-wide uppercase flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 animate-spin" /> Limited Time Event
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-yellow-400 text-slate-950 text-[11px] font-black tracking-wide uppercase">
+                          UP TO 50% OFF
+                        </span>
+                      </div>
+                      <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                        ⚡ Flash Sale & Mega Deals
+                      </h2>
+                      <p className="text-xs sm:text-sm text-white/90 font-medium">
+                        সেরা সব ট্রেন্ডিং গ্যাজেট ও লাইফস্টাইল প্রডাক্টে সীমিত সময়ের বিশাল মূল্যছাড়!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Visual Search Active Banner */}
               {searchParams.get("visualSearch") === "true" && (
                 <div className="mb-4 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-primary/10 via-orange-500/10 to-amber-500/10 border border-primary/25 flex items-center justify-between gap-3 flex-wrap animate-in fade-in duration-200">
