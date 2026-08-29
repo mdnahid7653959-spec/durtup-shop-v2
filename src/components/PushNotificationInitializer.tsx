@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { db } from '@/integrations/firebase/client';
 import { collection, query, orderBy, limit, onSnapshot, doc, setDoc } from 'firebase/firestore';
-import { sendBrowserNotification, playNewOrderSound, unlockAudio } from '@/hooks/useAdminOrderNotifications';
-import { Bell, X, ExternalLink, Sparkles } from 'lucide-react';
+import { sendBrowserNotification, playNewOrderSound } from '@/hooks/useAdminOrderNotifications';
+import { X, ExternalLink, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface BroadcastPayload {
@@ -15,7 +15,6 @@ interface BroadcastPayload {
 
 export const PushNotificationInitializer: React.FC = () => {
   const navigate = useNavigate();
-  const [showSoftPrompt, setShowSoftPrompt] = useState(false);
   const [activeBroadcast, setActiveBroadcast] = useState<BroadcastPayload | null>(null);
   const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -60,19 +59,6 @@ export const PushNotificationInitializer: React.FC = () => {
     };
 
     registerDeviceToken();
-
-    // Soft prompt for permission on mobile & desktop if not yet answered
-    if (
-      typeof window !== 'undefined' &&
-      'Notification' in window &&
-      Notification.permission === 'default'
-    ) {
-      const dismissed = sessionStorage.getItem('durtup_notif_prompt_dismissed');
-      if (!dismissed) {
-        const timer = setTimeout(() => setShowSoftPrompt(true), 2500);
-        return () => clearTimeout(timer);
-      }
-    }
   }, []);
 
   // 2. Real-time broadcast notification listener (User phone push notifications sent by Admin)
@@ -141,31 +127,6 @@ export const PushNotificationInitializer: React.FC = () => {
       console.warn('[PushNotificationInitializer] Broadcast listener setup error:', e);
     }
   }, []);
-
-  const handleEnableNotifications = async () => {
-    unlockAudio();
-    setShowSoftPrompt(false);
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      try {
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') {
-          playNewOrderSound();
-          sendBrowserNotification('🎉 নোটিফিকেশন চালু হয়েছে!', {
-            body: 'ধন্যবাদ! এখন থেকে যেকোনো অফার ও ফ্ল্যাশ সেল সরাসরি আপনার ফোনের স্ক্রিনে পৌঁছে যাবে।',
-            product_image: '/icon-512.png',
-            data: { url: '/' }
-          });
-        }
-      } catch (e) {
-        console.warn('Permission request error:', e);
-      }
-    }
-  };
-
-  const handleDismissPrompt = () => {
-    setShowSoftPrompt(false);
-    sessionStorage.setItem('durtup_notif_prompt_dismissed', 'true');
-  };
 
   const handleBroadcastClick = () => {
     if (activeBroadcast?.action_url) {
@@ -238,43 +199,6 @@ export const PushNotificationInitializer: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* 2. Soft Permission Request Banner (Prompt to enable mobile notifications) */}
-      {showSoftPrompt && !activeBroadcast && (
-        <div className="fixed top-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-96 z-50 bg-card border border-primary/30 rounded-2xl p-3.5 shadow-2xl shadow-primary/10 flex items-start gap-3 animate-in slide-in-from-top-4 duration-300">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shrink-0 shadow-md">
-            <Bell className="w-5 h-5 animate-bounce" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="text-xs sm:text-sm font-bold text-foreground leading-tight">
-              অফার ও ডিসকাউন্ট নোটিফিকেশন 🔔
-            </h4>
-            <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
-              সেরা ডিল এবং নতুন অফার সবার আগে আপনার ফোনে পেতে নোটিফিকেশন অন করুন।
-            </p>
-            <div className="flex items-center gap-2 mt-2.5">
-              <button
-                onClick={handleEnableNotifications}
-                className="px-3 py-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-lg shadow-sm hover:opacity-95 active:scale-95 transition-all cursor-pointer"
-              >
-                অনুমতি দিন (Allow)
-              </button>
-              <button
-                onClick={handleDismissPrompt}
-                className="px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-              >
-                পরে (Later)
-              </button>
-            </div>
-          </div>
-          <button
-            onClick={handleDismissPrompt}
-            className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
       )}
     </>

@@ -1,8 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
 import { 
   Home, 
-  Shapes, 
   LayoutGrid, 
+  ShoppingBag, 
   ShoppingCart, 
   Package, 
   User, 
@@ -19,17 +19,19 @@ import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 const iconMap: Record<string, LucideIcon> = {
   home: Home,
-  category: Shapes,
-  categories: Shapes,
+  category: LayoutGrid,
+  categories: LayoutGrid,
   grid: LayoutGrid,
   "layout-grid": LayoutGrid,
-  shapes: Shapes,
+  shapes: LayoutGrid,
   "shopping-cart": ShoppingCart,
-  cart: ShoppingCart,
+  cart: ShoppingBag,
+  bag: ShoppingBag,
   package: Package,
   orders: Package,
   user: User,
   account: User,
+  profile: User,
   heart: Heart,
   wishlist: Heart,
   search: Search,
@@ -74,15 +76,25 @@ export function MobileBottomNav() {
 
   return (
     <div 
-      className="md:hidden fixed bottom-2.5 left-0 right-0 z-50 pointer-events-none px-4 transition-all duration-300"
-      style={{ bottom: "max(env(safe-area-inset-bottom, 0px) + 6px, 10px)" }}
+      className="md:hidden fixed bottom-3 left-0 right-0 z-50 pointer-events-none px-3.5 flex justify-center transition-all duration-300"
+      style={{ bottom: "max(env(safe-area-inset-bottom, 0px) + 8px, 12px)" }}
     >
       <nav 
         aria-label="Mobile Navigation"
-        className="pointer-events-auto max-w-[330px] sm:max-w-[350px] mx-auto bg-white/92 dark:bg-slate-950/92 backdrop-blur-2xl border border-slate-200/80 dark:border-slate-800/80 rounded-full shadow-[0_8px_28px_-6px_rgba(0,0,0,0.15),0_2px_8px_-2px_rgba(0,0,0,0.06)] px-1.5 py-0.5 ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
+        className={cn(
+          "pointer-events-auto relative w-full max-w-[390px]",
+          "rounded-[26px] p-1.5",
+          // Premium solid-glass with high opacity for crystal readability
+          "bg-white/95 dark:bg-slate-900/95",
+          "backdrop-blur-xl backdrop-saturate-150",
+          // Subtle high-definition border & elevation shadow
+          "border border-slate-200/90 dark:border-slate-800",
+          "shadow-[0_12px_32px_-4px_rgba(0,0,0,0.12),0_4px_12px_-2px_rgba(0,0,0,0.04)]",
+          "dark:shadow-[0_14px_36px_-4px_rgba(0,0,0,0.6)]"
+        )}
       >
         <div 
-          className="grid h-[42px] items-center" 
+          className="grid h-[52px] items-center gap-1" 
           style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}
         >
           {tabs.map((tab) => {
@@ -98,38 +110,38 @@ export function MobileBottomNav() {
                 to={tab.href}
                 aria-label={tab.label}
                 className={cn(
-                  "flex flex-col items-center justify-center relative touch-manipulation py-0.5 px-1 rounded-full transition-all duration-200 active:scale-90 select-none group",
+                  "flex flex-col items-center justify-center relative touch-manipulation h-full py-1.5 px-1 rounded-[18px] transition-all duration-200 active:scale-95 select-none group",
                   isActive 
-                    ? "text-orange-600 font-bold" 
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    ? "text-orange-600 dark:text-orange-500 font-semibold" 
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 )}
               >
-                {/* Micro active background indicator pill */}
+                {/* Active Pill Highlight */}
                 {isActive && (
-                  <span className="absolute inset-0.5 bg-orange-500/[0.09] dark:bg-orange-500/20 rounded-full -z-0 animate-in fade-in zoom-in-95 duration-150" />
+                  <span className="absolute inset-0.5 rounded-[18px] bg-orange-500/10 dark:bg-orange-500/20 border border-orange-500/15 dark:border-orange-500/30 animate-in fade-in zoom-in-95 duration-150" />
                 )}
 
                 <div className="relative z-10 flex items-center justify-center">
                   <IconComp 
                     className={cn(
-                      "h-[17px] w-[17px] transition-all duration-200",
+                      "h-[21px] w-[21px] transition-all duration-200",
                       isActive 
-                        ? "stroke-[2.3] text-orange-600 scale-105" 
-                        : "stroke-[1.7] opacity-80 group-hover:opacity-100"
+                        ? "stroke-[2.3] text-orange-600 dark:text-orange-500 scale-105" 
+                        : "stroke-[1.85] text-slate-500 dark:text-slate-400 group-hover:scale-105"
                     )} 
                   />
                   
                   {badgeCount > 0 && (
-                    <span className="absolute -top-1 -right-2.5 min-w-[13px] h-[13px] rounded-full bg-orange-600 text-white text-[8.5px] font-black flex items-center justify-center px-0.5 shadow-sm shadow-orange-600/30 animate-in zoom-in-50 duration-150">
+                    <span className="absolute -top-1.5 -right-3 min-w-[18px] h-[18px] rounded-full bg-gradient-to-r from-red-500 to-rose-600 text-white text-[10px] font-bold flex items-center justify-center px-1 border-2 border-white dark:border-slate-900 shadow-sm animate-in zoom-in-50 duration-150">
                       {badgeCount > 99 ? "99+" : badgeCount}
                     </span>
                   )}
                 </div>
 
                 <span className={cn(
-                  "text-[9px] leading-tight tracking-tight transition-colors z-10 mt-0.5",
+                  "text-[10.5px] leading-tight tracking-tight transition-all duration-200 z-10 mt-1",
                   isActive 
-                    ? "text-orange-600 font-bold" 
+                    ? "text-orange-600 dark:text-orange-500 font-bold" 
                     : "text-slate-500 dark:text-slate-400 font-medium"
                 )}>
                   {tab.label}
