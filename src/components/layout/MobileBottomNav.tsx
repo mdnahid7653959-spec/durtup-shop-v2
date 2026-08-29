@@ -134,8 +134,8 @@ export function MobileBottomNav() {
 
   return (
     <div 
-      className="md:hidden fixed bottom-3 left-0 right-0 z-50 pointer-events-none px-3.5 flex justify-center transition-all duration-300"
-      style={{ bottom: "max(env(safe-area-inset-bottom, 0px) + 8px, 12px)" }}
+      className="md:hidden fixed bottom-1 left-0 right-0 z-50 pointer-events-none px-2.5 flex justify-center transition-all duration-300"
+      style={{ bottom: "max(env(safe-area-inset-bottom, 0px) + 2px, 4px)" }}
     >
       <nav 
         aria-label="Mobile Navigation"
