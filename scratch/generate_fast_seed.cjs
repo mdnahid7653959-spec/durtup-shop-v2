@@ -22,20 +22,51 @@ if (!rawData || rawData.length === 0) {
 
 console.log("Total raw items:", rawData.length);
 
-// Select top 120 items with clean fields
-const selected = rawData.slice(0, 120).map((p, idx) => {
-  const base = "https://mohasagor.com.bd";
-  const resolveUrl = (url) => {
-    if (!url || typeof url !== "string") return "";
-    const trimmed = url.trim();
-    if (!trimmed) return "";
-    if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
-      return trimmed;
-    }
-    if (trimmed.startsWith("//")) return `https:${trimmed}`;
-    return trimmed.startsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
-  };
+const base = "https://mohasagor.com.bd";
+const resolveUrl = (url) => {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("//")) return `https:${trimmed}`;
+  return trimmed.startsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
+};
 
+// Filter valid items with proper image and non-zero price
+const validProducts = rawData.filter(p => {
+  const price = parseFloat(p.price) || parseFloat(p.sale_price) || 0;
+  const hasImg = p.thumbnail_img || p.image || p.thumbnail || p.image_url || (Array.isArray(p.product_images) && p.product_images.length > 0);
+  return price > 0 && hasImg && p.name && p.name.trim().length > 3;
+});
+
+// Group by category to interleave and provide an ultra-diverse, attractive feed
+const byCat = {};
+validProducts.forEach(p => {
+  const cat = p.category || 'Gadgets & Electronics';
+  if (!byCat[cat]) byCat[cat] = [];
+  byCat[cat].push(p);
+});
+
+const cats = Object.keys(byCat);
+const selectedRaw = [];
+let round = 0;
+let added = true;
+
+while (selectedRaw.length < 180 && added) {
+  added = false;
+  for (const c of cats) {
+    if (byCat[c][round]) {
+      selectedRaw.push(byCat[c][round]);
+      added = true;
+      if (selectedRaw.length >= 180) break;
+    }
+  }
+  round++;
+}
+
+const selected = selectedRaw.map((p, idx) => {
   let img = "";
   if (p.thumbnail_img) img = resolveUrl(p.thumbnail_img);
   else if (p.image) img = resolveUrl(p.image);
@@ -62,9 +93,9 @@ const selected = rawData.slice(0, 120).map((p, idx) => {
     originalPrice: originalPrice > price ? originalPrice : undefined,
     rating: Number(p.rating || p.rating_average || 4.8),
     reviews: Number(p.reviews || p.rating_count || 18),
-    sold: parseInt(p.sold) || parseInt(p.sold_count) || (30 + (idx * 7) % 200),
+    sold: parseInt(p.sold) || parseInt(p.sold_count) || (45 + (idx * 11) % 250),
     freeShipping: true,
-    isNew: idx < 24,
+    isNew: idx % 3 === 0,
     isBestSeller: idx % 4 === 0,
     category: p.category || ""
   };
@@ -83,4 +114,5 @@ export const FAST_SEED_PRODUCTS: (Product & { [key: string]: any })[] = ${JSON.s
 
 const targetPath = path.join(dir, 'fastSeedCatalog.ts');
 fs.writeFileSync(targetPath, fileContent, 'utf8');
-console.log("Written", selected.length, "seed products to", targetPath);
+console.log("Written", selected.length, "diverse, attractive seed products to", targetPath);
+

@@ -205,65 +205,51 @@ function mapSupplierProduct(p: any, index: number): Product {
 }
 
 function buildSections(products: Product[]) {
-  // 5-Minute Time Block Rotation Seed (changes automatically every 300,000ms)
-  const timeBlock = Math.floor(Date.now() / (5 * 60 * 1000));
   const total = products.length;
-
-  if (total > 0) {
-    const shift = (timeBlock * 6) % total;
-    const rotated = [...products.slice(shift), ...products.slice(0, shift)];
-
-    // Deduplicate so that once a product is assigned to a section, it is excluded from others
-    const assignedIds = new Set<string>();
-    const getUniqueSlice = (count: number): Product[] => {
-      const slice: Product[] = [];
-      for (const p of rotated) {
-        if (slice.length >= count) break;
-        if (!assignedIds.has(p.id)) {
-          assignedIds.add(p.id);
-          slice.push(p);
-        }
-      }
-      return slice;
-    };
-
-    const latestProducts = getUniqueSlice(12);
-    const flashSale = getUniqueSlice(6).map(p => ({ ...p, is_flash_sale: true }));
-    const featured = getUniqueSlice(12).map(p => ({ ...p, is_featured: true }));
-    const newArrivals = getUniqueSlice(12);
-    const trending = getUniqueSlice(6);
-    const recommended = getUniqueSlice(12);
-
+  if (total === 0) {
     return {
-      latestProducts,
-      flashSale,
-      featured,
-      newArrivals,
-      trending,
-      recommended,
+      latestProducts: [],
+      flashSale: [],
+      featured: [],
+      newArrivals: [],
+      trending: [],
+      recommended: [],
     };
   }
 
+  // 5-Minute Time Block Rotation Seed (changes automatically every 300,000ms)
+  const timeBlock = Math.floor(Date.now() / (5 * 60 * 1000));
+  const shift = (timeBlock * 6) % total;
+  const rotated = [...products.slice(shift), ...products.slice(0, shift)];
+
+  // Deduplicate so that once a product is assigned to a section, it is excluded from others
   const assignedIds = new Set<string>();
-  const getUniqueSlice = (arr: Product[], count: number): Product[] => {
+  const getUniqueSlice = (count: number, modifier?: (p: Product) => Product): Product[] => {
     const slice: Product[] = [];
-    for (const p of arr) {
+    for (const p of rotated) {
       if (slice.length >= count) break;
       if (!assignedIds.has(p.id)) {
         assignedIds.add(p.id);
-        slice.push(p);
+        slice.push(modifier ? modifier(p) : p);
       }
     }
     return slice;
   };
 
+  const flashSale = getUniqueSlice(6, (p) => ({ ...p, is_flash_sale: true }));
+  const trending = getUniqueSlice(12, (p) => ({ ...p, isBestSeller: true }));
+  const featured = getUniqueSlice(12, (p) => ({ ...p, is_featured: true }));
+  const newArrivals = getUniqueSlice(12, (p) => ({ ...p, isNew: true }));
+  const latestProducts = getUniqueSlice(12);
+  const recommended = getUniqueSlice(18);
+
   return {
-    latestProducts: getUniqueSlice(products, 12),
-    flashSale: getUniqueSlice(products, 6).map(p => ({ ...p, is_flash_sale: true })),
-    featured: getUniqueSlice(products, 12).map(p => ({ ...p, is_featured: true })),
-    newArrivals: getUniqueSlice(products, 12),
-    trending: getUniqueSlice(products, 6),
-    recommended: getUniqueSlice(products, 12),
+    latestProducts,
+    flashSale,
+    featured,
+    newArrivals,
+    trending,
+    recommended,
   };
 }
 
