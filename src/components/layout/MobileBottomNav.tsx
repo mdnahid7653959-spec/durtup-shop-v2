@@ -74,15 +74,15 @@ export function MobileBottomNav() {
 
   return (
     <div 
-      className="md:hidden fixed bottom-3.5 left-3.5 right-3.5 z-50 pointer-events-none transition-all duration-300"
-      style={{ bottom: "max(env(safe-area-inset-bottom, 0px), 14px)" }}
+      className="md:hidden fixed bottom-2.5 left-0 right-0 z-50 pointer-events-none px-4 transition-all duration-300"
+      style={{ bottom: "max(env(safe-area-inset-bottom, 0px) + 6px, 10px)" }}
     >
       <nav 
         aria-label="Mobile Navigation"
-        className="pointer-events-auto max-w-md mx-auto bg-white/95 dark:bg-card/95 backdrop-blur-xl border-2 border-primary/90 dark:border-primary/80 rounded-full shadow-[0_12px_32px_-4px_rgba(0,0,0,0.18),0_4px_12px_-2px_rgba(0,0,0,0.08)] px-2 py-1 transition-all"
+        className="pointer-events-auto max-w-[330px] sm:max-w-[350px] mx-auto bg-white/92 dark:bg-slate-950/92 backdrop-blur-2xl border border-slate-200/80 dark:border-slate-800/80 rounded-full shadow-[0_8px_28px_-6px_rgba(0,0,0,0.15),0_2px_8px_-2px_rgba(0,0,0,0.06)] px-1.5 py-0.5 ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
       >
         <div 
-          className="grid h-[54px] items-center" 
+          className="grid h-[42px] items-center" 
           style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}
         >
           {tabs.map((tab) => {
@@ -98,31 +98,39 @@ export function MobileBottomNav() {
                 to={tab.href}
                 aria-label={tab.label}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 relative touch-manipulation py-1 rounded-full transition-all duration-200 active:scale-95",
+                  "flex flex-col items-center justify-center relative touch-manipulation py-0.5 px-1 rounded-full transition-all duration-200 active:scale-90 select-none group",
                   isActive 
-                    ? "text-primary font-semibold" 
-                    : "text-slate-600 dark:text-slate-300 hover:text-foreground font-medium"
+                    ? "text-orange-600 font-bold" 
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
-                <div className="relative flex items-center justify-center">
+                {/* Micro active background indicator pill */}
+                {isActive && (
+                  <span className="absolute inset-0.5 bg-orange-500/[0.09] dark:bg-orange-500/20 rounded-full -z-0 animate-in fade-in zoom-in-95 duration-150" />
+                )}
+
+                <div className="relative z-10 flex items-center justify-center">
                   <IconComp 
                     className={cn(
-                      "h-5 w-5 transition-all duration-200",
+                      "h-[17px] w-[17px] transition-all duration-200",
                       isActive 
-                        ? "stroke-[2.2] scale-105" 
-                        : "stroke-[1.8] opacity-85 hover:opacity-100"
+                        ? "stroke-[2.3] text-orange-600 scale-105" 
+                        : "stroke-[1.7] opacity-80 group-hover:opacity-100"
                     )} 
                   />
                   
                   {badgeCount > 0 && (
-                    <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1 shadow-sm animate-in zoom-in-50 duration-200">
+                    <span className="absolute -top-1 -right-2.5 min-w-[13px] h-[13px] rounded-full bg-orange-600 text-white text-[8.5px] font-black flex items-center justify-center px-0.5 shadow-sm shadow-orange-600/30 animate-in zoom-in-50 duration-150">
                       {badgeCount > 99 ? "99+" : badgeCount}
                     </span>
                   )}
                 </div>
+
                 <span className={cn(
-                  "text-[11px] leading-tight tracking-tight select-none transition-colors",
-                  isActive ? "text-primary font-semibold" : "text-slate-600 dark:text-slate-300"
+                  "text-[9px] leading-tight tracking-tight transition-colors z-10 mt-0.5",
+                  isActive 
+                    ? "text-orange-600 font-bold" 
+                    : "text-slate-500 dark:text-slate-400 font-medium"
                 )}>
                   {tab.label}
                 </span>
