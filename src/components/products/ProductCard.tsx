@@ -175,7 +175,7 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
       <div className="p-2.5 pt-0 mt-1">
         <button
           onClick={handleBuyNow}
-          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm py-2 px-3 rounded-lg flex items-center justify-center shadow-sm active:scale-[0.98] transition-all cursor-pointer"
+          className="w-full water-droplet-btn water-droplet-primary font-bold text-xs sm:text-sm py-2 px-3 flex items-center justify-center cursor-pointer active:scale-[0.96] transition-all"
         >
           Order Now
         </button>

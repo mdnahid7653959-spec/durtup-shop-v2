@@ -190,7 +190,7 @@ export default function Wishlist() {
                       <div className="mt-3 pt-2 border-t flex flex-col gap-1.5">
                         <Button
                           size="sm"
-                          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold shadow-sm h-8"
+                          className="w-full text-xs font-bold h-8"
                           onClick={() => handleOrderNow(item)}
                           disabled={addingId === item.product_id}
                         >

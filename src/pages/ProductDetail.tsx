@@ -1395,7 +1395,7 @@ export default function ProductDetail() {
                     {addingToCart ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <ShoppingCart className="h-5 w-5 mr-2" />}
                     Add to Cart
                   </Button>
-                  <Button size="lg" className="flex-1 h-12 sm:h-14 text-sm sm:text-base md:text-lg bg-gradient-to-r from-primary to-warning hover:opacity-90 shadow-lg shadow-primary/30 rounded-xl font-bold" onClick={handleBuyNow} disabled={buyingNow}>
+                  <Button size="lg" className="flex-1 h-12 sm:h-14 text-sm sm:text-base md:text-lg font-bold" onClick={handleBuyNow} disabled={buyingNow}>
                     {buyingNow ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Zap className="h-5 w-5 mr-2" />}
                     Buy Now
                   </Button>
@@ -1650,7 +1650,7 @@ export default function ProductDetail() {
               {/* Buy Now */}
               <Button
                 size="sm"
-                className="flex-1 h-10 px-2 text-xs font-bold rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md shadow-orange-500/25 active:scale-[0.98]"
+                className="flex-1 h-10 px-2 text-xs font-bold rounded-xl active:scale-[0.98]"
                 onClick={handleBuyNow}
                 disabled={buyingNow}
               >

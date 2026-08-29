@@ -179,7 +179,7 @@ export function SmartSearchBar({
               navigate("/search");
             }}
             aria-label="Search"
-            className="h-7 w-7 grid place-items-center rounded-full bg-primary text-primary-foreground shrink-0 shadow-sm active:scale-95 transition cursor-pointer"
+            className="h-8 w-8 grid place-items-center rounded-full water-droplet-btn water-droplet-primary shrink-0 shadow-md active:scale-90 transition cursor-pointer"
           >
             <Search className="h-3.5 w-3.5" />
           </button>

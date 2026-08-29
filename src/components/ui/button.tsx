@@ -5,25 +5,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-bold ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 water-droplet-btn",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg active:scale-[0.98]",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-md",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        hero: "gradient-primary text-primary-foreground font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]",
-        sale: "bg-sale text-sale-foreground font-semibold shadow-md hover:bg-sale/90",
+        default: "water-droplet-primary shadow-md active:scale-[0.96]",
+        hero: "water-droplet-primary text-base shadow-lg hover:shadow-orange-500/40 hover:scale-[1.03] active:scale-[0.96]",
+        sale: "water-droplet-sale shadow-md active:scale-[0.96]",
+        destructive: "water-droplet-sale shadow-md active:scale-[0.96]",
+        outline: "water-droplet-crystal border-slate-200/90 dark:border-white/20 active:scale-[0.96]",
+        secondary: "water-droplet-crystal active:scale-[0.96]",
+        ghost: "!rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-foreground !backdrop-blur-none !shadow-none !border-none before:!hidden after:!hidden",
+        link: "text-primary underline-offset-4 hover:underline !rounded-none !shadow-none !border-none !backdrop-blur-none before:!hidden after:!hidden",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-12 rounded-lg px-8 text-base",
-        xl: "h-14 rounded-xl px-10 text-lg",
-        icon: "h-10 w-10",
+        default: "h-10 px-5 py-2 rounded-full",
+        sm: "h-8.5 rounded-full px-3.5 text-xs",
+        lg: "h-12 rounded-full px-8 text-base",
+        xl: "h-14 rounded-full px-10 text-lg",
+        icon: "h-10 w-10 rounded-full",
       },
     },
     defaultVariants: {

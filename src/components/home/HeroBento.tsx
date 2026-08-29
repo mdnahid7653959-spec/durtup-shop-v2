@@ -436,17 +436,17 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
                 </div>
               </div>
 
-              {/* Glowing CTA Button */}
-              <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#ff8a00] via-[#ff6a00] to-[#f24e00] text-white px-2.5 sm:px-3.5 py-0.5 sm:py-1 rounded-full shadow-lg shadow-orange-500/25 border border-white/50 group-hover:scale-105 transition-transform">
+              {/* Glowing Water Droplet CTA Button */}
+              <div className="inline-flex items-center gap-1.5 water-droplet-btn water-droplet-primary px-2.5 sm:px-3.5 py-0.5 sm:py-1 rounded-full group-hover:scale-105 transition-transform">
                 <div className="flex flex-col text-left leading-none">
-                  <span className="text-[7px] sm:text-[8px] font-black italic text-amber-200 uppercase tracking-wider">
+                  <span className="text-[7px] sm:text-[8px] font-black italic text-orange-600 uppercase tracking-wider">
                     FLASH SALE
                   </span>
-                  <span className="text-[8px] sm:text-[10px] font-black text-white uppercase tracking-wider">
+                  <span className="text-[8px] sm:text-[10px] font-black text-slate-900 uppercase tracking-wider">
                     SHOP NOW
                   </span>
                 </div>
-                <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-300 fill-cyan-300/30" />
+                <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-orange-600 fill-orange-500/20" />
               </div>
             </div>
           </Link>

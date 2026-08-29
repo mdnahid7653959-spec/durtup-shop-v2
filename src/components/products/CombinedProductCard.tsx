@@ -171,7 +171,8 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
           <div className="mt-3">
             <Button
               size="sm"
-              className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm py-2 rounded-lg shadow-sm active:scale-[0.98] transition-all"
+              variant="default"
+              className="w-full text-xs sm:text-sm py-2"
               onClick={handleBuyNow}
             >
               Order Now
