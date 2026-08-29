@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   Home, 
@@ -111,6 +112,26 @@ export function MobileBottomNav() {
 
   const effectiveActiveIndex = activeIndex >= 0 ? activeIndex : 0;
 
+  // Real liquid physics animation state (stretch on move, bounce on settle)
+  const [isSliding, setIsSliding] = useState(false);
+  const [slideDir, setSlideDir] = useState<"left" | "right" | "none">("none");
+  const prevIndexRef = useRef(effectiveActiveIndex);
+
+  useEffect(() => {
+    if (prevIndexRef.current !== effectiveActiveIndex) {
+      const dir = effectiveActiveIndex > prevIndexRef.current ? "right" : "left";
+      setSlideDir(dir);
+      setIsSliding(true);
+      prevIndexRef.current = effectiveActiveIndex;
+
+      const timer = setTimeout(() => {
+        setIsSliding(false);
+        setSlideDir("none");
+      }, 420);
+      return () => clearTimeout(timer);
+    }
+  }, [effectiveActiveIndex]);
+
   return (
     <div 
       className="md:hidden fixed bottom-3 left-0 right-0 z-50 pointer-events-none px-3.5 flex justify-center transition-all duration-300"
@@ -121,50 +142,75 @@ export function MobileBottomNav() {
         className={cn(
           "pointer-events-auto relative w-full max-w-[390px]",
           "rounded-[26px] p-1.5",
-          // Premium solid-glass with high opacity for crystal readability
+          // Premium solid base dock with crystal blur
           "bg-white/95 dark:bg-slate-900/95",
           "backdrop-blur-xl backdrop-saturate-150",
-          // Subtle high-definition border & elevation shadow
+          // Refined border and elevation shadow
           "border border-slate-200/90 dark:border-slate-800",
-          "shadow-[0_12px_32px_-4px_rgba(0,0,0,0.12),0_4px_12px_-2px_rgba(0,0,0,0.04)]",
+          "shadow-[0_12px_32px_-4px_rgba(0,0,0,0.14),0_4px_12px_-2px_rgba(0,0,0,0.04)]",
           "dark:shadow-[0_14px_36px_-4px_rgba(0,0,0,0.6)]"
         )}
       >
-        {/* Specular gloss top reflection beam */}
+        {/* Specular gloss top reflection beam on the dock */}
         <div className="absolute inset-x-8 top-0 h-[1px] bg-gradient-to-r from-transparent via-white dark:via-white/30 to-transparent pointer-events-none opacity-90" />
 
-        {/* ── Realistic Liquid Water Droplet Sliding Indicator (পানির ফোঁটা) ── */}
+        {/* ── Hyper-Realistic Pure Crystal Water Droplet (আসল স্ফটিক স্বচ্ছ পানির ফোঁটা) ── */}
         {activeIndex !== -1 && (
           <div
-            className="absolute top-1.5 bottom-1.5 pointer-events-none transition-all duration-350 ease-[cubic-bezier(0.34,1.4,0.64,1)] z-0"
+            className={cn(
+              "absolute top-1.5 bottom-1.5 pointer-events-none z-0",
+              // Ultra-smooth fluid spring glide
+              "transition-transform duration-400 ease-[cubic-bezier(0.34,1.45,0.64,1)]"
+            )}
             style={{
               width: `calc((100% - 12px) / ${tabs.length})`,
               left: "6px",
               transform: `translateX(${effectiveActiveIndex * 100}%)`,
             }}
           >
-            <div className="w-full h-full p-0.5">
+            <div 
+              className={cn(
+                "w-full h-full p-0.5 transition-transform duration-300",
+                // Liquid droplet elastic deformation when sliding
+                isSliding && slideDir === "right" && "scale-x-[1.14] scale-y-[0.88] origin-left",
+                isSliding && slideDir === "left" && "scale-x-[1.14] scale-y-[0.88] origin-right",
+                !isSliding && "scale-100"
+              )}
+            >
               <div 
                 className={cn(
-                  "w-full h-full rounded-[20px] relative overflow-hidden",
-                  // Fluid water gradient
-                  "bg-gradient-to-b from-orange-500/20 via-orange-500/10 to-amber-500/25",
-                  "dark:from-orange-500/30 dark:via-orange-500/15 dark:to-amber-500/30",
-                  // Water droplet meniscus edge
-                  "border border-orange-500/40 dark:border-orange-400/50",
-                  // Specular liquid highlights and refraction
-                  "shadow-[0_4px_14px_rgba(249,115,22,0.22),inset_0_2px_4px_rgba(255,255,255,0.9),inset_0_-2px_4px_rgba(249,115,22,0.2)]",
-                  "dark:shadow-[0_4px_16px_rgba(249,115,22,0.35),inset_0_2px_4px_rgba(255,255,255,0.35),inset_0_-2px_4px_rgba(249,115,22,0.3)]"
+                  "w-full h-full rounded-[21px] relative overflow-hidden",
+                  // Pure crystal water transparency / 3D liquid lens
+                  "bg-gradient-to-b from-white/80 via-white/25 to-white/60",
+                  "dark:from-white/30 dark:via-white/10 dark:to-white/25",
+                  "backdrop-blur-md",
+                  // Realistic water meniscus surface-tension border
+                  "border border-white/95 dark:border-white/60",
+                  // 3D Liquid refraction caustics, inner specular gloss, and drop shadow
+                  "shadow-[0_6px_20px_rgba(0,0,0,0.12),0_2px_6px_rgba(0,0,0,0.05),inset_0_3.5px_6px_rgba(255,255,255,1),inset_0_-2.5px_5px_rgba(0,0,0,0.06),inset_0_0_15px_rgba(255,255,255,0.9)]",
+                  "dark:shadow-[0_6px_22px_rgba(0,0,0,0.55),inset_0_3.5px_6px_rgba(255,255,255,0.5),inset_0_-2.5px_5px_rgba(0,0,0,0.3),inset_0_0_15px_rgba(255,255,255,0.25)]"
                 )}
               >
-                {/* Top specular curved glare (পানির ফোঁটার চকচকে রিফ্লেকশন) */}
-                <div className="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-[3.5px] bg-white/90 dark:bg-white/80 rounded-full blur-[0.2px] shadow-[0_0_3px_rgba(255,255,255,0.95)]" />
-                
-                {/* Subtle side sparkle */}
-                <div className="absolute top-1.5 right-2 w-1.5 h-1.5 bg-white/80 rounded-full blur-[0.2px]" />
+                {/* 1. Main Curved Top-Left Specular Glare (উপরের প্রধান চকচকে আলোর বক্ররেখা) */}
+                <div className="absolute top-1 left-2.5 w-7 h-[3px] bg-gradient-to-r from-white via-white to-white/70 rounded-full blur-[0.15px] shadow-[0_0_4px_rgba(255,255,255,1)]" />
 
-                {/* Bottom caustic refraction */}
-                <div className="absolute bottom-0.5 inset-x-2 h-[2px] bg-gradient-to-r from-transparent via-orange-400/40 to-transparent" />
+                {/* 2. Primary Micro Sparkle Dot (ডানপাশের প্রধান চকচকে আলোর বিন্দু) */}
+                <div className="absolute top-1.5 right-3 w-2 h-2 rounded-full bg-white shadow-[0_0_5px_#ffffff,0_0_2px_#ffffff]" />
+
+                {/* 3. Secondary Tiny Glint Dot (ডানপাশের ছোট আলোর স্ফুলিঙ্গ) */}
+                <div className="absolute top-3.5 right-2 w-1 h-1 rounded-full bg-white/95 shadow-[0_0_3px_#ffffff]" />
+
+                {/* 4. Left Rim Micro Light Reflection (বামপাশের প্রান্তিক আলোর রিফ্লেক্ট) */}
+                <div className="absolute top-3.5 left-1.5 w-[2px] h-3 bg-gradient-to-b from-white/90 to-transparent rounded-full blur-[0.2px]" />
+
+                {/* 5. Right Rim Micro Light Reflection (ডানপাশের প্রান্তিক আলোর রিফ্লেক্ট) */}
+                <div className="absolute top-4 right-1.5 w-[1.5px] h-2.5 bg-gradient-to-b from-white/80 to-transparent rounded-full blur-[0.2px]" />
+
+                {/* 6. Bottom Caustic Light Arc (নিচের প্রতিসরিত বাঁকানো আলোর ফোকাস) */}
+                <div className="absolute bottom-0.5 inset-x-3 h-[2px] bg-gradient-to-r from-transparent via-white to-transparent rounded-full blur-[0.3px] shadow-[0_0_4px_rgba(255,255,255,0.95)]" />
+
+                {/* 7. Bottom-Left Small Light Reflection Spot (নিচের ছোট উজ্জ্বল আলোর বিন্দু) */}
+                <div className="absolute bottom-1.5 left-4 w-2.5 h-[1.5px] bg-white/90 rounded-full blur-[0.2px] shadow-[0_0_3px_#ffffff]" />
               </div>
             </div>
           </div>
@@ -187,8 +233,8 @@ export function MobileBottomNav() {
                 className={cn(
                   "flex flex-col items-center justify-center relative touch-manipulation h-full py-1.5 px-1 rounded-[18px] transition-all duration-200 active:scale-90 select-none group",
                   isActive 
-                    ? "text-orange-600 dark:text-orange-500 font-semibold" 
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    ? "text-slate-900 dark:text-white font-bold" 
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
                 )}
               >
                 <div className="relative flex items-center justify-center">
@@ -196,7 +242,7 @@ export function MobileBottomNav() {
                     className={cn(
                       "h-[21px] w-[21px] transition-all duration-300",
                       isActive 
-                        ? "stroke-[2.3] text-orange-600 dark:text-orange-500 scale-105 drop-shadow-[0_2px_8px_rgba(249,115,22,0.3)]" 
+                        ? "stroke-[2.35] text-slate-900 dark:text-white scale-105 drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]" 
                         : "stroke-[1.85] text-slate-500 dark:text-slate-400 group-hover:scale-105"
                     )} 
                   />
@@ -211,7 +257,7 @@ export function MobileBottomNav() {
                 <span className={cn(
                   "text-[10.5px] leading-tight tracking-tight transition-all duration-200 mt-1",
                   isActive 
-                    ? "text-orange-600 dark:text-orange-500 font-bold drop-shadow-sm" 
+                    ? "text-slate-900 dark:text-white font-bold drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)] dark:drop-shadow-none" 
                     : "text-slate-500 dark:text-slate-400 font-medium"
                 )}>
                   {tab.label}
