@@ -1,14 +1,31 @@
 import { Link } from "react-router-dom";
 import { 
-  Facebook, Twitter, Instagram, Youtube,
+  Facebook, Instagram,
   CreditCard, Shield, Truck, Headphones,
   LucideIcon
 } from "lucide-react";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 
-const iconMap: Record<string, LucideIcon> = {
-  truck: Truck, shield: Shield, headphones: Headphones, "credit-card": CreditCard,
-  facebook: Facebook, twitter: Twitter, instagram: Instagram, youtube: Youtube,
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg 
+      className={className || "h-4 w-4"} 
+      viewBox="0 0 24 24" 
+      fill="currentColor"
+    >
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.298-.002.595.042.88.13V9.4a6.33 6.33 0 0 0-1-.08A6.34 6.34 0 0 0 3 15.66a6.34 6.34 0 0 0 10.82 4.5 6.3 6.3 0 0 0 1.86-4.49V8.78a8.21 8.21 0 0 0 4.91 1.62v-3.71z"/>
+    </svg>
+  );
+}
+
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  truck: Truck, 
+  shield: Shield, 
+  headphones: Headphones, 
+  "credit-card": CreditCard,
+  facebook: Facebook, 
+  instagram: Instagram, 
+  tiktok: TikTokIcon,
 };
 
 interface FooterLink { name: string; href: string; }
@@ -50,8 +67,9 @@ const defaultFooterConfig: FooterConfig = {
     { icon: "credit-card", title: "Easy Returns", desc: "30 days" },
   ],
   social_links: [
-    { platform: "facebook", url: "#" }, { platform: "twitter", url: "#" },
-    { platform: "instagram", url: "#" }, { platform: "youtube", url: "#" },
+    { platform: "facebook", url: "https://www.facebook.com/profile.php?id=61582125938251" },
+    { platform: "instagram", url: "https://www.instagram.com/durtup.shop/" },
+    { platform: "tiktok", url: "https://www.tiktok.com/@durtup.shop?is_from_webapp=1&sender_device=pc" },
   ],
   copyright: "© 2026 Durtup.shop. All rights reserved.",
   brand_description: "Your one-stop destination for millions of products at unbeatable prices. Shop with confidence worldwide.",
@@ -64,7 +82,9 @@ export function Footer() {
 
   const columns = config.columns?.length ? config.columns : defaultFooterConfig.columns;
   const trustBadges = config.trust_badges?.length ? config.trust_badges : defaultFooterConfig.trust_badges;
-  const socialLinks = config.social_links?.length ? config.social_links : defaultFooterConfig.social_links;
+  const socialLinks = (config.social_links?.length && config.social_links.some(s => s.url && s.url !== "#" && (s.platform === "facebook" || s.platform === "instagram" || s.platform === "tiktok")))
+    ? config.social_links
+    : defaultFooterConfig.social_links;
   const copyright = config.copyright || defaultFooterConfig.copyright;
   const brandDesc = config.brand_description || defaultFooterConfig.brand_description;
   const logoUrl = config.logo_url || defaultFooterConfig.logo_url;
@@ -110,11 +130,18 @@ export function Footer() {
               />
             </Link>
             <p className="text-muted-foreground mb-4 text-xs leading-relaxed max-w-xs">{brandDesc}</p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               {socialLinks.map((social, idx) => {
-                const Icon = iconMap[social.platform] || Facebook;
+                const Icon = iconMap[social.platform.toLowerCase()] || Facebook;
                 return (
-                  <a key={idx} href={social.url} className="w-10 h-10 rounded-full bg-card border flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors touch-manipulation press-scale">
+                  <a 
+                    key={idx} 
+                    href={social.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    aria-label={`Follow us on ${social.platform}`}
+                    className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 touch-manipulation hover:scale-105 shadow-sm"
+                  >
                     <Icon className="h-4 w-4" />
                   </a>
                 );

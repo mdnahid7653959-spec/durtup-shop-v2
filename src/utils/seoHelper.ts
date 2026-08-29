@@ -264,7 +264,9 @@ export function buildOrganizationJsonLd(): object {
       availableLanguage: ["Bangla", "English"],
     },
     sameAs: [
-      "https://facebook.com/durtupshop",
+      "https://www.facebook.com/profile.php?id=61582125938251",
+      "https://www.instagram.com/durtup.shop/",
+      "https://www.tiktok.com/@durtup.shop?is_from_webapp=1&sender_device=pc",
     ],
   };
 }
