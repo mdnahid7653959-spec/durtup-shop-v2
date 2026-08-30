@@ -752,11 +752,24 @@ export default function BuyerMessages() {
               e.preventDefault();
               handleSendMessage();
             }}
+            autoComplete="off"
+            role="search"
             className="flex items-center gap-2 bg-white/95 backdrop-blur-2xl p-1.5 rounded-full border border-sky-200 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),_0_6px_20px_rgba(14,165,233,0.18)]"
           >
             <input
               ref={inputRef}
-              type="text"
+              id="sigma-chat-query"
+              name="sigma_chat_query"
+              type="search"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              data-form-type="other"
+              data-lpignore="true"
+              data-1p-ignore="true"
+              inputMode="text"
+              enterKeyHint="send"
               value={inputValue}
               onFocus={() => {
                 window.scrollTo(0, 0);
