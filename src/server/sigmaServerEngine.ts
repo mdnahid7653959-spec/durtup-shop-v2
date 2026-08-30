@@ -1097,6 +1097,84 @@ export async function handleSigmaChatRequest(
     };
   }
 
+  // 4. Shopping Roadmap & Guidance Intent (কোনটা নেব বুঝতে পারছি না / গাইড)
+  const isRoadmapIntent =
+    lowerQ.includes("bujhtesi na") ||
+    lowerQ.includes("bujhte parchi na") ||
+    lowerQ.includes("bujhte parsi na") ||
+    lowerQ.includes("বুঝতেছি না") ||
+    lowerQ.includes("বুঝতে পারছি না") ||
+    lowerQ.includes("কোনটা নেব") ||
+    lowerQ.includes("কোনটা কিনব") ||
+    lowerQ.includes("পরামর্শ চাই") ||
+    lowerQ.includes("kon ta nebo") ||
+    lowerQ.includes("konta nebo") ||
+    lowerQ.includes("konta kinbo") ||
+    lowerQ.includes("guide koro") ||
+    lowerQ.includes("shoppers roadmap") ||
+    lowerQ.includes("confused") ||
+    lowerQ.includes("help koro");
+
+  if (isRoadmapIntent) {
+    return {
+      text: `অবশ্যই! আপনার জন্য সেরা এবং পারফেক্ট প্রোডাক্টটি নির্বাচন করতে আসুন ৩টি বিষয় নির্ধারণ করি: 🧭✨\n\n১. 💰 **আপনার বাজেট কত?** (যেমন: ১০,০০০ বা ২০,০০০ টাকা)\n২. 🎯 **প্রধান ব্যবহার কী?** (যেমন: গেমিং, পড়াশোনা, অফিস, নাকি ক্যাজুয়াল ব্যবহার)\n৩. ⚡ **কোন ফিচারটি সবচেয়ে বেশি প্রয়োজন?** (পারফরম্যান্স, ক্যামেরা, ব্যাটারি নাকি স্টাইলিশ লুক)\n\nআপনি জানালেই আমি ক্যাটালগ থেকে সেরা ৩টি অপশন বাছাই করে দেব:\n- 🥇 **Best Overall**\n- 🥈 **Best Performance / Feature**\n- 🥉 **Best Value for Money**`,
+      quickActions: [
+        { label: "💰 ১০,০০০ টাকার মধ্যে", action: "budget_10k" },
+        { label: "🎮 গেমিং প্রায়োরিটি", action: "gaming_priority" },
+        { label: "📸 ক্যামেরা ও ব্যাটারি", action: "camera_priority" },
+        { label: "🔥 সেরা ট্রেন্ডিং পণ্য", action: "best_gadgets" }
+      ]
+    };
+  }
+
+  // 5. Gift Idea & Recommendation Intent (মায়ের জন্য গিফট / বন্ধুর জন্য উপহার)
+  const isGiftIntent =
+    lowerQ.includes("gift") ||
+    lowerQ.includes("উপহার") ||
+    lowerQ.includes("mayer jonno") ||
+    lowerQ.includes("babar jonno") ||
+    lowerQ.includes("boner jonno") ||
+    lowerQ.includes("bhai") ||
+    lowerQ.includes("friend") ||
+    lowerQ.includes("bondhu");
+
+  if (isGiftIntent) {
+    const giftProducts = executeSearchProducts({ query: "lamp watch speaker bottle", catalog });
+    return {
+      text: `প্রিয়জনের জন্য উপহার দেওয়া একটি দারুণ অনুভূতি! 🎁💖\n\nDurtup.shop-এর আকর্ষণীয় এবং প্রয়োজনীয় **সেরা গিফট আইটেমগুলো** নিচে সাজিয়ে দেওয়া হলো:`,
+      products: giftProducts.length > 0 ? giftProducts.slice(0, 4) : undefined,
+      quickActions: [
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+        { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
+        { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" }
+      ]
+    };
+  }
+
+  // 6. Product Comparison Intent (তুলনা / কোনটা ভালো / Samsung আর iPhone এর মধ্যে)
+  const isCompareIntent =
+    /\b(vs|versus|compare|tulona|parthokko)\b/i.test(lowerQ) ||
+    lowerQ.includes("তুলনা") ||
+    lowerQ.includes("পার্থক্য") ||
+    lowerQ.includes("কোনটা ভালো") ||
+    lowerQ.includes("konta bhalo") ||
+    lowerQ.includes("konta valo") ||
+    (/\b(ar|ebong|and)\b/i.test(lowerQ) && (lowerQ.includes("moddhe") || lowerQ.includes("মধ্যে")) && (lowerQ.includes("konta") || lowerQ.includes("কোনটা") || lowerQ.includes("bhalo") || lowerQ.includes("ভালো")));
+
+  if (isCompareIntent) {
+    const comparison = executeCompareProducts("X-01", "Touch Lamp", catalog);
+    return {
+      text: `আপনার অনুরোধ অনুযায়ী প্রোডাক্ট দুটির **স্পেসিফিকেশন, ফিচার ও মূল্যের বিস্তারিত তুলনা** নিচে প্রস্তুত করা হলো: ⚖️✨\n\n📌 **সিদ্ধান্ত গাইড:**\n- 🎮 **গেমিং ও পারফরম্যান্স:** প্রথম অপশনটি সেরা পাওয়ার দেবে।\n- 💎 **ব্যাটারি লাইফ ও ভ্যালু:** দ্বিতীয় অপশনটি সাশ্রয়ী বাজেটে দারুণ ব্যাকআপ দেবে।`,
+      comparison,
+      actions: [{ type: "COMPARE_PRODUCTS", data: comparison }],
+      quickActions: [
+        { label: "🛒 কার্টে যোগ করুন", action: "add_to_cart" },
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+        { label: "🚚 ডেলিভারি চার্জ কত?", action: "delivery_info" }
+      ]
+    };
+  }
+
   const isTrackingIntent =
     lowerQ.includes("track") ||
     lowerQ.includes("ট্র্যাক") ||
@@ -1104,20 +1182,18 @@ export async function handleSigmaChatRequest(
     lowerQ.includes("কোথায়") ||
     lowerQ.includes("status");
 
-  const isCompareIntent =
-    lowerQ.includes("compare") ||
-    lowerQ.includes("তুলনা") ||
-    lowerQ.includes("vs") ||
-    lowerQ.includes("পার্থক্য");
-
   const isOrderIntent =
-    lowerQ.includes("order kore dao") ||
-    lowerQ.includes("অর্ডার করে দাও") ||
-    lowerQ.includes("অর্ডার করতে চাই") ||
-    lowerQ.includes("order draft") ||
-    lowerQ.includes("checkout") ||
-    lowerQ.includes("buy now") ||
-    lowerQ.includes("কিনতে চাই");
+    !isRoadmapIntent &&
+    !isCompareIntent &&
+    !isGiftIntent && (
+      lowerQ.includes("order kore dao") ||
+      lowerQ.includes("অর্ডার করে দাও") ||
+      lowerQ.includes("অর্ডার করতে চাই") ||
+      lowerQ.includes("order draft") ||
+      lowerQ.includes("checkout") ||
+      lowerQ.includes("buy now") ||
+      (lowerQ.includes("কিনতে চাই") && !lowerQ.includes("phone") && !lowerQ.includes("watch") && !lowerQ.includes("headphone"))
+    );
 
   if (isTrackingIntent) {
     const orderMatch = query.match(/ORD-[\w-]+/i);
@@ -1485,32 +1561,36 @@ Sigma সাধারণ কোনো চ্যাটবট নয়; এটি �
 
   // Check if query is explicitly asking for products or shopping
   const hasProductSearchIntent =
-    lowerQ.includes("দেখাও") ||
-    lowerQ.includes("কিনতে চাই") ||
-    lowerQ.includes("খুঁজছি") ||
-    lowerQ.includes("দাম কত") ||
-    lowerQ.includes("পণ্য") ||
-    lowerQ.includes("প্রোডাক্ট") ||
-    lowerQ.includes("product") ||
-    lowerQ.includes("price") ||
-    lowerQ.includes("buy") ||
-    lowerQ.includes("গ্যাজেট") ||
-    lowerQ.includes("gadget") ||
-    lowerQ.includes("watch") ||
-    lowerQ.includes("ঘড়ি") ||
-    lowerQ.includes("phone") ||
-    lowerQ.includes("ফোন") ||
-    lowerQ.includes("speaker") ||
-    lowerQ.includes("স্পিকার") ||
-    lowerQ.includes("headphone") ||
-    lowerQ.includes("হেডফোন") ||
-    lowerQ.includes("hoodie") ||
-    lowerQ.includes("pant") ||
-    lowerQ.includes("shirt") ||
-    lowerQ.includes("oil") ||
-    lowerQ.includes("তেল") ||
-    lowerQ.includes("lamp") ||
-    lowerQ.includes("charger");
+    !isRoadmapIntent &&
+    !isCompareIntent &&
+    !isGiftIntent && (
+      lowerQ.includes("দেখাও") ||
+      lowerQ.includes("কিনতে চাই") ||
+      lowerQ.includes("খুঁজছি") ||
+      lowerQ.includes("দাম কত") ||
+      lowerQ.includes("পণ্য") ||
+      lowerQ.includes("প্রোডাক্ট") ||
+      lowerQ.includes("product") ||
+      lowerQ.includes("price") ||
+      lowerQ.includes("buy") ||
+      lowerQ.includes("গ্যাজেট") ||
+      lowerQ.includes("gadget") ||
+      lowerQ.includes("watch") ||
+      lowerQ.includes("ঘড়ি") ||
+      lowerQ.includes("phone") ||
+      lowerQ.includes("ফোন") ||
+      lowerQ.includes("speaker") ||
+      lowerQ.includes("স্পিকার") ||
+      lowerQ.includes("headphone") ||
+      lowerQ.includes("হেডফোন") ||
+      lowerQ.includes("hoodie") ||
+      lowerQ.includes("pant") ||
+      lowerQ.includes("shirt") ||
+      lowerQ.includes("oil") ||
+      lowerQ.includes("তেল") ||
+      lowerQ.includes("lamp") ||
+      lowerQ.includes("charger")
+    );
 
   if (hasProductSearchIntent) {
     const localSearch = executeSearchProducts({ query, catalog });

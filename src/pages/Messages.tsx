@@ -174,12 +174,13 @@ export default function BuyerMessages() {
       : `হাই! আমি **Sigma** — Durtup.shop-এর অফিসিয়াল Personal Shopping Manager (Powered by Durtup.shop)।\n\nআমাদের স্টোরের প্রোডাক্ট খোঁজা, পণ্যের স্পেক্স তুলনা করা, কার্টে যোগ বা যেকোনো অর্ডারে সহায়তা পেতে আমাকে লিখুন অথবা ছবি আপলোড করুন:`,
     timestamp: "Just now",
     quickActions: [
-      { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
       { label: "🔥 সেরা গ্যাজেট দেখাও", action: "best_gadgets" },
+      { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+      { label: "💰 কম বাজেটের প্রোডাক্ট", action: "budget_search" },
+      { label: "⚖️ প্রোডাক্ট তুলনা করুন", action: "compare_products" },
+      { label: "🎁 উপহার আইডিয়া", action: "gift_finder" },
       { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
-      { label: "💵 ক্যাশ অন ডেলিভারি ও পেমেন্ট", action: "payment_info" },
-      { label: "🔄 ৭ দিনের রিটার্ন ও রিফান্ড", action: "return_policy" },
-      { label: "📦 অর্ডার ট্র্যাক করার নিয়ম", action: "track_order" },
+      { label: "💵 ক্যাশ অন ডেলিভারি নিয়ম", action: "payment_info" },
     ],
   };
 

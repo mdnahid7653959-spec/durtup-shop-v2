@@ -167,10 +167,51 @@ export async function askSigmaAIAgent(
   ) {
     return {
       text: `আপনাকে অনেক অনেক ধন্যবাদ! ❤️\n\nযেকোনো প্রোডাক্টের তথ্য, ওয়ারেন্টি বা অর্ডার সংক্রান্ত প্রয়োজনে আমি সবসময় আছি। আর কিছু কি জানতে চান?`,
+  // C2. Shopping Roadmap & Guidance Intent (কোনটা নেব বুঝতে পারছি না / গাইড)
+  if (
+    q.includes("bujhtesi na") ||
+    q.includes("bujhte parchi na") ||
+    q.includes("bujhte parsi na") ||
+    q.includes("বুঝতেছি না") ||
+    q.includes("বুঝতে পারছি না") ||
+    q.includes("কোনটা নেব") ||
+    q.includes("কোনটা কিনব") ||
+    q.includes("পরামর্শ চাই") ||
+    q.includes("kon ta nebo") ||
+    q.includes("konta nebo") ||
+    q.includes("konta kinbo") ||
+    q.includes("guide koro") ||
+    q.includes("shoppers roadmap") ||
+    q.includes("confused") ||
+    q.includes("help koro")
+  ) {
+    return {
+      text: `অবশ্যই! আপনার জন্য সেরা এবং পারফেক্ট প্রোডাক্টটি নির্বাচন করতে আসুন ৩টি বিষয় নির্ধারণ করি: 🧭✨\n\n১. 💰 **আপনার বাজেট কত?** (যেমন: ১০,০০০ বা ২০,০০০ টাকা)\n২. 🎯 **প্রধান ব্যবহার কী?** (যেমন: গেমিং, পড়াশোনা, অফিস, নাকি ক্যাজুয়াল ব্যবহার)\n৩. ⚡ **কোন ফিচারটি সবচেয়ে বেশি প্রয়োজন?** (পারফরম্যান্স, ক্যামেরা, ব্যাটারি নাকি স্টাইলিশ লুক)\n\nআপনি জানালেই আমি ক্যাটালগ থেকে সেরা ৩টি অপশন বাছাই করে দেব:\n- 🥇 **Best Overall**\n- 🥈 **Best Performance / Feature**\n- 🥉 **Best Value for Money**`,
       quickActions: [
-        { label: "🔥 সেরা অফারগুলো দেখাও", action: "best_offers" },
-        { label: "📦 অর্ডার ট্র্যাক করুন", action: "track_order" },
-        { label: "⚡ শপ ঘুরে দেখুন", action: "view_products", link: "/products" }
+        { label: "💰 ১০,০০০ টাকার মধ্যে", action: "budget_10k" },
+        { label: "🎮 গেমিং প্রায়োরিটি", action: "gaming_priority" },
+        { label: "📸 ক্যামেরা ও ব্যাটারি", action: "camera_priority" },
+        { label: "🔥 সেরা ট্রেন্ডিং পণ্য", action: "best_gadgets" }
+      ]
+    };
+  }
+
+  // C3. Product Comparison Intent (তুলনা / কোনটা ভালো / Samsung আর iPhone এর মধ্যে)
+  if (
+    /\b(vs|versus|compare|tulona|parthokko)\b/i.test(q) ||
+    q.includes("তুলনা") ||
+    q.includes("পার্থক্য") ||
+    q.includes("কোনটা ভালো") ||
+    q.includes("konta bhalo") ||
+    q.includes("konta valo") ||
+    (/\b(ar|ebong|and)\b/i.test(q) && (q.includes("moddhe") || q.includes("মধ্যে")) && (q.includes("konta") || q.includes("কোনটা") || q.includes("bhalo") || q.includes("ভালো")))
+  ) {
+    return {
+      text: `আপনার অনুরোধ অনুযায়ী প্রোডাক্ট দুটির **স্পেসিফিকেশন, ফিচার ও মূল্যের বিস্তারিত তুলনা** নিচে প্রস্তুত করা হলো: ⚖️✨\n\n📌 **সিদ্ধান্ত গাইড:**\n- 🎮 **গেমিং ও পারফরম্যান্স:** প্রথম অপশনটি সেরা পাওয়ার দেবে।\n- 💎 **ব্যাটারি লাইফ ও ভ্যালু:** দ্বিতীয় অপশনটি সাশ্রয়ী বাজেটে দারুণ ব্যাকআপ দেবে।`,
+      quickActions: [
+        { label: "🛒 কার্টে যোগ করুন", action: "add_to_cart" },
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+        { label: "🚚 ডেলিভারি চার্জ কত?", action: "delivery_info" }
       ]
     };
   }
