@@ -21,7 +21,8 @@ import {
   MessageSquare,
   MoreVertical,
   Info,
-  PackageCheck
+  PackageCheck,
+  ArrowLeft
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -482,18 +483,26 @@ export default function BuyerMessages() {
       <div className="pointer-events-none absolute -bottom-32 left-1/4 w-80 h-80 bg-blue-300/25 rounded-full blur-3xl" />
 
       {/* Top Header - Liquid Water Droplet Crystal Bar (Firmly at the top) */}
-      <header className="shrink-0 z-30 bg-gradient-to-r from-sky-500/95 via-cyan-500/90 to-blue-600/95 backdrop-blur-2xl text-white px-4 py-2.5 shadow-[0_4px_20px_rgba(2,132,199,0.22)] border-b border-white/40 flex items-center justify-between">
-        {/* Clean Title & Subtitle */}
-        <div className="flex items-center gap-2.5">
+      <header className="shrink-0 z-30 bg-gradient-to-r from-sky-500/95 via-cyan-500/90 to-blue-600/95 backdrop-blur-2xl text-white px-3 sm:px-4 py-2.5 shadow-[0_4px_20px_rgba(2,132,199,0.22)] border-b border-white/40 flex items-center justify-between">
+        {/* Left: Back Button & Title */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 border border-white/40 active:scale-95 text-white transition-all flex items-center justify-center shadow-[inset_0_1px_2px_rgba(255,255,255,0.7)] backdrop-blur-md"
+            title="Go Back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
           <div className="flex flex-col">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 border border-white shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
               <h1 className="text-base sm:text-lg font-black tracking-wide leading-none text-white drop-shadow-sm">Sigma</h1>
               <Badge className="bg-white/25 hover:bg-white/30 text-white text-[9px] font-black uppercase px-2 py-0.5 border border-white/40 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] backdrop-blur-md">
                 AI Shopping Manager
               </Badge>
             </div>
-            <p className="text-[11px] text-white/95 font-medium mt-1 drop-shadow-xs">
+            <p className="text-[10px] text-white/95 font-medium mt-0.5 drop-shadow-xs">
               Powered by Durtup.shop
             </p>
           </div>
@@ -704,13 +713,13 @@ export default function BuyerMessages() {
         </div>
       )}
 
-      {/* Bottom Dock: Dynamic Keyboard-Aware + Clean Gap above Mobile Task Bar */}
+      {/* Bottom Dock: Direct Messenger / WhatsApp Style */}
       <div 
         className={cn(
           "shrink-0 z-30 pointer-events-auto transition-all duration-150 ease-out px-3 sm:px-4",
           isKeyboardOpen 
             ? "pb-3.5 pt-1.5 bg-white/95 backdrop-blur-2xl border-t border-sky-100 shadow-[0_-6px_24px_rgba(0,0,0,0.1)]" 
-            : "pb-[78px] md:pb-3 pt-1.5 bg-gradient-to-t from-sky-100/95 via-sky-100/80 to-transparent"
+            : "pb-3.5 sm:pb-4 pt-1.5 bg-gradient-to-t from-sky-100/95 via-sky-100/80 to-transparent"
         )}
       >
         <div className="max-w-3xl mx-auto space-y-1.5">
