@@ -1,7 +1,6 @@
 import { ReactNode, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { MobileBottomNav } from "./MobileBottomNav";
-import { DurtupAIAssistant } from "@/components/ai/DurtupAIAssistant";
 import { PushNotificationInitializer } from "@/components/PushNotificationInitializer";
 
 interface AppLayoutProps {
@@ -33,13 +32,11 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const isMessages = path.startsWith("/messages");
   const shouldShowMobileNav = !isCheckout && !isAdmin && !isSeller && !isStaff && !isProductDetail && !isMessages;
-  const shouldShowAIAssistant = !isAdmin && !isSeller && !isStaff && !isMessages;
 
   return (
     <>
       <PushNotificationInitializer />
       {children}
-      {shouldShowAIAssistant && <DurtupAIAssistant />}
       {shouldShowMobileNav && <MobileBottomNav />}
     </>
   );
