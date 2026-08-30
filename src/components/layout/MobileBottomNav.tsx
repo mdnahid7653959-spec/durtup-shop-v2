@@ -175,23 +175,53 @@ export function MobileBottomNav() {
   const [slideDir, setSlideDir] = useState<"left" | "right" | "none">("none");
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const prevIndexRef = useRef(effectiveActiveIndex);
+  const initialHeightRef = useRef(typeof window !== "undefined" ? (window.visualViewport?.height || window.innerHeight) : 0);
 
-  // Detect Mobile Virtual Keyboard to avoid blocking input fields
+  // Detect Mobile Virtual Keyboard via focusin/focusout and visualViewport resize
   useEffect(() => {
-    if (typeof window === "undefined" || !window.visualViewport) return;
+    if (typeof window === "undefined") return;
+
+    if (!initialHeightRef.current) {
+      initialHeightRef.current = window.visualViewport?.height || window.innerHeight;
+    }
 
     const handleResize = () => {
-      if (!window.visualViewport) return;
-      const heightDiff = window.innerHeight - window.visualViewport.height;
-      setIsKeyboardOpen(heightDiff > 100);
+      const currentVh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const baseHeight = Math.max(initialHeightRef.current, window.screen?.height ? window.screen.height * 0.7 : 600);
+      const isKb = (baseHeight - currentVh) > 120;
+      setIsKeyboardOpen(isKb);
     };
 
-    window.visualViewport.addEventListener("resize", handleResize);
-    window.visualViewport.addEventListener("scroll", handleResize);
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        setIsKeyboardOpen(true);
+      }
+    };
+
+    const handleFocusOut = () => {
+      setTimeout(() => {
+        const active = document.activeElement as HTMLElement;
+        if (!active || (active.tagName !== "INPUT" && active.tagName !== "TEXTAREA")) {
+          const currentVh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+          const baseHeight = Math.max(initialHeightRef.current, 600);
+          setIsKeyboardOpen((baseHeight - currentVh) > 120);
+        }
+      }, 100);
+    };
+
+    window.visualViewport?.addEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("scroll", handleResize);
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("focusin", handleFocusIn);
+    window.addEventListener("focusout", handleFocusOut);
 
     return () => {
       window.visualViewport?.removeEventListener("resize", handleResize);
       window.visualViewport?.removeEventListener("scroll", handleResize);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("focusin", handleFocusIn);
+      window.removeEventListener("focusout", handleFocusOut);
     };
   }, []);
 

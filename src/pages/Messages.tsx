@@ -422,9 +422,12 @@ export default function BuyerMessages() {
     };
   }, []);
 
+  const initialHeightRef = useRef<number>(0);
+
   // Dynamic mobile viewport and keyboard tracking
   useEffect(() => {
     if (typeof window === "undefined") return;
+    initialHeightRef.current = window.visualViewport?.height || window.innerHeight;
 
     const handleResize = () => {
       if (window.visualViewport) {
@@ -433,11 +436,11 @@ export default function BuyerMessages() {
         const vt = vv.offsetTop || 0;
         setViewportTop(vt);
         setViewportHeight(vh);
-        setIsKeyboardOpen((window.innerHeight - vh) > 80);
+        const baseH = Math.max(initialHeightRef.current, 600);
+        setIsKeyboardOpen((baseH - vh) > 120);
       } else {
         setViewportTop(0);
         setViewportHeight(window.innerHeight);
-        setIsKeyboardOpen(false);
       }
       window.scrollTo(0, 0);
     };
@@ -760,7 +763,7 @@ export default function BuyerMessages() {
               ref={inputRef}
               id="sigma-chat-query"
               name="sigma_chat_query"
-              type="search"
+              type="text"
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="none"
@@ -772,10 +775,15 @@ export default function BuyerMessages() {
               enterKeyHint="send"
               value={inputValue}
               onFocus={() => {
+                setIsKeyboardOpen(true);
                 window.scrollTo(0, 0);
+              }}
+              onBlur={() => {
                 setTimeout(() => {
-                  window.scrollTo(0, 0);
-                }, 50);
+                  const currentVh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                  const baseH = Math.max(initialHeightRef.current, 600);
+                  setIsKeyboardOpen((baseH - currentVh) > 120);
+                }, 100);
               }}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="প্রোডাক্টের নাম লিখুন বা প্রশ্ন করুন (বাংলা / Banglish)..."
