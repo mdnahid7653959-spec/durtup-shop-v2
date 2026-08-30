@@ -15,12 +15,12 @@ interface CategoryTile {
 const POPULAR_TILES: CategoryTile[] = [
   {
     id: "electronics",
-    name: "Electronics",
+    name: "Gadgets & Electronics",
     subtitle: "Up to 30% Off",
     href: "/products?category=Gadgets%20%26%20Electronics",
     bgGradient: "bg-[#e8edff] dark:bg-indigo-950/30",
     border: "border-indigo-100 dark:border-indigo-900/40",
-    image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&h=300&fit=crop",
+    image: "/category-gadgets.jpg",
   },
   {
     id: "mens-fashion",
@@ -29,7 +29,7 @@ const POPULAR_TILES: CategoryTile[] = [
     href: "/products?category=Men's%20Fashion",
     bgGradient: "bg-[#fef4db] dark:bg-amber-950/30",
     border: "border-amber-100 dark:border-amber-900/40",
-    image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=300&h=300&fit=crop",
+    image: "/category-mens.jpg",
   },
   {
     id: "womens-fashion",
@@ -38,7 +38,7 @@ const POPULAR_TILES: CategoryTile[] = [
     href: "/products?category=Women's%20Fashion",
     bgGradient: "bg-[#fdebf3] dark:bg-pink-950/30",
     border: "border-pink-100 dark:border-pink-900/40",
-    image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=300&h=300&fit=crop",
+    image: "/category-womens.jpg",
   },
   {
     id: "smart-watch",
@@ -47,7 +47,7 @@ const POPULAR_TILES: CategoryTile[] = [
     href: "/products?category=Watch",
     bgGradient: "bg-[#e8f7ee] dark:bg-emerald-950/30",
     border: "border-emerald-100 dark:border-emerald-900/40",
-    image: "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=300&h=300&fit=crop",
+    image: "/category-smartwatch.jpg",
   },
 ];
 

@@ -137,63 +137,24 @@ export function SmartSearchBar({
 
   const showDropdown =
     open && (hasQuery ? true : rows.length > 0);
-  // Mobile: tap opens dedicated /search page for a richer experience + 1-tap Camera search INSIDE bar
+  // Mobile: tap opens dedicated /search page for a richer experience
   if (variant === "mobile") {
     return (
       <div className={cn("w-full relative", className)}>
-        <div className="h-11 pl-3.5 pr-1 flex items-center gap-1.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs text-left transition min-w-0 overflow-hidden focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20">
-          {/* Left search icon inside placeholder area */}
-          <Search className="h-4 w-4 text-slate-400 shrink-0 ml-0.5" />
-
-          <button
-            type="button"
-            onClick={() => {
-              onNavigate?.();
-              navigate("/search");
-            }}
-            className="flex-1 flex items-center min-w-0 text-left cursor-text py-2 pl-1 pr-2"
-            aria-label="Open search"
-          >
-            <span className="flex-1 min-w-0 truncate text-xs sm:text-[13px] text-slate-400 font-normal">
-              {placeholder}
-            </span>
-          </button>
-
-          {/* Right Action Icons Group (Camera & Search Action Button) */}
-          <div className="flex items-center gap-1 shrink-0 pr-0.5">
-            {/* Camera Button INSIDE Search Bar */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setImageSearchOpen(true);
-              }}
-              aria-label="Search with image"
-              title="ছবি দিয়ে খুঁজুন (Search with image)"
-              className="h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-slate-700 active:scale-90 transition-all shrink-0 cursor-pointer"
-            >
-              <Camera className="h-4 w-4" />
-            </button>
-
-            {/* Inset Orange Search Action Button */}
-            <button
-              type="button"
-              onClick={() => {
-                onNavigate?.();
-                navigate("/search");
-              }}
-              aria-label="Search"
-              className="h-8 w-8 rounded-full bg-orange-600 hover:bg-orange-500 text-white shrink-0 flex items-center justify-center shadow-xs active:scale-90 transition-transform cursor-pointer"
-            >
-              <Search className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        <ImageSearchModal
-          open={imageSearchOpen}
-          onOpenChange={setImageSearchOpen}
-        />
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate?.();
+            navigate("/search");
+          }}
+          className="w-full h-11 px-4 flex items-center gap-2.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs text-left transition-all min-w-0 active:scale-[0.99] focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20"
+          aria-label="Open search"
+        >
+          <Search className="h-4 w-4 text-slate-400 shrink-0" />
+          <span className="flex-1 min-w-0 truncate text-xs sm:text-[13px] text-slate-400 font-normal select-none">
+            {placeholder}
+          </span>
+        </button>
       </div>
     );
   }
@@ -210,14 +171,14 @@ export function SmartSearchBar({
       >
         <div
           className={cn(
-            "group flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700",
-            "rounded-full shadow-2xs transition-all duration-200 overflow-hidden",
-            "focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20",
-            "h-11 gap-1.5 pl-3.5 pr-1"
+            "group relative w-full h-11 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700",
+            "rounded-full shadow-2xs transition-all duration-200 flex items-center px-4 gap-2.5",
+            "focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20"
           )}
         >
-          <Search className="h-4 w-4 text-slate-400 shrink-0 ml-0.5" />
+          <Search className="h-4 w-4 text-slate-400 shrink-0" />
 
+          {/* Main Search Input */}
           <input
             ref={inputRef}
             autoFocus={autoFocus}
@@ -235,56 +196,32 @@ export function SmartSearchBar({
             }}
             onFocus={() => setOpen(true)}
             onKeyDown={onKeyDown}
-            className="flex-1 min-w-0 bg-transparent text-foreground placeholder:text-slate-400 text-sm outline-none border-0 leading-none pl-1 pr-2 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none font-medium"
+            className="w-full h-full bg-transparent text-foreground placeholder:text-slate-400 text-sm outline-none border-0 leading-none [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none font-medium"
           />
 
-          {isFetching && hasQuery && (
-            <Loader2 className="h-4 w-4 text-muted-foreground animate-spin shrink-0" aria-hidden />
-          )}
+          {/* Right Actions: Loader / Clear Button */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isFetching && hasQuery && (
+              <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" aria-hidden />
+            )}
 
-          {query && (
-            <button
-              type="button"
-              aria-label="Clear search"
-              onClick={() => {
-                setQuery("");
-                setActiveIdx(-1);
-                inputRef.current?.focus();
-              }}
-              className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-
-          <div className="flex items-center gap-1 shrink-0 pr-0.5">
-            {/* Visual Product Search (Camera) Button */}
-            <button
-              type="button"
-              onClick={() => setImageSearchOpen(true)}
-              aria-label="Search by image"
-              title="ছবি দিয়ে খুঁজুন (Search by Image)"
-              className="h-8 w-8 rounded-full text-slate-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-slate-700 transition-all shrink-0 active:scale-90 flex items-center justify-center cursor-pointer"
-            >
-              <Camera className="h-4 w-4" />
-            </button>
-
-            {/* Circular Orange Search Action Button */}
-            <button
-              type="submit"
-              aria-label="Search"
-              className="h-8 w-8 rounded-full bg-orange-600 hover:bg-orange-500 text-white shrink-0 flex items-center justify-center shadow-xs active:scale-90 transition-transform cursor-pointer"
-            >
-              <Search className="h-4 w-4" />
-            </button>
+            {query && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => {
+                  setQuery("");
+                  setActiveIdx(-1);
+                  inputRef.current?.focus();
+                }}
+                className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </form>
-
-      <ImageSearchModal
-        open={imageSearchOpen}
-        onOpenChange={setImageSearchOpen}
-      />
 
       {showDropdown && (
         <div

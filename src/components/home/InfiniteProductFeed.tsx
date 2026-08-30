@@ -99,11 +99,8 @@ export function InfiniteProductFeed() {
     <section className="w-full py-6 space-y-4">
       {/* Title block that matches the original theme styling */}
       <div className="flex items-center justify-between border-b pb-3">
-        <h2 className="text-xl md:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-          <span>More to Love</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-orange-600/10 text-orange-600 font-semibold">
-            {allCatalog.length}+ items
-          </span>
+        <h2 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">
+          More to Love
         </h2>
       </div>
 

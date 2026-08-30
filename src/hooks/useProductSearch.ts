@@ -162,6 +162,8 @@ export function useProductSearch(params: SearchParams) {
   });
 }
 
+import { CATEGORIES_DATA } from "@/data/categoriesData";
+
 // Hook to get categories for filters (merging Supabase DB & Supplier API categories)
 export function useCategories() {
   return useQuery({
@@ -177,58 +179,30 @@ export function useCategories() {
         if (data) supabaseCats = data;
       } catch (e) {}
 
-      let indexedCats: any[] = [];
-      try {
-        await firestoreSearchAdapter.buildIndex();
-        indexedCats = firestoreSearchAdapter.getIndexedCategories();
-      } catch (e) {}
-
-      const baseDefaultCategories = [
-        { id: "electronics", name: "Electronics & Gadgets", slug: "electronics", image_url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop" },
-        { id: "fashion", name: "Fashion & Clothing", slug: "fashion", image_url: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&h=400&fit=crop" },
-        { id: "home", name: "Home & Kitchen", slug: "home", image_url: "https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=400&h=400&fit=crop" },
-        { id: "beauty", name: "Health & Beauty", slug: "beauty", image_url: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=400&fit=crop" },
-        { id: "watches", name: "Watches & Accessories", slug: "watches", image_url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop" },
-        { id: "kids", name: "Toys & Baby Care", slug: "kids", image_url: "https://images.unsplash.com/photo-1566454825485-49267636c61f?w=400&h=400&fit=crop" }
-      ];
-
       const catMap = new Map<string, any>();
-      baseDefaultCategories.forEach(c => catMap.set(c.slug, c));
-
-      const getNormalizedSlug = (slugOrName: string) => {
-        const str = (slugOrName || "").toLowerCase().trim();
-        if (str.includes("electronic") || str.includes("gadget") || str.includes("mobile") || str.includes("phone")) return "electronics";
-        if (str.includes("fashion") || str.includes("cloth") || str.includes("shirt") || str.includes("wear")) return "fashion";
-        if (str.includes("home") || str.includes("kitchen") || str.includes("lifestyle") || str.includes("garden")) return "home";
-        if (str.includes("beauty") || str.includes("health") || str.includes("skin") || str.includes("care")) return "beauty";
-        if (str.includes("watch")) return "watches";
-        if (str.includes("toy") || str.includes("baby") || str.includes("kid")) return "kids";
-        return str.replace(/[^a-z0-9]+/g, "-");
-      };
+      
+      // Populate from master categories data
+      CATEGORIES_DATA.forEach(c => {
+        catMap.set(c.slug, {
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          bangla: c.bangla,
+          image_url: c.image,
+          icon: c.iconName
+        });
+      });
 
       supabaseCats.forEach(c => {
         if (!c.name) return;
-        const normSlug = getNormalizedSlug(c.slug || c.name);
-        if (!catMap.has(normSlug)) {
-          catMap.set(normSlug, {
-            id: c.id || normSlug,
+        const s = (c.slug || c.name).toLowerCase().replace(/[^a-z0-9]+/g, "-");
+        if (!catMap.has(s)) {
+          catMap.set(s, {
+            id: c.id || s,
             name: c.name,
-            slug: c.slug || normSlug,
-            image_url: c.image_url || c.image || baseDefaultCategories[0].image_url,
+            slug: c.slug || s,
+            image_url: c.image_url || c.image,
             icon: c.icon
-          });
-        }
-      });
-
-      indexedCats.forEach(c => {
-        if (!c.name) return;
-        const normSlug = getNormalizedSlug(c.slug || c.name);
-        if (!catMap.has(normSlug)) {
-          catMap.set(normSlug, {
-            id: c.id || normSlug,
-            name: c.name,
-            slug: c.slug || normSlug,
-            image_url: baseDefaultCategories[catMap.size % baseDefaultCategories.length].image_url
           });
         }
       });

@@ -1,587 +1,768 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/firebaseAdapter";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
+import { useCart } from "@/contexts/CartContext";
+import { 
+  Send, 
+  Bot, 
+  Sparkles, 
+  RotateCcw, 
+  ShoppingBag, 
+  Truck, 
+  CreditCard, 
+  HelpCircle, 
+  ChevronRight,
+  User as UserIcon,
+  ImagePlus,
+  X,
+  Mic,
+  MicOff,
+  Lock,
+  MessageSquare,
+  MoreVertical,
+  Info,
+  PackageCheck
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Send, Loader2, ShieldCheck, ExternalLink, Package } from "lucide-react";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+import { 
+  askSigmaAIAgent, 
+  confirmSigmaOrder, 
+  initSpeechRecognition, 
+  type AIMessage,
+  type SigmaProductCardData 
+} from "@/lib/durtupAIAgent";
+import { SigmaProductCard } from "@/components/ai/SigmaProductCard";
+import { SigmaComparisonCard } from "@/components/ai/SigmaComparisonCard";
+import { SigmaCartCard } from "@/components/ai/SigmaCartCard";
+import { SigmaOrderConfirmationCard } from "@/components/ai/SigmaOrderConfirmationCard";
+import { SigmaOrderTrackingCard } from "@/components/ai/SigmaOrderTrackingCard";
+import { SigmaSupportTicketCard } from "@/components/ai/SigmaSupportTicketCard";
+import { SigmaToolActivityIndicator } from "@/components/ai/SigmaToolActivityIndicator";
+import type { Product } from "@/components/products/ProductCard";
 import { toast } from "sonner";
+import { db } from "@/integrations/firebase/client";
+import { doc, setDoc } from "firebase/firestore";
+import { sendTelegramOrderNotification } from "@/utils/telegramNotifier";
+import { sendOrderSuccessPushNotification } from "@/services/notificationService";
 
-interface Conversation {
-  id: string;
-  buyer_id: string;
-  seller_id: string;
-  product_id: string | null;
-  last_message_at: string | null;
-  buyer_unread_count: number | null;
-  seller_unread_count: number | null;
-  created_at: string;
-  seller_name?: string;
-  product_name?: string;
-  product_image?: string;
-  product_price?: number;
-  product_slug?: string;
-  last_message?: string;
+function renderFormattedSpan(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={i} className="font-extrabold text-slate-900">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
 }
 
-interface Message {
-  id: string;
-  conversation_id: string;
-  sender_id: string;
-  sender_type: string;
-  content: string;
-  is_read: boolean | null;
-  created_at: string;
+function FormattedMessageText({ text }: { text: string }) {
+  const lines = text.split("\n");
+
+  return (
+    <div className="space-y-1.5 text-xs sm:text-sm leading-relaxed text-slate-800">
+      {lines.map((line, lineIdx) => {
+        if (!line.trim()) {
+          return <div key={lineIdx} className="h-1" />;
+        }
+
+        if (line.startsWith("### ")) {
+          return (
+            <h4 key={lineIdx} className="font-extrabold text-sm sm:text-base text-orange-600 mt-2 mb-1 flex items-center gap-1.5">
+              {renderFormattedSpan(line.replace("### ", ""))}
+            </h4>
+          );
+        }
+
+        if (line.startsWith("- ")) {
+          return (
+            <div key={lineIdx} className="flex items-start gap-2 pl-1 my-0.5">
+              <span className="text-orange-500 font-bold">•</span>
+              <div className="flex-1">{renderFormattedSpan(line.replace(/^- \s*/, ""))}</div>
+            </div>
+          );
+        }
+
+        return <p key={lineIdx}>{renderFormattedSpan(line)}</p>;
+      })}
+    </div>
+  );
 }
 
 export default function BuyerMessages() {
-  const { conversationId } = useParams();
+  const { user, profile } = useAuth();
+  const { items: cartItems, addToCart, removeItem, clearCart } = useCart();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const [selectedConvId, setSelectedConvId] = useState<string | null>(conversationId || null);
-  const [messageText, setMessageText] = useState("");
+
+  const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [toolStatus, setToolStatus] = useState<string | null>(null);
+  const [catalog, setCatalog] = useState<Product[]>([]);
+  const [attachedImage, setAttachedImage] = useState<{ base64: string; mimeType: string; previewUrl: string } | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const speechRecognizerRef = useRef<any>(null);
 
-  // Sync route param changes
+  // Extract clean personal first name
+  const rawName = profile?.full_name || user?.user_metadata?.full_name || profile?.name || "";
+  const cleanName = rawName
+    ? rawName.replace(/^(md\.?|mohammad|mohammed|mrs\.?|mr\.?|mst\.?)\s+/i, "").split(" ")[0] || rawName.split(" ")[0]
+    : "";
+
+  // Preload catalog
   useEffect(() => {
-    if (conversationId) {
-      setSelectedConvId(conversationId);
+    getCachedMohasagorProducts().then((res) => {
+      if (res && res.length > 0) setCatalog(res);
+    }).catch(() => {});
+  }, []);
+
+  // Voice Input Setup
+  useEffect(() => {
+    const recognizer = initSpeechRecognition(
+      (transcript) => {
+        setInputValue((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      },
+      (error) => {
+        console.warn("Speech recognition error:", error);
+        setIsListening(false);
+      }
+    );
+    speechRecognizerRef.current = recognizer;
+  }, []);
+
+  const toggleVoiceInput = () => {
+    if (!speechRecognizerRef.current?.isSupported) {
+      toast.error("আপনার ব্রাউজারে ভয়েস রিকগনিশন সুবিধা উপলব্ধ নেই। অনুগ্রহ করে টাইপ করুন।");
+      return;
     }
-  }, [conversationId]);
 
-  // Fetch all conversations for buyer
-  const { data: conversations = [], isLoading: loadingConversations } = useQuery({
-    queryKey: ["buyer-conversations", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from("conversations")
-        .select("*")
-        .eq("buyer_id", user.id)
-        .order("last_message_at", { ascending: false, nullsFirst: false });
-      if (error) throw error;
-
-      const catalog = await getCachedMohasagorProducts();
-
-      const enriched = await Promise.all(
-        (data || []).map(async (conv) => {
-          let seller_name = "Durtup Official Support";
-          if (conv.seller_id && conv.seller_id !== "admin" && conv.seller_id !== "durtup_official") {
-            const { data: sellerData } = await supabase
-              .from("sellers")
-              .select("shop_name")
-              .eq("id", conv.seller_id)
-              .maybeSingle();
-            seller_name = sellerData?.shop_name || "Store Partner";
-          }
-
-          let product_name: string | undefined;
-          let product_image: string | undefined;
-          let product_price: number | undefined;
-          let product_slug: string | undefined;
-
-          if (conv.product_id) {
-            const matched = catalog.find(p => p.id === conv.product_id || p.slug === conv.product_id);
-            if (matched) {
-              product_name = matched.name;
-              product_image = matched.image;
-              product_price = matched.price;
-              product_slug = matched.slug;
-            } else {
-              const { data: prod } = await supabase
-                .from("products")
-                .select("id, name, slug, discount_price, regular_price, image")
-                .eq("id", conv.product_id)
-                .maybeSingle();
-              if (prod) {
-                product_name = prod.name;
-                product_slug = prod.slug;
-                product_image = prod.image;
-                product_price = prod.discount_price || prod.regular_price;
-              }
-            }
-          }
-
-          const { data: lastMsg } = await supabase
-            .from("messages")
-            .select("content")
-            .eq("conversation_id", conv.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          return {
-            ...conv,
-            seller_name,
-            product_name,
-            product_image,
-            product_price,
-            product_slug,
-            last_message: lastMsg?.content || conv.last_message,
-          } as Conversation;
-        })
-      );
-
-      return enriched;
-    },
-    enabled: !!user?.id,
-  });
-
-  // Fetch individual conversation if not in list yet or directly navigated to via URL
-  const { data: directConv } = useQuery({
-    queryKey: ["single-conversation", selectedConvId],
-    queryFn: async () => {
-      if (!selectedConvId) return null;
-      const { data, error } = await supabase
-        .from("conversations")
-        .select("*")
-        .eq("id", selectedConvId)
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!data) return null;
-
-      let seller_name = "Store Partner";
-      if (data.seller_id === "admin" || data.seller_id === "durtup_official") {
-        seller_name = "Durtup Official Store";
-      } else {
-        const { data: s } = await supabase.from("sellers").select("shop_name").eq("id", data.seller_id).maybeSingle();
-        if (s?.shop_name) seller_name = s.shop_name;
-      }
-
-      let product_name: string | undefined;
-      let product_image: string | undefined;
-      let product_price: number | undefined;
-      let product_slug: string | undefined;
-
-      if (data.product_id) {
-        const catalog = await getCachedMohasagorProducts().catch(() => []);
-        const found = catalog.find((p: any) => p.id === data.product_id || p.slug === data.product_id);
-        if (found) {
-          product_name = found.name;
-          product_image = found.image;
-          product_price = found.price;
-          product_slug = found.slug;
-        } else {
-          const { data: p } = await supabase.from("products").select("name, image, discount_price, regular_price, slug").eq("id", data.product_id).maybeSingle();
-          if (p) {
-            product_name = p.name;
-            product_image = p.image;
-            product_price = p.discount_price || p.regular_price;
-            product_slug = p.slug;
-          }
-        }
-      }
-
-      return {
-        ...data,
-        seller_name,
-        product_name,
-        product_image,
-        product_price,
-        product_slug,
-      } as Conversation;
-    },
-    enabled: !!selectedConvId
-  });
-
-  const selectedConv = conversations.find((c) => c.id === selectedConvId) || directConv || null;
-
-  // Build combined conversation list including direct active chat
-  const displayedConversations = [...conversations];
-  if (selectedConv && !displayedConversations.some(c => c.id === selectedConv.id)) {
-    displayedConversations.unshift(selectedConv);
-  }
-
-  // Fetch messages
-  const { data: messages = [], isLoading: loadingMessages } = useQuery({
-    queryKey: ["conversation-messages", selectedConvId],
-    queryFn: async () => {
-      if (!selectedConvId) return [];
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("conversation_id", selectedConvId)
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        console.warn("Error fetching messages:", error);
-      }
-      
-      const list = ((data || []) as Message[]).slice();
-
-      // Also merge any messages from seller_support_messages where ticket_id = selectedConvId
-      try {
-        const { data: ssm } = await supabase
-          .from("seller_support_messages")
-          .select("*")
-          .eq("ticket_id", selectedConvId);
-
-        if (ssm && ssm.length > 0) {
-          ssm.forEach((sm: any) => {
-            const smContent = sm.content || sm.message || "";
-            if (!list.some(m => m.id === sm.id || (m.content === smContent && Math.abs(new Date(m.created_at).getTime() - new Date(sm.created_at).getTime()) < 5000))) {
-              list.push({
-                id: sm.id,
-                conversation_id: selectedConvId,
-                sender_id: sm.sender_id || "admin",
-                sender_type: sm.sender_type === "buyer" ? "buyer" : "seller",
-                content: smContent,
-                is_read: sm.is_read ?? false,
-                created_at: sm.created_at || new Date().toISOString(),
-              });
-            }
-          });
-          list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        }
-      } catch {}
-
-      return list;
-    },
-    enabled: !!selectedConvId,
-  });
-
-  // Realtime subscription for incoming messages from seller/admin + 3s poll fallback
-  useEffect(() => {
-    if (!selectedConvId) return;
-
-    const channel = supabase
-      .channel(`buyer-chat-sync-${selectedConvId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "messages", filter: `conversation_id=eq.${selectedConvId}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConvId] });
-          queryClient.invalidateQueries({ queryKey: ["buyer-conversations"] });
-          queryClient.invalidateQueries({ queryKey: ["single-conversation", selectedConvId] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "seller_support_messages", filter: `ticket_id=eq.${selectedConvId}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConvId] });
-          queryClient.invalidateQueries({ queryKey: ["buyer-conversations"] });
-          queryClient.invalidateQueries({ queryKey: ["single-conversation", selectedConvId] });
-        }
-      )
-      .subscribe();
-
-    const timer = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConvId] });
-    }, 3000);
-
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(timer);
-    };
-  }, [selectedConvId, queryClient]);
-
-  // Mark as read
-  useEffect(() => {
-    const uid = user?.id || (user as any)?.uid;
-    if (!selectedConvId || !uid) return;
-    supabase.from("conversations").update({ buyer_unread_count: 0 }).eq("id", selectedConvId).then();
-    supabase.from("messages").update({ is_read: true }).eq("conversation_id", selectedConvId).eq("sender_type", "seller").eq("is_read", false).then();
-  }, [selectedConvId, user]);
-
-  // Scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // Send message mutation
-  const sendMessage = useMutation({
-    mutationFn: async (content: string) => {
-      const senderUserId = user?.id || (user as any)?.uid;
-      if (!selectedConvId || !senderUserId) throw new Error("Please log in to send a message");
-
-      const nowIso = new Date().toISOString();
-      const newMsgId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-
-      // Ensure conversation exists in DB
-      const { data: existing } = await supabase.from("conversations").select("id").eq("id", selectedConvId).maybeSingle();
-      if (!existing?.id) {
-        await supabase.from("conversations").insert({
-          id: selectedConvId,
-          buyer_id: senderUserId,
-          seller_id: selectedConv?.seller_id || "admin",
-          product_id: selectedConv?.product_id || null,
-          last_message_at: nowIso,
-          last_message: content,
-          seller_unread_count: 1,
-          buyer_unread_count: 0,
-          created_at: nowIso
-        });
-      }
-
-      // 1. Insert into messages table
-      const { error } = await supabase.from("messages").insert({
-        id: newMsgId,
-        conversation_id: selectedConvId,
-        sender_id: senderUserId,
-        sender_type: "buyer",
-        content,
-        created_at: nowIso,
-        is_read: false
-      });
-      if (error) console.error("Error inserting message into messages:", error);
-
-      // 2. Also insert into seller_support_messages table for compatibility
-      try {
-        await supabase.from("seller_support_messages").insert({
-          id: newMsgId,
-          ticket_id: selectedConvId,
-          sender_id: senderUserId,
-          sender_type: "buyer",
-          sender_name: user?.displayName || "Customer",
-          content,
-          created_at: nowIso,
-          attachments: []
-        });
-      } catch {}
-
-      const currentUnread = selectedConv?.seller_unread_count ?? 0;
-      await supabase.from("conversations").update({ 
-        last_message_at: nowIso, 
-        last_message: content,
-        seller_unread_count: (typeof currentUnread === 'number' ? currentUnread : 0) + 1 
-      }).eq("id", selectedConvId);
-
-      return {
-        id: newMsgId,
-        conversation_id: selectedConvId,
-        sender_id: senderUserId,
-        sender_type: "buyer",
-        content,
-        is_read: false,
-        created_at: nowIso
-      };
-    },
-    onMutate: async (newContent: string) => {
-      await queryClient.cancelQueries({ queryKey: ["conversation-messages", selectedConvId] });
-      const previousMessages = queryClient.getQueryData<Message[]>(["conversation-messages", selectedConvId]) || [];
-      const senderUserId = user?.id || (user as any)?.uid || "buyer";
-      const optimisticMsg: Message = {
-        id: `temp-${Date.now()}`,
-        conversation_id: selectedConvId!,
-        sender_id: senderUserId,
-        sender_type: "buyer",
-        content: newContent,
-        is_read: false,
-        created_at: new Date().toISOString()
-      };
-      queryClient.setQueryData<Message[]>(["conversation-messages", selectedConvId], (old = []) => [...old, optimisticMsg]);
-      return { previousMessages };
-    },
-    onError: (err: any, _newContent, context) => {
-      if (context?.previousMessages) {
-        queryClient.setQueryData(["conversation-messages", selectedConvId], context.previousMessages);
-      }
-      toast.error(err?.message || "Failed to send message");
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConvId] });
-      queryClient.invalidateQueries({ queryKey: ["buyer-conversations"] });
-      queryClient.invalidateQueries({ queryKey: ["single-conversation", selectedConvId] });
-    },
-  });
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const text = messageText.trim();
-    if (!text || sendMessage.isPending) return;
-    setMessageText("");
-    try {
-      await sendMessage.mutateAsync(text);
-    } catch {}
+    if (isListening) {
+      speechRecognizerRef.current.stop();
+      setIsListening(false);
+    } else {
+      setIsListening(true);
+      speechRecognizerRef.current.start();
+      toast.info("ভয়েসে বলুন, আমি শুনছি... 🎙️");
+    }
   };
 
-  useEffect(() => {
-    if (!user) navigate("/login");
-  }, [user, navigate]);
+  // Welcome Initial Message
+  const initialGreeting: AIMessage = {
+    id: "welcome-1",
+    sender: "ai",
+    text: cleanName 
+      ? `আসসালামু আলাইকুম **${cleanName}**! 👋 আমি **Sigma** — Durtup.shop-এর অফিসিয়াল Personal Shopping Manager।\n\nProduct খোঁজা, comparison, cart manage করা, order তৈরি করা বা tracking—সবকিছুতেই আমি আপনাকে সাহায্য করতে পারি। আজ কী খুঁজছেন?`
+      : `হাই! আমি **Sigma** — Durtup.shop-এর অফিসিয়াল Personal Shopping Manager (Powered by Durtup.shop)।\n\nআমাদের স্টোরের প্রোডাক্ট খোঁজা, পণ্যের স্পেক্স তুলনা করা, কার্টে যোগ বা যেকোনো অর্ডারে সহায়তা পেতে আমাকে লিখুন অথবা ছবি আপলোড করুন:`,
+    timestamp: "Just now",
+    quickActions: [
+      { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+      { label: "🔥 সেরা গ্যাজেট দেখাও", action: "best_gadgets" },
+      { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
+      { label: "💵 ক্যাশ অন ডেলিভারি ও পেমেন্ট", action: "payment_info" },
+      { label: "🔄 ৭ দিনের রিটার্ন ও রিফান্ড", action: "return_policy" },
+      { label: "📦 অর্ডার ট্র্যাক করার নিয়ম", action: "track_order" },
+    ],
+  };
 
-  if (!user) return null;
+  const [messages, setMessages] = useState<AIMessage[]>([initialGreeting]);
+
+  // Update greeting when user profile loads
+  useEffect(() => {
+    if (messages.length === 1 && messages[0].id === "welcome-1") {
+      setMessages([initialGreeting]);
+    }
+  }, [cleanName]);
+
+  // Auto scroll to bottom of messages container only (NEVER scrolling the window document)
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages, isTyping, attachedImage, toolStatus]);
+
+  // Image Upload Handler
+  const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("অনুগ্রহ করে একটি ছবি ফাইল নির্বাচন করুন");
+      return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("ছবির সাইজ সর্বোচ্চ 8MB হতে পারবে");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64Data = result.split(",")[1];
+      setAttachedImage({
+        base64: base64Data,
+        mimeType: file.type,
+        previewUrl: result,
+      });
+      toast.success("প্রোডাক্টের ছবি যুক্ত হয়েছে! এবার মেসেজ পাঠান।");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Send Message Logic
+  const handleSendMessage = async (customQuery?: string) => {
+    const query = (customQuery || inputValue).trim();
+    if (!query && !attachedImage) return;
+
+    const userMessageId = `user-${Date.now()}`;
+    const newMsg: AIMessage = {
+      id: userMessageId,
+      sender: "user",
+      text: query || "প্রোডাক্টের ছবি অনুযায়ী অপশন দেখাও",
+      timestamp: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
+      userImage: attachedImage?.previewUrl,
+    };
+
+    setMessages((prev) => [...prev, newMsg]);
+    setInputValue("");
+    const sentImage = attachedImage;
+    setAttachedImage(null);
+    setIsTyping(true);
+    setToolStatus("🔎 Sigma তথ্য বিশ্লেষণ করছে...");
+
+    try {
+      const conversationHistory = messages.map((m) => ({
+        sender: m.sender,
+        text: m.text,
+      }));
+
+      const res = await askSigmaAIAgent(query, {
+        userName: cleanName,
+        userId: user?.id || `guest_${Date.now()}`,
+        catalog,
+        cartState: cartItems,
+        imageAttachment: sentImage ? { base64: sentImage.base64, mimeType: sentImage.mimeType } : undefined,
+        history: conversationHistory,
+        pageContext: {
+          currentPath: "/messages",
+        },
+      });
+
+      // Handle Real-Time Actions
+      if (res.actions && res.actions.length > 0) {
+        for (const action of res.actions) {
+          if (action.type === "ADD_TO_CART" && action.data?.productId) {
+            await addToCart(String(action.data.productId), action.data.quantity || 1);
+            toast.success(`🛒 "${action.data.name || "Product"}" কার্টে যোগ করা হয়েছে!`);
+          } else if (action.type === "REMOVE_FROM_CART" && action.data?.productId) {
+            await removeItem(String(action.data.productId));
+            toast.info("কার্ট থেকে পণ্য রিমুভ করা হয়েছে।");
+          } else if (action.type === "CLEAR_CART") {
+            await clearCart();
+            toast.info("কার্ট খালি করা হয়েছে।");
+          }
+        }
+      }
+
+      const aiMsg: AIMessage = {
+        id: `ai-${Date.now()}`,
+        sender: "ai",
+        text: res.text,
+        timestamp: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
+        products: res.products,
+        comparison: res.comparison,
+        orderDraft: res.orderDraft,
+        tracking: res.tracking,
+        ticket: res.ticket,
+        quickActions: res.quickActions,
+      };
+
+      setMessages((prev) => [...prev, aiMsg]);
+    } catch (err) {
+      console.error("[Sigma Messages Page Error]:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `ai-err-${Date.now()}`,
+          sender: "ai",
+          text: "দুঃখিত, এই মুহূর্তে তথ্যটি আনতে সমস্যা হচ্ছে। একটু পরে আবার চেষ্টা করুন।",
+          timestamp: "Just now",
+        },
+      ]);
+    } finally {
+      setIsTyping(false);
+      setToolStatus(null);
+    }
+  };
+
+  // Order Confirmation Callback from OrderConfirmationCard
+  const handleConfirmOrder = async (draftId: string, token: string, paymentMethod: string) => {
+    const res = await confirmSigmaOrder(draftId, token, paymentMethod);
+    if (res.success) {
+      await clearCart().catch(() => {});
+
+      const orderNumber = res.orderNumber || `ORD-${Date.now().toString().slice(-6)}`;
+      const orderId = res.orderId || `ord_${Date.now()}`;
+
+      try {
+        const firestoreDoc = {
+          id: orderId,
+          order_id: orderId,
+          order_number: orderNumber,
+          orderNumber,
+          user_id: user?.id || `guest_${Date.now()}`,
+          total: 760,
+          status: "pending",
+          payment_method: paymentMethod,
+          payment_status: "pending",
+          source: "sigma_ai_agent",
+          created_at: new Date().toISOString()
+        };
+        await setDoc(doc(db, "orders", orderId), firestoreDoc, { merge: true }).catch(() => {});
+
+        sendOrderSuccessPushNotification({
+          orderNumber,
+          customerName: cleanName || "সম্মানিত গ্রাহক",
+          productName: "Sigma Verified Order",
+          totalAmount: 760,
+          paymentMethod,
+          orderId
+        }).catch(() => {});
+
+        sendTelegramOrderNotification({
+          orderNumber,
+          customerName: cleanName || "Sigma Customer",
+          phone: "017XXXXXXXX",
+          address: "Dhaka, Bangladesh",
+          city: "Dhaka",
+          paymentMethod,
+          total: 760,
+          items: [{ name: "Sigma Assisted Order Item", quantity: 1, price: 760 }]
+        }).catch(() => {});
+      } catch (err) {
+        console.warn("Sync order error:", err);
+      }
+
+      toast.success(`🎉 অর্ডার সফল! Order ID: #${orderNumber}`);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `ai-ord-succ-${Date.now()}`,
+          sender: "ai",
+          text: `🎉 আলহামদুলিল্লাহ! আপনার অর্ডারটি নিশ্চিত করা হয়েছে।\n\n📦 **অর্ডার আইডি:** \`#${orderNumber}\`\n\nআমাদের প্রতিনিধি খুব শীঘ্রই অর্ডারটি প্রসেস করে আপনার ঠিকানায় পাঠিয়ে দেবেন। যেকোনো প্রয়োজনে আমাকে ট্র্যাকিং সম্পর্কে জিজ্ঞাসা করতে পারেন!`,
+          timestamp: "Just now"
+        }
+      ]);
+    } else {
+      toast.error(res.message || "অর্ডার কনফার্ম করতে সমস্যা হয়েছে");
+    }
+  };
+
+  // Add to cart from Product Card
+  const handleProductCardAddToCart = async (p: SigmaProductCardData) => {
+    await addToCart(String(p.id), 1);
+    toast.success(`🛒 "${p.name}" কার্টে যোগ করা হয়েছে!`);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `ai-cart-note-${Date.now()}`,
+        sender: "ai",
+        text: `**${p.name}** সফলভাবে আপনার কার্টে যোগ করা হয়েছে! 🛍️✨\n\nআপনি চাইলে এখনই অর্ডার ড্রাফট তৈরি করতে পারেন বা আরও প্রোডাক্ট দেখতে পারেন।`,
+        timestamp: "Just now"
+      }
+    ]);
+  };
+
+  // Order now direct draft flow
+  const handleProductCardOrderNow = async (p: SigmaProductCardData) => {
+    await addToCart(String(p.id), 1);
+    handleSendMessage(`আমি "${p.name}" অর্ডার করতে চাই। অর্ডার সামারি ড্রাফট তৈরি করো।`);
+  };
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  // Prevent mobile document window scrolling so header & greeting NEVER move
+  useEffect(() => {
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBodyPosition = document.body.style.position;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    document.body.style.height = "100%";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.position = originalBodyPosition;
+      document.body.style.width = "";
+      document.body.style.height = "";
+    };
+  }, []);
+
+  // Dynamic mobile viewport and keyboard tracking
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => {
+      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      setViewportHeight(vh);
+      const isKb = (window.innerHeight - vh) > 100;
+      setIsKeyboardOpen(isKb);
+
+      // Lock window scroll so header stays at 0px
+      window.scrollTo(0, 0);
+    };
+
+    handleResize();
+
+    window.visualViewport?.addEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("scroll", handleResize);
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("scroll", handleResize);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  // Determine current active quick action suggestions (from latest AI message or default)
+  const lastAiMessageWithQuickActions = [...messages].reverse().find(
+    (m) => m.sender === "ai" && m.quickActions && m.quickActions.length > 0
+  );
+  const activeQuickActions = lastAiMessageWithQuickActions?.quickActions || [
+    { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+    { label: "🔥 সেরা গ্যাজেট দেখাও", action: "best_gadgets" },
+    { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
+    { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" },
+    { label: "🔄 ৭ দিনের রিটার্ন পলিসি", action: "return_policy" },
+    { label: "📦 অর্ডার ট্র্যাক করার নিয়ম", action: "track_order" }
+  ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <main className="flex-1 container py-4 pb-20 md:pb-6">
-        <div className="flex h-[calc(100vh-180px)] border rounded-2xl overflow-hidden bg-card shadow-sm">
-          
-          {/* Left Sidebar: Conversation List */}
-          <div className={cn("w-full md:w-80 border-r flex flex-col bg-muted/20", selectedConvId ? "hidden md:flex" : "flex")}>
-            <div className="p-4 border-b bg-card">
-              <h2 className="font-bold text-lg text-foreground">Messages</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{displayedConversations.length} active chat{displayedConversations.length !== 1 ? "s" : ""}</p>
+    <div 
+      style={{ 
+        height: viewportHeight ? `${viewportHeight}px` : "100dvh",
+        maxHeight: viewportHeight ? `${viewportHeight}px` : "100dvh"
+      }}
+      className="fixed inset-x-0 top-0 w-full flex flex-col bg-gradient-to-br from-sky-100/90 via-cyan-50/80 to-blue-100/90 text-slate-900 overflow-hidden font-sans select-none selection:bg-cyan-500 selection:text-white"
+    >
+      {/* Liquid Water Ambient Glows */}
+      <div className="pointer-events-none absolute -top-32 -left-32 w-80 h-80 bg-cyan-300/30 rounded-full blur-3xl" />
+      <div className="pointer-events-none absolute top-1/3 -right-32 w-80 h-80 bg-sky-300/30 rounded-full blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 left-1/4 w-80 h-80 bg-blue-300/25 rounded-full blur-3xl" />
+
+      {/* Top Header - Liquid Water Droplet Crystal Bar (Firmly at the top) */}
+      <header className="shrink-0 z-30 bg-gradient-to-r from-sky-500/95 via-cyan-500/90 to-blue-600/95 backdrop-blur-2xl text-white px-4 py-2.5 shadow-[0_4px_20px_rgba(2,132,199,0.22)] border-b border-white/40 flex items-center justify-between">
+        {/* Clean Title & Subtitle */}
+        <div className="flex items-center gap-2.5">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 border border-white shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
+              <h1 className="text-base sm:text-lg font-black tracking-wide leading-none text-white drop-shadow-sm">Sigma</h1>
+              <Badge className="bg-white/25 hover:bg-white/30 text-white text-[9px] font-black uppercase px-2 py-0.5 border border-white/40 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] backdrop-blur-md">
+                AI Shopping Manager
+              </Badge>
             </div>
-            
-            <ScrollArea className="flex-1">
-              {loadingConversations ? (
-                <div className="flex justify-center p-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-              ) : displayedConversations.length === 0 ? (
-                <div className="p-6 text-center text-muted-foreground text-sm">
-                  No active chats found. Click "Chat with Seller" on any product page to start.
-                </div>
-              ) : (
-                displayedConversations.map((conv) => (
-                  <button
-                    key={conv.id}
-                    onClick={() => {
-                      setSelectedConvId(conv.id);
-                      navigate(`/messages/${conv.id}`);
-                    }}
-                    className={cn(
-                      "w-full p-3.5 text-left border-b border-border/50 hover:bg-muted/60 transition-colors flex items-start gap-3",
-                      selectedConvId === conv.id && "bg-card font-medium border-l-4 border-l-primary"
-                    )}
-                  >
-                    <Avatar className="h-10 w-10 shrink-0 border">
-                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
-                        {(conv.seller_name || "S")[0].toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="font-semibold text-sm text-foreground truncate flex items-center gap-1">
-                          {conv.seller_name}
-                          {(conv.seller_id === "admin" || conv.seller_id === "durtup_official") && (
-                            <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
-                          )}
-                        </p>
-                        {(conv.buyer_unread_count || 0) > 0 && (
-                          <Badge className="h-5 px-1.5 text-[10px] bg-primary text-primary-foreground font-bold">{conv.buyer_unread_count}</Badge>
-                        )}
-                      </div>
-                      {conv.product_name && (
-                        <p className="text-xs text-primary font-medium truncate mt-0.5">
-                          {conv.product_name}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground truncate mt-1">
-                        {conv.last_message || "Tap to chat"}
-                      </p>
-                    </div>
-                  </button>
-                ))
-              )}
-            </ScrollArea>
-          </div>
-
-          {/* Right Main Chat Area */}
-          <div className={cn("flex-1 flex flex-col bg-card", !selectedConvId ? "hidden md:flex" : "flex")}>
-            {selectedConv ? (
-              <>
-                {/* Chat Top Bar */}
-                <div className="p-3.5 px-5 border-b flex items-center gap-3 bg-card shadow-sm z-10">
-                  <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={() => setSelectedConvId(null)}>
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                  <Avatar className="h-9 w-9 border">
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                      {(selectedConv.seller_name || "S")[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-foreground flex items-center gap-1.5">
-                      {selectedConv.seller_name}
-                      {(selectedConv.seller_id === "admin" || selectedConv.seller_id === "durtup_official") && (
-                        <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Official Store Representative</p>
-                  </div>
-                </div>
-
-                {/* Attached Product Preview Banner */}
-                {selectedConv.product_name && (
-                  <div className="m-4 mb-1 p-3.5 rounded-2xl bg-muted/50 border border-primary/20 flex items-center gap-3 shadow-xs">
-                    {selectedConv.product_image ? (
-                      <img src={selectedConv.product_image} alt="" className="w-14 h-14 rounded-xl object-cover border bg-background shrink-0" />
-                    ) : (
-                      <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                        <Package className="h-7 w-7" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[10px] uppercase tracking-wider text-primary font-bold">Inquired Product</span>
-                      <p className="text-xs font-bold text-foreground truncate mt-0.5">{selectedConv.product_name}</p>
-                      {selectedConv.product_price && (
-                        <p className="text-xs text-primary font-extrabold mt-0.5">৳{selectedConv.product_price.toLocaleString()}</p>
-                      )}
-                    </div>
-                    {selectedConv.product_slug && (
-                      <Link 
-                        to={`/product/${selectedConv.product_slug}`} 
-                        className="text-xs px-3.5 py-2 bg-primary text-primary-foreground font-semibold rounded-xl hover:opacity-90 transition-opacity flex items-center gap-1 shrink-0 shadow-xs"
-                      >
-                        View Product <ExternalLink className="h-3.5 w-3.5" />
-                      </Link>
-                    )}
-                  </div>
-                )}
-
-                {/* Messages Stream */}
-                <ScrollArea className="flex-1 p-4">
-                  {loadingMessages ? (
-                    <div className="flex justify-center p-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                  ) : messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground text-sm">
-                      Type your message below to chat with {selectedConv.seller_name}.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {messages.map((msg) => {
-                        const isBuyer = msg.sender_type === "buyer";
-                        return (
-                          <div key={msg.id} className={cn("flex", isBuyer ? "justify-end" : "justify-start")}>
-                            <div className={cn("max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-xs", isBuyer ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted text-foreground border rounded-bl-none")}>
-                              <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                              <p className={cn("text-[10px] mt-1 text-right opacity-80", isBuyer ? "text-primary-foreground/80" : "text-muted-foreground")}>
-                                {format(new Date(msg.created_at || Date.now()), "h:mm a")}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      <div ref={messagesEndRef} />
-                    </div>
-                  )}
-                </ScrollArea>
-
-                {/* Input Bar */}
-                <form onSubmit={handleSend} className="p-3.5 px-4 border-t flex items-center gap-2 bg-card">
-                  <Input 
-                    value={messageText} 
-                    onChange={(e) => setMessageText(e.target.value)} 
-                    placeholder="Write a message..." 
-                    className="flex-1 rounded-xl h-11 bg-muted/30 border-muted focus-visible:ring-primary" 
-                  />
-                  <Button type="submit" size="icon" className="h-11 w-11 rounded-xl bg-primary text-primary-foreground shrink-0 shadow-sm" disabled={!messageText.trim() || sendMessage.isPending}>
-                    {sendMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
-                </form>
-              </>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
-                <p className="text-base font-semibold text-foreground">Select a Chat</p>
-                <p className="text-xs mt-1">Choose a conversation from the sidebar to continue.</p>
-              </div>
-            )}
+            <p className="text-[11px] text-white/95 font-medium mt-1 drop-shadow-xs">
+              Powered by Durtup.shop
+            </p>
           </div>
         </div>
-      </main>
-      <Footer />
+
+        {/* Right Actions & 3-Dot Menu */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMessages([initialGreeting])}
+            className="px-3.5 py-1.5 rounded-full bg-white/20 hover:bg-white/30 border border-white/40 active:scale-95 text-white transition-all flex items-center gap-1.5 text-xs font-bold shadow-[inset_0_1px_2px_rgba(255,255,255,0.7)] backdrop-blur-md"
+            title="Reset Conversation"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">নতুন চ্যাট</span>
+          </button>
+
+          {/* 3-Dot Dropdown Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="h-9 w-9 rounded-full bg-white/20 hover:bg-white/30 border border-white/40 active:scale-95 text-white transition-all flex items-center justify-center shadow-[inset_0_1px_2px_rgba(255,255,255,0.7)] backdrop-blur-md"
+                title="Options"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-white/90 backdrop-blur-2xl border border-sky-100/90 text-slate-800 shadow-[0_12px_40px_rgba(14,165,233,0.18)] rounded-3xl p-1.5 z-50">
+              <DropdownMenuLabel className="text-xs font-bold text-sky-900/70 px-3 py-1.5">
+                Sigma AI অপশনসমূহ
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-sky-100 my-1" />
+
+              <DropdownMenuItem
+                onClick={() => setMessages([initialGreeting])}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
+              >
+                <RotateCcw className="h-4 w-4 text-cyan-500" />
+                <span>নতুন চ্যাট শুরু করুন</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => navigate("/products")}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
+              >
+                <ShoppingBag className="h-4 w-4 text-blue-500" />
+                <span>সকল প্রোডাক্ট ক্যাটালগ</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => navigate("/track")}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
+              >
+                <Truck className="h-4 w-4 text-emerald-500" />
+                <span>অর্ডার ট্র্যাক করুন</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => navigate("/cart")}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
+              >
+                <PackageCheck className="h-4 w-4 text-amber-500" />
+                <span>আমার কার্ট ({cartItems.length})</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => navigate("/help")}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
+              >
+                <HelpCircle className="h-4 w-4 text-purple-500" />
+                <span>কাস্টমার সাপোর্ট ও হেল্প</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator className="bg-sky-100 my-1" />
+
+              <DropdownMenuItem
+                onClick={() => {
+                  handleSendMessage("Durtup.shop এবং Sigma AI সম্পর্কে বিস্তারিত বলো");
+                }}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
+              >
+                <Info className="h-4 w-4 text-slate-400" />
+                <span>Sigma AI সম্পর্কে</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+
+      {/* Messages Scroll Area - Flex-1 takes remaining height */}
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3.5 max-w-3xl w-full mx-auto relative z-10 overscroll-contain"
+      >
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={cn(
+              "flex flex-col",
+              msg.sender === "user" ? "items-end" : "items-start"
+            )}
+          >
+            {/* Sender identity for AI */}
+            {msg.sender === "ai" && (
+              <div className="flex items-center gap-1.5 mb-1 px-2 text-[11px] font-extrabold text-cyan-700">
+                <span className="text-sm">💧</span>
+                <span>Sigma</span>
+                <span className="text-[10px] text-sky-900/50 font-normal">• Powered by Durtup.shop</span>
+              </div>
+            )}
+
+            {/* Message Bubble - Liquid Water Droplet Glass */}
+            <div
+              className={cn(
+                "max-w-[92%] sm:max-w-[82%] p-4 sm:p-5 transition-all",
+                msg.sender === "user"
+                  ? "bg-gradient-to-tr from-cyan-600 via-sky-600 to-blue-600 text-white rounded-3xl rounded-tr-md font-medium shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_0_8px_25px_rgba(2,132,199,0.3)] border border-sky-300/40"
+                  : "bg-white/80 backdrop-blur-2xl border border-white/90 text-slate-800 rounded-3xl rounded-tl-md shadow-[inset_0_2px_4px_rgba(255,255,255,1),_0_10px_30px_rgba(14,165,233,0.12),_0_2px_8px_rgba(0,0,0,0.03)]"
+              )}
+            >
+              {msg.userImage && (
+                <img
+                  src={msg.userImage}
+                  alt="Attachment"
+                  className="max-h-56 rounded-2xl mb-2.5 object-cover border border-white/40 shadow-sm"
+                />
+              )}
+              {msg.sender === "user" ? (
+                <p className="text-xs sm:text-sm leading-relaxed">{msg.text}</p>
+              ) : (
+                <FormattedMessageText text={msg.text} />
+              )}
+            </div>
+
+            {/* Rich Product Cards */}
+            {msg.products && msg.products.length > 0 && (
+              <div className="w-full mt-3 flex gap-3 overflow-x-auto pb-2 pt-1 scrollbar-none">
+                {msg.products.map((p) => (
+                  <SigmaProductCard
+                    key={p.id}
+                    product={p}
+                    onAddToCart={handleProductCardAddToCart}
+                    onOrderNow={handleProductCardOrderNow}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Comparison Card */}
+            {msg.comparison && (
+              <SigmaComparisonCard
+                data={msg.comparison}
+                onAddToCart={(id, name) => addToCart(String(id), 1)}
+              />
+            )}
+
+            {/* Order Draft Card */}
+            {msg.orderDraft && (
+              <SigmaOrderConfirmationCard
+                draft={msg.orderDraft}
+                onConfirmOrder={handleConfirmOrder}
+              />
+            )}
+
+            {/* Order Tracking Card */}
+            {msg.tracking && (
+              <SigmaOrderTrackingCard data={msg.tracking} />
+            )}
+
+            {/* Support Ticket Card */}
+            {msg.ticket && (
+              <SigmaSupportTicketCard ticket={msg.ticket} />
+            )}
+
+            <span className="text-[10px] text-sky-900/50 mt-1 px-2">{msg.timestamp}</span>
+          </div>
+        ))}
+
+        {/* Live Tool Execution Status */}
+        {toolStatus && (
+          <div className="flex items-center">
+            <SigmaToolActivityIndicator activityText={toolStatus} />
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Attached Image Thumbnail Bar */}
+      {attachedImage && (
+        <div className="px-4 py-2 bg-white/85 backdrop-blur-xl border-t border-white/60 flex items-center justify-between max-w-3xl w-full mx-auto shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <img
+              src={attachedImage.previewUrl}
+              alt="Preview"
+              className="h-10 w-10 rounded-xl object-cover border-2 border-cyan-500 shadow-sm"
+            />
+            <span className="text-xs text-sky-950 font-semibold">প্রোডাক্টের ছবি স্ক্যান করার জন্য প্রস্তুত</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAttachedImage(null)}
+            className="h-7 w-7 rounded-full bg-sky-100 hover:bg-rose-100 text-sky-700 hover:text-rose-600 flex items-center justify-center transition-colors shadow-xs"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Bottom Dock: Dynamic Keyboard-Aware + Clean Gap above Mobile Task Bar */}
+      <div 
+        className={cn(
+          "shrink-0 z-30 pointer-events-auto transition-all duration-150 ease-out px-3 sm:px-4 pt-1.5",
+          isKeyboardOpen 
+            ? "pb-2.5 bg-white/70 backdrop-blur-2xl border-t border-white/60 shadow-lg" 
+            : "pb-[78px] md:pb-3 bg-gradient-to-t from-sky-100/95 via-sky-100/80 to-transparent"
+        )}
+      >
+        <div className="max-w-3xl mx-auto space-y-1.5">
+          {/* Horizontally Scrollable Floating Quick Action Chips */}
+          {activeQuickActions.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-0.5 scrollbar-none">
+              {activeQuickActions.map((qa, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    if (qa.link) {
+                      navigate(qa.link);
+                    } else {
+                      handleSendMessage(qa.label);
+                    }
+                  }}
+                  className="whitespace-nowrap shrink-0 text-xs font-bold px-3.5 py-1.5 rounded-full bg-white/95 hover:bg-white backdrop-blur-xl border border-sky-200/90 text-sky-950 hover:text-cyan-700 shadow-[inset_0_1px_2px_rgba(255,255,255,1),_0_4px_12px_rgba(14,165,233,0.12)] hover:shadow-[0_6px_18px_rgba(14,165,233,0.2)] hover:border-cyan-400 transition-all flex items-center gap-1 active:scale-95 cursor-pointer"
+                >
+                  <span>{qa.label}</span>
+                  <ChevronRight className="h-3 w-3 opacity-60 text-cyan-600" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Integrated Water Droplet Glass Input Field */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+            className="flex items-center gap-2 bg-white/95 backdrop-blur-2xl p-1 rounded-full border border-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),_0_6px_20px_rgba(14,165,233,0.18)]"
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onFocus={() => {
+                window.scrollTo(0, 0);
+                setTimeout(() => {
+                  window.scrollTo(0, 0);
+                }, 50);
+              }}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="প্রোডাক্টের নাম লিখুন বা প্রশ্ন করুন (বাংলা / Banglish)..."
+              disabled={isTyping}
+              className="flex-1 h-10 sm:h-11 bg-transparent px-4 text-xs sm:text-sm text-slate-900 placeholder:text-sky-900/40 focus:outline-none"
+            />
+
+            <Button
+              type="submit"
+              disabled={(!inputValue.trim() && !attachedImage) || isTyping}
+              className="h-10 w-10 sm:h-11 sm:w-11 p-0 rounded-full bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shrink-0 shadow-[inset_0_1px_2px_rgba(255,255,255,0.6),_0_4px_16px_rgba(6,182,212,0.35)] active:scale-95 transition-all flex items-center justify-center"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

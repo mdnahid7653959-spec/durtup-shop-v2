@@ -118,14 +118,14 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sticky search header */}
-      <div className="sticky top-0 z-40 bg-primary text-primary-foreground shadow-md w-full">
-        <div className="max-w-2xl mx-auto flex items-center gap-2 px-3 py-2 sm:px-4">
+      {/* Sticky search header with clean professional white background */}
+      <div className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 shadow-xs w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="max-w-2xl mx-auto flex items-center gap-2.5 px-3 py-2 sm:px-4">
           <button
             type="button"
             aria-label="Back"
             onClick={() => navigate(-1)}
-            className="p-1.5 rounded-full hover:bg-white/10 active:scale-95 transition shrink-0"
+            className="p-2 rounded-full text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -136,18 +136,36 @@ export default function SearchPage() {
             }}
             className="flex-1 min-w-0"
           >
-            <div className="flex items-center gap-2 bg-background text-foreground rounded-full h-10 px-3 shadow-inner w-full">
-              <SearchIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+            {/* ── Big 3D Liquid Water Droplet Search Bar (বড় পানির ফোঁটা সার্চ বার) ── */}
+            <div className={cn(
+              "relative flex items-center gap-2.5 rounded-full h-11 px-4 w-full overflow-hidden select-none",
+              "bg-gradient-to-b from-white/95 via-white/45 to-white/75 dark:from-white/35 dark:via-white/12 dark:to-white/30",
+              "backdrop-blur-md backdrop-saturate-150",
+              "border border-slate-200/90 dark:border-white/60",
+              "shadow-[0_6px_22px_rgba(0,0,0,0.08),0_2px_6px_rgba(0,0,0,0.03),inset_0_3.5px_6px_rgba(255,255,255,1),inset_0_-2.5px_5px_rgba(0,0,0,0.04),inset_0_0_15px_rgba(255,255,255,0.9)]",
+              "dark:shadow-[0_6px_24px_rgba(0,0,0,0.55),inset_0_3.5px_6px_rgba(255,255,255,0.5),inset_0_-2.5px_5px_rgba(0,0,0,0.3)]",
+              "focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all"
+            )}>
+              {/* Top Specular Glare Beam */}
+              <div className="absolute top-0.5 inset-x-8 h-[2px] bg-gradient-to-r from-transparent via-white to-transparent rounded-full blur-[0.2px] shadow-[0_0_5px_#ffffff]" />
+              
+              {/* Primary Micro Sparkle Glint */}
+              <div className="absolute top-1.5 right-6 w-2 h-2 rounded-full bg-white shadow-[0_0_5px_#ffffff,0_0_3px_#ffffff]" />
+
+              {/* Bottom Caustic Reflection Arc */}
+              <div className="absolute bottom-0.5 inset-x-10 h-[2px] bg-gradient-to-r from-transparent via-white to-transparent rounded-full blur-[0.3px] shadow-[0_0_4px_rgba(255,255,255,0.95)]" />
+
+              <SearchIcon className="h-4 w-4 text-slate-500 dark:text-slate-300 shrink-0 relative z-10" />
               <input
                 ref={inputRef}
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search products, brands, categories..."
-                className="flex-1 min-w-0 bg-transparent outline-none border-0 text-[13px] placeholder:text-muted-foreground/70 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
+                className="flex-1 min-w-0 bg-transparent outline-none border-0 text-sm placeholder:text-slate-400 font-semibold text-slate-900 dark:text-white relative z-10 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
               />
               {isFetching && hasQuery && (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+                <Loader2 className="h-4 w-4 animate-spin text-slate-500 dark:text-slate-300 shrink-0 relative z-10" />
               )}
               {query && (
                 <button
@@ -157,30 +175,15 @@ export default function SearchPage() {
                     setQuery("");
                     inputRef.current?.focus();
                   }}
-                  className="p-1 rounded-full text-muted-foreground hover:bg-muted shrink-0"
+                  className="p-1 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0 relative z-10 transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
-              {/* Visual Search Button */}
-              <button
-                type="button"
-                onClick={() => setImageSearchOpen(true)}
-                aria-label="Search with image"
-                title="ছবি দিয়ে খুঁজুন (Search with image)"
-                className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-all shrink-0 active:scale-95 flex items-center justify-center"
-              >
-                <Camera className="h-4 w-4" />
-              </button>
             </div>
           </form>
         </div>
       </div>
-
-      <ImageSearchModal
-        open={imageSearchOpen}
-        onOpenChange={setImageSearchOpen}
-      />
 
       <div className="px-4 py-4 space-y-6 max-w-2xl mx-auto pb-24">
         {/* Live suggestions */}
@@ -278,24 +281,24 @@ export default function SearchPage() {
           </div>
         ) : (
           <>
-            {/* Recent searches */}
+            {/* Recent searches with 3D Water Droplets */}
             <section>
-              <div className="flex items-center justify-between px-1 mb-2">
+              <div className="flex items-center justify-between px-1 mb-3">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide inline-flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" /> Recent searches
+                  <Clock className="h-3.5 w-3.5 text-orange-600" /> Recent searches
                 </h3>
                 {recent.length > 0 && (
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setEditMode((v) => !v)}
-                      className="text-xs font-medium text-primary"
+                      className="text-xs font-semibold text-orange-600 hover:underline"
                     >
                       {editMode ? "Done" : "Edit"}
                     </button>
                     {editMode && (
                       <button
                         onClick={clearAll}
-                        className="text-xs font-medium text-destructive"
+                        className="text-xs font-semibold text-destructive hover:underline"
                       >
                         Clear all
                       </button>
@@ -308,14 +311,26 @@ export default function SearchPage() {
                   No recent searches yet.
                 </p>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {recent.map((t) => (
                     <div
                       key={t}
-                      className="group inline-flex items-center gap-1 rounded-full border border-border/70 bg-card pl-3 pr-1 h-8 text-sm hover:bg-muted transition"
+                      className={cn(
+                        "group relative overflow-hidden inline-flex items-center gap-1.5 rounded-full pl-4 pr-2 py-1.5 text-xs sm:text-sm font-bold select-none",
+                        "bg-gradient-to-b from-white/95 via-white/45 to-white/75 dark:from-white/35 dark:via-white/12 dark:to-white/30",
+                        "backdrop-blur-md border border-white/95 dark:border-white/60 text-slate-900 dark:text-slate-100",
+                        "shadow-[0_6px_20px_rgba(0,0,0,0.12),0_2px_6px_rgba(0,0,0,0.05),inset_0_3.5px_6px_rgba(255,255,255,1),inset_0_-2.5px_5px_rgba(0,0,0,0.06),inset_0_0_15px_rgba(255,255,255,0.9)]",
+                        "dark:shadow-[0_6px_22px_rgba(0,0,0,0.55),inset_0_3.5px_6px_rgba(255,255,255,0.5),inset_0_-2.5px_5px_rgba(0,0,0,0.3)]",
+                        "hover:scale-[1.03] transition-transform"
+                      )}
                     >
+                      {/* Water Glare Arc & Sparkle */}
+                      <div className="absolute top-0.5 left-2.5 w-6 h-[2px] bg-gradient-to-r from-white via-white to-white/70 rounded-full blur-[0.15px] shadow-[0_0_4px_#ffffff]" />
+                      <div className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_4px_#ffffff]" />
+                      <div className="absolute bottom-0.5 inset-x-2 h-[1.5px] bg-gradient-to-r from-transparent via-white to-transparent rounded-full blur-[0.3px]" />
+
                       <button
-                        className="truncate max-w-[160px]"
+                        className="truncate max-w-[160px] relative z-10"
                         onClick={() => submit(t)}
                       >
                         {t}
@@ -324,11 +339,11 @@ export default function SearchPage() {
                         aria-label={`Remove ${t}`}
                         onClick={() => removeOne(t)}
                         className={cn(
-                          "h-6 w-6 grid place-items-center rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition",
+                          "h-5 w-5 grid place-items-center rounded-full text-slate-500 hover:text-destructive hover:bg-destructive/10 transition relative z-10 ml-0.5",
                           editMode ? "opacity-100" : "opacity-0 group-hover:opacity-100 md:opacity-100"
                         )}
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <X className="h-3 w-3" />
                       </button>
                     </div>
                   ))}
@@ -336,20 +351,36 @@ export default function SearchPage() {
               )}
             </section>
 
-            {/* Popular / trending */}
+            {/* Popular / trending searches with Hyper-Realistic 3D Water Droplets (আসল পানির ফোঁটা থিম) */}
             <section>
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2 inline-flex items-center gap-1.5">
-                <TrendingUp className="h-3.5 w-3.5" /> Popular on Darzo
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-3 inline-flex items-center gap-1.5">
+                <TrendingUp className="h-3.5 w-3.5 text-orange-600" /> Popular on Durtup
               </h3>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2.5">
                 {trending.map((t, i) => (
                   <button
                     key={t}
                     onClick={() => submit(t)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-3 h-8 text-sm font-medium hover:bg-primary/20 transition"
+                    className={cn(
+                      "relative overflow-hidden inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold select-none group",
+                      "bg-gradient-to-b from-white/95 via-white/45 to-white/75 dark:from-white/35 dark:via-white/12 dark:to-white/30",
+                      "backdrop-blur-md border border-white/95 dark:border-white/60 text-slate-900 dark:text-slate-100",
+                      "shadow-[0_6px_20px_rgba(0,0,0,0.12),0_2px_6px_rgba(0,0,0,0.05),inset_0_3.5px_6px_rgba(255,255,255,1),inset_0_-2.5px_5px_rgba(0,0,0,0.06),inset_0_0_15px_rgba(255,255,255,0.9)]",
+                      "dark:shadow-[0_6px_22px_rgba(0,0,0,0.55),inset_0_3.5px_6px_rgba(255,255,255,0.5),inset_0_-2.5px_5px_rgba(0,0,0,0.3)]",
+                      "hover:scale-[1.04] active:scale-95 transition-all"
+                    )}
                   >
-                    <span className="text-[10px] font-bold opacity-70">{i + 1}</span>
-                    {t}
+                    {/* Top Specular Glare Arc */}
+                    <div className="absolute top-0.5 left-2.5 w-6 h-[2px] bg-gradient-to-r from-white via-white to-white/70 rounded-full blur-[0.15px] shadow-[0_0_4px_#ffffff]" />
+                    
+                    {/* Micro Sparkle Dot */}
+                    <div className="absolute top-1 right-2.5 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_4px_#ffffff]" />
+
+                    {/* Bottom Caustic Reflection Arc */}
+                    <div className="absolute bottom-0.5 inset-x-2 h-[1.5px] bg-gradient-to-r from-transparent via-white to-transparent rounded-full blur-[0.3px]" />
+
+                    <span className="text-[11px] font-black text-orange-600 relative z-10">{i + 1}</span>
+                    <span className="relative z-10">{t}</span>
                   </button>
                 ))}
               </div>

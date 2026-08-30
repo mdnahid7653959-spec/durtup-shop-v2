@@ -14,6 +14,7 @@ import { ProductSection } from "@/components/home/ProductSection";
 import { PersonalizedFeed } from "@/components/home/PersonalizedFeed";
 import { Flame, Sparkles, TrendingUp, ThumbsUp, Clock } from "lucide-react";
 import { InfiniteProductFeed } from "@/components/home/InfiniteProductFeed";
+import { HomeMidBanner } from "@/components/home/HomeMidBanner";
 import { SEOHead } from "@/components/SEOHead";
 
 
@@ -335,6 +336,9 @@ const Index = () => {
             </div>
           </section>
         )}
+
+        {/* Brand Promotional Banner */}
+        <HomeMidBanner />
 
         {/* 8. Endless Automatic Product Feed */}
         <section className="w-full px-3 sm:px-4 pt-2">

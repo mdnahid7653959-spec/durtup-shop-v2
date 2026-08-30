@@ -15,6 +15,8 @@ import {
   LucideIcon 
 } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/firebaseAdapter";
 import { cn } from "@/lib/utils";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 
@@ -53,7 +55,7 @@ interface NavTab {
 
 const defaultTabs: NavTab[] = [
   { label: "Home", icon: "home", href: "/" },
-  { label: "Category", icon: "category", href: "/categories" },
+  { label: "Messages", icon: "messages", href: "/messages", badge: "messages" },
   { label: "Cart", icon: "cart", href: "/cart", badge: "cart" },
   { label: "Orders", icon: "orders", href: "/orders" },
   { label: "Account", icon: "account", href: "/account" },
@@ -65,13 +67,66 @@ interface MobileNavConfig {
 
 export function MobileBottomNav() {
   const location = useLocation();
+  const { user } = useAuth();
   const { itemCount: cartCount } = useCart();
+  const [unreadCount, setUnreadCount] = useState(0);
   const { config } = useSiteConfig<MobileNavConfig>("mobile_nav", { tabs: defaultTabs });
 
-  const tabs = config.tabs?.length ? config.tabs : defaultTabs;
+  // Real-time unread messages listener
+  useEffect(() => {
+    if (!user) { setUnreadCount(0); return; }
+
+    const checkUnread = async () => {
+      try {
+        const { data: buyerConvs } = await supabase
+          .from("conversations").select("buyer_unread_count")
+          .eq("buyer_id", user.id).gt("buyer_unread_count", 0);
+
+        let total = 0;
+        if (buyerConvs) {
+          total += buyerConvs.reduce((acc, c) => acc + (c.buyer_unread_count || 0), 0);
+        }
+
+        const { data: sellerData } = await supabase
+          .from("sellers").select("id")
+          .eq("user_id", user.id).eq("status", "approved").limit(1);
+
+        if (sellerData && sellerData.length > 0) {
+          const { data: sellerConvs } = await supabase
+            .from("conversations").select("seller_unread_count")
+            .eq("seller_id", sellerData[0].id).gt("seller_unread_count", 0);
+          if (sellerConvs) {
+            total += sellerConvs.reduce((acc, c) => acc + (c.seller_unread_count || 0), 0);
+          }
+        }
+        setUnreadCount(total);
+      } catch (err) {
+        console.error("Error checking unread messages:", err);
+      }
+    };
+
+    checkUnread();
+    const channel = supabase
+      .channel("mobile-unread-messages")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => checkUnread())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "conversations" }, () => checkUnread())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
+  const rawTabs = config.tabs?.length ? config.tabs : defaultTabs;
+  // Ensure "Category" tab is replaced with "Messages"
+  const tabs = rawTabs.map((t) => {
+    if (t.label.toLowerCase().includes("cat") || t.href.includes("/cat")) {
+      return { label: "Messages", icon: "messages", href: "/messages", badge: "messages" };
+    }
+    return t;
+  });
 
   const getBadgeCount = (badge?: string) => {
     if (badge === "cart") return cartCount;
+    if (badge === "messages" || badge === "chat") return unreadCount;
     return 0;
   };
 
@@ -82,6 +137,9 @@ export function MobileBottomNav() {
     
     if (href === "/" || href === "") {
       return p === "/" || p === "";
+    }
+    if (href.includes("message") || href.includes("chat")) {
+      return p.includes("message") || p.includes("chat");
     }
     if (href.includes("cat")) {
       return p.includes("cat");
@@ -115,7 +173,27 @@ export function MobileBottomNav() {
   // Real liquid physics animation state (stretch on move, bounce on settle)
   const [isSliding, setIsSliding] = useState(false);
   const [slideDir, setSlideDir] = useState<"left" | "right" | "none">("none");
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const prevIndexRef = useRef(effectiveActiveIndex);
+
+  // Detect Mobile Virtual Keyboard to avoid blocking input fields
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+
+    const handleResize = () => {
+      if (!window.visualViewport) return;
+      const heightDiff = window.innerHeight - window.visualViewport.height;
+      setIsKeyboardOpen(heightDiff > 100);
+    };
+
+    window.visualViewport.addEventListener("resize", handleResize);
+    window.visualViewport.addEventListener("scroll", handleResize);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("scroll", handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     if (prevIndexRef.current !== effectiveActiveIndex) {
@@ -131,6 +209,8 @@ export function MobileBottomNav() {
       return () => clearTimeout(timer);
     }
   }, [effectiveActiveIndex]);
+
+  if (isKeyboardOpen) return null;
 
   return (
     <div 

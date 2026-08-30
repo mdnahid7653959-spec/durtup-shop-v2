@@ -51,26 +51,32 @@ exports.supplierApi = onRequest({ cors: true }, async (req, res) => {
   }
 });
 
-// 2. Process Order Cloud Function
-exports.processOrder = onRequest({ cors: true }, async (req, res) => {
+// 3. Sigma AI Chat Cloud Function (/api/ai/chat)
+exports.aiChat = onRequest({ cors: true }, async (req, res) => {
   try {
-    const { action, items, shipping_address, payment_method } = req.body || {};
+    const { query, userName, userId, history, cartState, imageAttachment } = req.body || {};
+    const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || "";
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
-    if (action === "create") {
-      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-      return res.status(200).json({
-        success: true,
-        order: {
-          id: `ord_${Date.now()}`,
-          order_number: orderNumber,
-          status: "pending",
-          payment_method: payment_method || "cod"
-        }
-      });
-    }
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: `You are Sigma, the official AI Personal Shopping Assistant for Durtup.shop. Answer in natural Bengali/Banglish: "${query || "Hello"}"` }]
+          }
+        ]
+      })
+    });
 
-    return res.status(400).json({ error: "Invalid action" });
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "আমি Sigma — Durtup.shop এ আপনাকে স্বাগতম!";
+    return res.status(200).json({ text, success: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 });
+

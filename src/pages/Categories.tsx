@@ -8,93 +8,46 @@ import {
   ChevronRight, Loader2, Package, 
   Smartphone, Shirt, Home, Dumbbell, Gamepad2, 
   Sparkles, Car, Gem, Baby, Watch, Headphones, 
-  Wrench, ShoppingBag, Gift, LucideIcon
+  Wrench, ShoppingBag, Gift, Tag, LucideIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { CATEGORIES_DATA, type MainCategoryItem } from "@/data/categoriesData";
+import { optimizeImageUrl } from "@/utils/productImageHelper";
 
-// Category icon mapping
 const categoryIcons: Record<string, LucideIcon> = {
+  "gadgets-electronics": Smartphone,
+  "mens-fashion": Shirt,
+  "womens-fashion": Sparkles,
+  "home-lifestyle": Home,
+  "kids-zone": Baby,
+  "foods": ShoppingBag,
+  "winter": Shirt,
+  "watch": Watch,
+  "customize-gift": Gift,
+  "offer": Tag,
+  "others": Package,
   "electronics": Smartphone,
   "fashion": Shirt,
-  "home-garden": Home,
-  "sports": Dumbbell,
-  "toys-hobbies": Gamepad2,
-  "toys": Gamepad2,
-  "beauty-health": Sparkles,
+  "home": Home,
   "beauty": Sparkles,
-  "automotive": Car,
-  "jewelry": Gem,
-  "baby-kids": Baby,
   "watches": Watch,
-  "audio": Headphones,
-  "tools": Wrench,
-  "accessories": ShoppingBag,
-  "gifts": Gift,
+  "kids": Baby,
 };
 
 const getCategoryIcon = (slug: string): LucideIcon => {
   return categoryIcons[slug] || ShoppingBag;
 };
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  image_url: string | null;
-  parent_id: string | null;
-  children?: Category[];
-}
-
-const defaultMohasagorCats: Category[] = [
-  { id: "cat-electronics", name: "Electronics & Gadgets", slug: "electronics", image_url: "https://mohasagor.com.bd/public/storage/images/products/eLWq6za5bthOuiTD40ZvFOjinbTfMEnbRIaCJkP3.png", parent_id: null },
-  { id: "cat-fashion", name: "Fashion & Clothing", slug: "fashion", image_url: "https://mohasagor.com.bd/public/storage/images/products/mgiwhl1BwLXSNkjjGmle1UBdV68gFeTAM89wbC7j.png", parent_id: null },
-  { id: "cat-home", name: "Home & Kitchen", slug: "home", image_url: "https://mohasagor.com.bd/public/storage/images/products/8zdCA2XuHO7IB9dH6Ezm6jJub4AePatuDvhSKFPV.jpg", parent_id: null },
-  { id: "cat-beauty", name: "Health & Beauty", slug: "beauty", image_url: "https://mohasagor.com.bd/public/storage/images/products/Z5cO12U9EbUwsd52tjuZwRL2QFaIalS47wpkxNfV.jpg", parent_id: null },
-  { id: "cat-watches", name: "Watches & Accessories", slug: "watches", image_url: "https://mohasagor.com.bd/public/storage/images/products/oOyfIL7udV4sQxq1Sz9uVFX5iGiQ8DWfKa6QhegT.png", parent_id: null },
-  { id: "cat-kids", name: "Toys & Baby Care", slug: "kids", image_url: "https://mohasagor.com.bd/public/storage/images/products/UpG8zJxrUofDm6wzCVE1WUVWvoxz7nNdIiFk8xoK.jpg", parent_id: null },
-];
-
 const Categories = () => {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<Category[]>(defaultMohasagorCats);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(defaultMohasagorCats[0]);
+  const [categories, setCategories] = useState<MainCategoryItem[]>(CATEGORIES_DATA);
+  const [selectedCategory, setSelectedCategory] = useState<MainCategoryItem | null>(CATEGORIES_DATA[0]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("");
   const [productsLoading, setProductsLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("categories")
-          .select("id, name, slug, image_url, parent_id")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true });
-
-        if (!error && data && data.length > 0) {
-          const parentCategories = data.filter(c => !c.parent_id);
-          const childCategories = data.filter(c => c.parent_id);
-
-          const categoriesWithChildren = parentCategories.map(parent => ({
-            ...parent,
-            children: childCategories.filter(child => child.parent_id === parent.id),
-          }));
-
-          if (categoriesWithChildren.length > 0) {
-            setCategories(categoriesWithChildren);
-            setSelectedCategory(categoriesWithChildren[0]);
-          }
-        }
-      } catch (error) {
-        console.warn("Category fetch notice:", error);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
-  // Fetch products when category changes
+  // Fetch products when category or subcategory changes
   useEffect(() => {
     let isMounted = true;
     const fetchProducts = async () => {
@@ -102,11 +55,11 @@ const Categories = () => {
       setProductsLoading(true);
 
       try {
-        // 1. Get cached / live Mohasagor API products
         const allMohasagor = await getCachedMohasagorProducts();
         let instantFiltered: Product[] = [];
         if (allMohasagor && allMohasagor.length > 0) {
-          instantFiltered = filterProductsByCategory(allMohasagor, selectedCategory.slug, selectedCategory.name);
+          const filterKey = selectedSubcategory || selectedCategory.slug;
+          instantFiltered = filterProductsByCategory(allMohasagor, filterKey, selectedCategory.name);
           if (isMounted && instantFiltered.length > 0) {
             setProducts(instantFiltered);
             setProductsLoading(false);
@@ -143,7 +96,6 @@ const Categories = () => {
           }
         } catch {}
 
-        // Combine DB + Supplier products
         const merged = [...mappedDbProducts, ...instantFiltered];
         const unique = new Map<string, Product>();
         merged.forEach(p => {
@@ -162,78 +114,122 @@ const Categories = () => {
 
     fetchProducts();
     return () => { isMounted = false; };
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedSubcategory]);
 
-  const handleCategoryClick = (category: Category) => {
+  const handleCategoryClick = (category: MainCategoryItem) => {
     navigate(`/category/${category.slug}`);
   };
 
-  const handleParentClick = (category: Category) => {
+  const handleParentClick = (category: MainCategoryItem) => {
     setSelectedCategory(category);
+    setSelectedSubcategory("");
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <main className="flex-1 flex items-center justify-center pb-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </main>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
       <main className="flex-1 pb-20 md:pb-0">
-        {/* Mobile: Two-column layout */}
+        {/* Mobile: Split sidebar + subcategories + products */}
         <div className="md:hidden flex h-[calc(100vh-60px-60px)]">
-          {/* Left sidebar - Parent categories */}
-          <div className="w-24 bg-muted/30 border-r overflow-y-auto">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => handleParentClick(category)}
-                className={cn(
-                  "w-full p-3 flex flex-col items-center gap-1.5 text-center transition-colors border-l-2",
-                  selectedCategory?.id === category.id
-                    ? "bg-background border-l-primary text-primary"
-                    : "border-l-transparent text-muted-foreground hover:bg-background/50"
-                )}
-              >
-                {category.image_url ? (
-                  <img
-                    src={category.image_url}
-                    alt={category.name}
-                    className="w-10 h-10 rounded-lg object-cover"
-                  />
-                ) : (
-                  (() => {
-                    const IconComponent = getCategoryIcon(category.slug);
-                    return (
-                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                        <IconComponent className="h-5 w-5" />
-                      </div>
-                    );
-                  })()
-                )}
-                <span className="text-[10px] font-medium line-clamp-2 leading-tight">
-                  {category.name}
-                </span>
-              </button>
-            ))}
+          {/* Left sidebar - All 11 Categories */}
+          <div className="w-24 bg-muted/40 border-r border-slate-200 dark:border-slate-800 overflow-y-auto shrink-0 scrollbar-none">
+            {categories.map((category) => {
+              const isSelected = selectedCategory?.id === category.id;
+              const IconComponent = getCategoryIcon(category.slug);
+
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => handleParentClick(category)}
+                  className={cn(
+                    "w-full p-2.5 flex flex-col items-center gap-1 text-center transition-colors border-l-3 relative",
+                    isSelected
+                      ? "bg-background border-l-orange-600 text-orange-600 font-bold shadow-2xs"
+                      : "border-l-transparent text-muted-foreground hover:bg-background/50 font-medium"
+                  )}
+                >
+                  <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+                    {category.image ? (
+                      <img
+                        src={optimizeImageUrl(category.image, 100)}
+                        alt={category.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <IconComponent className="h-5 w-5 text-slate-700 dark:text-slate-300" />
+                    )}
+                  </div>
+                  <span className="text-[10px] line-clamp-2 leading-tight">
+                    {category.name}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Right content - Products */}
-          <div className="flex-1 overflow-y-auto p-2">
+          {/* Right content - Subcategories chips & Products */}
+          <div className="flex-1 overflow-y-auto p-2.5">
             {selectedCategory && (
               <>
+                {/* Header Banner */}
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <div>
+                    <h2 className="text-sm font-extrabold text-foreground">
+                      {selectedCategory.name}
+                    </h2>
+                  </div>
+                  <Link
+                    to={`/category/${selectedCategory.slug}`}
+                    className="text-[11px] font-bold text-orange-600 hover:text-orange-700 flex items-center gap-0.5"
+                  >
+                    <span>View All</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+
+                {/* Subcategory Pills Row */}
+                {selectedCategory.subcategories.length > 0 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 mb-2.5">
+                    <button
+                      onClick={() => setSelectedSubcategory("")}
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 transition-colors",
+                        !selectedSubcategory
+                          ? "bg-orange-600 text-white shadow-2xs"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                      )}
+                    >
+                      All
+                    </button>
+                    {selectedCategory.subcategories.map((sub) => {
+                      const isSubActive = selectedSubcategory === sub.slug;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => setSelectedSubcategory(sub.slug)}
+                          className={cn(
+                            "px-2.5 py-0.5 rounded-full text-[10px] font-semibold shrink-0 transition-colors whitespace-nowrap",
+                            isSubActive
+                              ? "bg-orange-600 text-white font-bold shadow-2xs"
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-orange-50"
+                          )}
+                        >
+                          {sub.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {/* Products Grid */}
                 {productsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
                   </div>
                 ) : products.length > 0 ? (
                   <div className="grid grid-cols-2 gap-1.5">
@@ -242,12 +238,9 @@ const Categories = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <Package className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
-                    <p className="text-muted-foreground text-xs">No products yet</p>
-                    <p className="text-muted-foreground/70 text-[10px] mt-1">
-                      Products will appear here when added
-                    </p>
+                  <div className="text-center py-10 bg-card rounded-xl border p-4">
+                    <Package className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                    <p className="text-muted-foreground text-xs font-semibold">No products found</p>
                   </div>
                 )}
               </>
@@ -255,83 +248,90 @@ const Categories = () => {
           </div>
         </div>
 
-        {/* Desktop: Grid layout */}
-        <div className="hidden md:block max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-2xl font-bold mb-6">All Categories</h1>
+        {/* Desktop: Rich Categories Grid with Subcategory Flyouts */}
+        <div className="hidden md:block max-w-7xl mx-auto px-4 py-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight">
+                All Product Categories
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Explore our full catalog categorized across 11 major departments with subcategory filters
+              </p>
+            </div>
+            <span className="text-xs font-bold text-orange-600 bg-orange-100 dark:bg-orange-950/60 px-3 py-1 rounded-full">
+              {categories.length} Major Categories
+            </span>
+          </div>
           
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {categories.map((category) => (
-              <div key={category.id} className="bg-card rounded-xl border p-4">
-                <button
-                  onClick={() => handleCategoryClick(category)}
-                  className="flex items-center gap-3 mb-4 w-full hover:text-primary transition-colors"
-                >
-                  {category.image_url ? (
-                    <img
-                      src={category.image_url}
-                      alt={category.name}
-                      className="w-14 h-14 rounded-lg object-cover"
-                    />
-                  ) : (
-                    (() => {
-                      const IconComponent = getCategoryIcon(category.slug);
-                      return (
-                        <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center">
-                          <IconComponent className="h-6 w-6" />
-                        </div>
-                      );
-                    })()
-                  )}
-                  <div className="text-left flex-1">
-                    <h3 className="font-semibold">{category.name}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {category.children?.length || 0} subcategories
-                    </p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {categories.map((category) => {
+              const IconComponent = getCategoryIcon(category.slug);
 
-                {category.children && category.children.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {category.children.slice(0, 4).map((child) => (
-                      <button
-                        key={child.id}
-                        onClick={() => handleCategoryClick(child)}
-                        className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors text-left"
-                      >
-                        {child.image_url ? (
+              return (
+                <div 
+                  key={category.id} 
+                  className="bg-card rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-2xs hover:shadow-md transition-all hover:border-orange-500/40 flex flex-col justify-between group"
+                >
+                  <div>
+                    {/* Header */}
+                    <div className="flex items-center gap-3.5 mb-4">
+                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700 group-hover:scale-105 transition-transform duration-200 flex items-center justify-center">
+                        {category.image ? (
                           <img
-                            src={child.image_url}
-                            alt={child.name}
-                            className="w-8 h-8 rounded object-cover"
+                            src={optimizeImageUrl(category.image, 200)}
+                            alt={category.name}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = "none";
+                            }}
                           />
                         ) : (
-                          (() => {
-                            const IconComponent = getCategoryIcon(child.slug);
-                            return (
-                              <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
-                                <IconComponent className="h-4 w-4" />
-                              </div>
-                            );
-                          })()
+                          <IconComponent className="w-7 h-7 text-orange-600" />
                         )}
-                        <span className="text-xs line-clamp-1">{child.name}</span>
-                      </button>
-                    ))}
-                    {category.children.length > 4 && (
-                      <button
-                        onClick={() => handleCategoryClick(category)}
-                        className="flex items-center justify-center p-2 rounded-lg bg-muted/30 text-xs text-primary"
-                      >
-                        +{category.children.length - 4} more
-                      </button>
-                    )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Link 
+                          to={`/category/${category.slug}`}
+                          className="font-extrabold text-base sm:text-lg text-foreground group-hover:text-orange-600 transition-colors block truncate"
+                        >
+                          {category.name}
+                        </Link>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {category.subcategories.length} subcategories
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Subcategories list */}
+                    <div className="grid grid-cols-2 gap-1.5 mb-4">
+                      {category.subcategories.map((sub) => (
+                        <Link
+                          key={sub.id}
+                          to={`/category/${category.slug}?subcategory=${sub.slug}`}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 hover:bg-orange-50 dark:hover:bg-slate-800 hover:text-orange-600 transition-colors text-xs font-semibold text-slate-700 dark:text-slate-300 truncate"
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* View Category Button */}
+                  <Link
+                    to={`/category/${category.slug}`}
+                    className="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-orange-600 hover:text-white font-bold text-xs flex items-center justify-between text-slate-800 dark:text-slate-200 transition-all"
+                  >
+                    <span>Browse All {category.name}</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              );
+            })}
           </div>
         </div>
+
       </main>
     </div>
   );
