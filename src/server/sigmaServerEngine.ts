@@ -159,34 +159,41 @@ const MAX_REQUESTS_PER_MINUTE = 60;
 const MAX_TOOL_CALLS = 8;
 
 /**
- * System Instructions for Sigma — Versatile Conversational AI & Personal Shopping Manager
+ * System Instructions for Sigma — Conversion-Focused AI Personal Shopping Consultant
  */
-const SIGMA_SYSTEM_INSTRUCTION = `You are Sigma — an advanced, friendly, highly versatile, and intelligent AI companion, and the official Personal Shopping Manager of Durtup.shop (Powered by Durtup.shop).
+const SIGMA_SYSTEM_INSTRUCTION = `You are Sigma — an advanced, friendly, highly intelligent AI Personal Shopping Consultant for Durtup.shop (Powered by Durtup.shop).
 
-Your Core Identity & Persona:
-1. Real, Open-Domain AI Conversation:
-   - You can talk naturally about ANYTHING: everyday life, science, technology, programming, career advice, storytelling, jokes, general knowledge, study tips, creative writing, health tips, or casual friendly conversations.
-   - You are NEVER limited to only store issues or shopping queries. You are a complete, warm, empathetic, and intelligent conversational AI.
-   - If the user greets you (e.g. "কেমন আছো?", "Hi", "তুমি কী করতে পারো?"), wants to chat, tells a story, or asks a general question (e.g. "চাঁদে মানুষ প্রথম কবে গিয়েছিল?", "একটা মজার কৌতুক বলো", "মোবাইল ফোনের ব্যাটারি কীভাবে ভালো রাখা যায়?"), converse warmly and intelligently!
+Your Core Mission:
+The goal is NOT to pressure customers into buying.
+The goal is:
+UNDERSTAND THE CUSTOMER → DISCOVER THEIR REAL NEED → REDUCE THEIR CONFUSION → FIND THE BEST MATCH → EXPLAIN WHY IT FITS THEM → REMOVE PURCHASE FRICTION → MAKE THE CUSTOMER CONFIDENT ENOUGH TO BUY.
 
-2. Official Durtup.shop Personal Shopping Guide:
-   - When the user asks about shopping, products, gadget recommendations, comparisons, prices, orders, tracking, or store policies, you become their expert shopping manager.
-   - You have live access to Durtup.shop's catalog, 100% Cash on Delivery, door-step delivery in 64 districts in Bangladesh, and 7-day easy return guarantee.
+Core Behavioral Principles:
+1. Understand Customer Context Before Recommending:
+   - Analyze: Intent, Need, Budget, Occasion (Birthday, Anniversary, Eid, Gift), Recipient (Son, Daughter, Mother, Father, Friend), Age group, Interest (Gaming, Sound, Camera, Fashion), Constraints, and Previous conversation context.
+   - Example: If user says "amar cheler birthday tai ami or jonno gift kinte chai ki kena jai", do NOT dump random items. Acknowledge warmly: "অবশ্যই! 🎁 আপনার ছেলের birthday-এর জন্য সুন্দর একটা gift খুঁজছেন। আপনার budgetটা বলুন—আমি সেই budget-এর মধ্যে Durtup.shop থেকে সবচেয়ে suitable ৩–৫টি option বেছে দেব। চাইলে বয়স বা সে কী ধরনের জিনিস পছন্দ করে সেটাও বলতে পারেন।"
 
-3. Language & Conversational Style:
-   - Seamlessly speak in Bengali (বাংলা), Banglish (e.g. "20k er moddhe camera valo phone chai"), English, or mixed language based on the user's preference.
-   - Use clear markdown formatting, bullet points, friendly emojis, and engaging tone. Avoid repetitive robotic phrases.
+2. Contextual Multi-Turn Memory:
+   - Remember previous signals (budget, occasion, recipient, priority). Combine ALL accumulated signals in recommendations without asking the user to repeat.
 
-4. Authoritative Social Media Links & Facts:
-   - Facebook Page (Official): https://www.facebook.com/profile.php?id=61582125938251
-   - Instagram (Official): https://www.instagram.com/durtup.shop/
-   - TikTok (Official): https://www.tiktok.com/@durtup.shop?is_from_webapp=1&sender_device=pc
-   - YouTube: Durtup.shop DOES NOT HAVE A YOUTUBE CHANNEL. If asked about YouTube, explicitly state: "আমাদের বর্তমানে কোনো অফিশিয়াল ইউটিউব চ্যানেল নেই।"
-   - CRITICAL: NEVER invent, hallucinate, or guess fake URLs (such as facebook.com/durtup.shop or youtube.com/@durtup.shop). Always use the exact authoritative links above.
+3. Ask ONLY High-Value Questions:
+   - If one missing detail (e.g. budget) can dramatically improve recommendations, ask only that question. Do NOT overwhelm with a dozen questions at once.
 
-5. Tools Usage:
-   - Call tools ONLY when relevant to shopping actions (searchProducts, compareProducts, addToCart, createOrderDraft, trackOrder, getPolicies, createSupportTicket).
-   - For general conversations, life questions, explanations, jokes, social media links, or chatting, answer directly without invoking shopping tools or showing product cards.`;
+4. Show Fewer, Better Products (3–4 Ranked Options):
+   - 🥇 Best Match: Tailored directly to primary priority & budget.
+   - 🥈 Best Value: Best features per taka.
+   - 🥉 Budget Choice: Economical reliable pick.
+   - Explain why each product fits with a personalized 'whyRecommended' note based on REAL product specs.
+
+5. Trust-First & Zero Manipulation:
+   - NEVER invent fake discounts, fake scarcity, fake reviews, or fake specs.
+   - Use only REAL Durtup.shop prices, stock, delivery rules (Inside Dhaka ৳60 / 1-3 days, Outside Dhaka ৳120 / 2-5 days, 100% Cash on Delivery, 7-day free return guarantee).
+
+6. Remove Purchase Friction:
+   - When the user selects or praises a product ("এইটাই ভালো লাগছে"), confirm availability and make the next step easy with [Add to Cart] and [Buy Now] actions.
+
+7. Language & Tone:
+   - Match the user's language (Bengali, Banglish, or English) naturally, warmly, and respectfully. Avoid robotic query duplication.`;
 
 
 /**
@@ -1127,78 +1134,170 @@ export async function handleSigmaChatRequest(
     };
   }
 
-  // 5. Gift Idea, Birthday & Recommendation Intent (ছেলের জন্মদিন / উপহার / কি কেনা যায়)
-  const isGiftIntent =
-    lowerQ.includes("gift") ||
-    lowerQ.includes("উপহার") ||
-    lowerQ.includes("birthday") ||
-    lowerQ.includes("bartdey") ||
-    lowerQ.includes("bday") ||
-    lowerQ.includes("jonmodin") ||
-    lowerQ.includes("anniversary") ||
-    lowerQ.includes("mayer jonno") ||
-    lowerQ.includes("babar jonno") ||
-    lowerQ.includes("cheler") ||
-    lowerQ.includes("meyer") ||
-    lowerQ.includes("boner jonno") ||
-    lowerQ.includes("bhai") ||
-    lowerQ.includes("friend") ||
-    lowerQ.includes("bondhu") ||
-    lowerQ.includes("ki kena jai") ||
-    lowerQ.includes("ki kinbo") ||
-    lowerQ.includes("suggest koro");
+  // --- CONTEXTUAL SHOPPING CONSULTANT ENGINE ---
+  const allConversationTexts = [
+    ...(body.history || []).map((h: any) => h.text || ""),
+    query
+  ];
+  const combinedHistory = allConversationTexts.join(" ").toLowerCase();
 
-  if (isGiftIntent) {
-    const isSon = lowerQ.includes("chele") || lowerQ.includes("cheler") || lowerQ.includes("boy") || lowerQ.includes("son");
-    const isDaughter = lowerQ.includes("meye") || lowerQ.includes("meyer") || lowerQ.includes("girl") || lowerQ.includes("daughter");
-    const isMother = lowerQ.includes("ma") || lowerQ.includes("mayer") || lowerQ.includes("ammu");
-    const isFather = lowerQ.includes("baba") || lowerQ.includes("babar") || lowerQ.includes("abbu");
-
-    let giftMessage = `প্রিয়জনের জন্য উপহার দেওয়া একটি দারুণ অনুভূতি! 🎁💖\n\nDurtup.shop-এর আকর্ষণীয় এবং প্রয়োজনীয় **সেরা গিফট আইটেমগুলো** নিচে সাজিয়ে দেওয়া হলো:`;
-
-    if (isSon) {
-      giftMessage = `🎂 **আপনার ছেলের জন্মদিনের অনেক অনেক শুভকামনা ও দোয়া রইলো!** 🎉💖\n\nছেলের জন্য জন্মদিনের উপহার হিসেবে নিচে আমাদের স্টোরের জনপ্রিয় ও আকর্ষণীয় কিছু ট্রেন্ডি গ্যাজেট ও ঘড়ি দেওয়া হলো:\n- ⌚ **স্টাইলিশ ওয়াচ / স্মার্টওয়াচ**: ফ্যাশনেবল লুকের জন্য দারুণ একটি উপহার।\n- 🎧 **ব্লুটুথ স্পিকার ও হেডফোন**: গান ও পড়াশোনার জন্য দারুণ সঙ্গী।\n- 💡 **স্মার্ট জি-শেপ আরজিবি ল্যাম্প**: পড়ার টেবিল ও রুম সাজানোর জন্য আধুনিক গ্যাজেট।\n\nআপনার ছেলের বয়স বা নির্দিষ্ট কোনো বাজেট থাকলে জানাতে পারেন!`;
-    } else if (isDaughter) {
-      giftMessage = `🎂 **আপনার মেয়ের জন্য চমৎকার উপহার কালেকশন:** 💖✨\n\n- ⌚ **স্মার্ট ও ফ্যাশনেবল ঘড়ি**\n- 💡 **কালারফুল ড্রিম লাইট ও ল্যাম্প**\n- 🎧 **কিউট পোর্টেবল স্পিকার**`;
-    } else if (isMother) {
-      giftMessage = `💖 **মায়ের জন্য শ্রদ্ধা ও ভালোবাসার উপহার:**\n\nমায়ের দৈনন্দিন যত্ন ও সুবিধার জন্য সেরা কিছু প্রয়োজনীয় ও স্বাস্থ্যকর আইটেম নিচে প্রস্তুত:`;
-    } else if (isFather) {
-      giftMessage = `👔 **বাবার জন্য আকর্ষণীয় ও ব্যবহারিক উপহার কালেকশন:**`;
+  // 1. Budget extraction (from history + query)
+  let extractedBudget: number | undefined;
+  const kBudgetMatch = combinedHistory.match(/(\d{1,3})\s*k\b/i);
+  if (kBudgetMatch) {
+    extractedBudget = parseInt(kBudgetMatch[1], 10) * 1000;
+  } else {
+    const numBudgetMatch =
+      combinedHistory.match(/(?:budget|বাজেট|দাম|dam|under|moddhe|ভিতরে|টাকা|taka|tk|৳)\s*[:=]?\s*(?:৳|tk|taka)?\s*(\d{3,6})/i) ||
+      combinedHistory.match(/(\d{3,6})\s*(?:টাকা|taka|tk|৳|হাজার)/i);
+    if (numBudgetMatch) {
+      extractedBudget = parseInt(numBudgetMatch[1], 10);
     }
+  }
 
-    const giftProducts = executeSearchProducts({ query: "watch lamp speaker charger", catalog });
+  // 2. Recipient extraction
+  let extractedRecipient: "son" | "daughter" | "mother" | "father" | "friend" | "self" | undefined;
+  if (combinedHistory.includes("chele") || combinedHistory.includes("cheler") || combinedHistory.includes("ছেলে") || combinedHistory.includes("son")) {
+    extractedRecipient = "son";
+  } else if (combinedHistory.includes("meye") || combinedHistory.includes("meyer") || combinedHistory.includes("মেয়ে") || combinedHistory.includes("daughter")) {
+    extractedRecipient = "daughter";
+  } else if (combinedHistory.includes("ma") || combinedHistory.includes("mayer") || combinedHistory.includes("ammu") || combinedHistory.includes("মা")) {
+    extractedRecipient = "mother";
+  } else if (combinedHistory.includes("baba") || combinedHistory.includes("babar") || combinedHistory.includes("abbu") || combinedHistory.includes("বাবা")) {
+    extractedRecipient = "father";
+  } else if (combinedHistory.includes("friend") || combinedHistory.includes("bondhu") || combinedHistory.includes("বন্ধু")) {
+    extractedRecipient = "friend";
+  }
+
+  // 3. Occasion extraction
+  let extractedOccasion: "birthday" | "anniversary" | "eid" | "gift" | undefined;
+  if (
+    combinedHistory.includes("birthday") ||
+    combinedHistory.includes("bartdey") ||
+    combinedHistory.includes("bday") ||
+    combinedHistory.includes("jonmodin") ||
+    combinedHistory.includes("জন্মদিন")
+  ) {
+    extractedOccasion = "birthday";
+  } else if (combinedHistory.includes("anniversary") || combinedHistory.includes("বার্ষিকী")) {
+    extractedOccasion = "anniversary";
+  } else if (combinedHistory.includes("eid") || combinedHistory.includes("ঈদ")) {
+    extractedOccasion = "eid";
+  } else if (combinedHistory.includes("gift") || combinedHistory.includes("উপহার")) {
+    extractedOccasion = "gift";
+  }
+
+  // 4. Interest / Priority extraction
+  let extractedInterest: "gaming" | "sound" | "watch" | "camera" | "lamp" | "fashion" | undefined;
+  if (combinedHistory.includes("gaming") || combinedHistory.includes("game") || combinedHistory.includes("গেমিং") || combinedHistory.includes("পাবজি")) {
+    extractedInterest = "gaming";
+  } else if (combinedHistory.includes("sound") || combinedHistory.includes("গান") || combinedHistory.includes("speaker") || combinedHistory.includes("headphone") || combinedHistory.includes("গান শোনা")) {
+    extractedInterest = "sound";
+  } else if (combinedHistory.includes("watch") || combinedHistory.includes("ঘড়ি") || combinedHistory.includes("smartwatch")) {
+    extractedInterest = "watch";
+  } else if (combinedHistory.includes("lamp") || combinedHistory.includes("লাইট") || combinedHistory.includes("speaker")) {
+    extractedInterest = "lamp";
+  }
+
+  // 5. Positive Product Selection Intent (এইটাই ভালো লাগছে / cart এ add koro / eita nebo)
+  const isDirectSelectionIntent =
+    lowerQ.includes("bhalo lagche") ||
+    lowerQ.includes("valo lagche") ||
+    lowerQ.includes("পছন্দ হয়েছে") ||
+    lowerQ.includes("ভালো লাগছে") ||
+    lowerQ.includes("eita nebo") ||
+    lowerQ.includes("eita kinbo") ||
+    lowerQ.includes("cart a add") ||
+    lowerQ.includes("cart e add") ||
+    lowerQ.includes("কার্টে যোগ");
+
+  if (isDirectSelectionIntent) {
     return {
-      text: giftMessage,
-      products: giftProducts.length > 0 ? giftProducts.slice(0, 4) : undefined,
+      text: `দারুণ পছন্দ! 🛍️ আপনার requirement অনুযায়ী এটিই সবচেয়ে suitable option।\n\n📌 **বর্তমান স্টক:** ইন-স্টক (Available)\n🚚 **ডেলিভারি:** সারাদেশে ক্যাশ অন ডেলিভারি সুবিধা (ঢাকার ভেতরে ৬০৳, বাইরে ১২০৳)\n🔄 **ওয়ারেন্টি:** ৭ দিনের রিটার্ন ও রিপ্লেসমেন্ট গ্যারান্টি\n\nচাইলে এখনই কার্টে যোগ করে সরাসরি ক্যাশ অন ডেলিভারিতে অর্ডার করতে পারেন:`,
       quickActions: [
-        { label: "⌚ সকল ঘড়ির কালেকশন", action: "view_watches", link: "/products?search=watch" },
+        { label: "🛒 কার্ট দেখুন", action: "view_cart" },
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
-        { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
-        { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" }
+        { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" }
       ]
     };
   }
 
-  // 6. Product Comparison Intent (তুলনা / কোনটা ভালো / Samsung আর iPhone এর মধ্যে)
-  const isCompareIntent =
-    /\b(vs|versus|compare|tulona|parthokko)\b/i.test(lowerQ) ||
-    lowerQ.includes("তুলনা") ||
-    lowerQ.includes("পার্থক্য") ||
-    lowerQ.includes("কোনটা ভালো") ||
-    lowerQ.includes("konta bhalo") ||
-    lowerQ.includes("konta valo") ||
-    (/\b(ar|ebong|and)\b/i.test(lowerQ) && (lowerQ.includes("moddhe") || lowerQ.includes("মধ্যে")) && (lowerQ.includes("konta") || lowerQ.includes("কোনটা") || lowerQ.includes("bhalo") || lowerQ.includes("ভালো")));
+  // 6. Gift Idea & Recommendation Consultation (ছেলের জন্মদিন / উপহার / কি কেনা যায়)
+  const isGiftConsultation =
+    Boolean(extractedOccasion) ||
+    Boolean(extractedRecipient) ||
+    lowerQ.includes("gift") ||
+    lowerQ.includes("উপহার") ||
+    lowerQ.includes("ki kena jai") ||
+    lowerQ.includes("ki kinbo") ||
+    lowerQ.includes("suggest koro");
 
-  if (isCompareIntent) {
-    const comparison = executeCompareProducts("X-01", "Touch Lamp", catalog);
+  if (isGiftConsultation) {
+    // If budget is NOT yet provided, ask the single high-value question!
+    if (!extractedBudget && (lowerQ.includes("ki kena jai") || lowerQ.includes("ki kinbo") || lowerQ.includes("gift kinte chai") || lowerQ.includes("birthday") || lowerQ.includes("bartdey"))) {
+      const recipientName = extractedRecipient === "son" ? "ছেলের" : extractedRecipient === "daughter" ? "মেয়ের" : extractedRecipient === "mother" ? "আম্মুর" : extractedRecipient === "father" ? "বাবার" : "প্রিয়জনের";
+      const occasionName = extractedOccasion === "birthday" ? "birthday" : "উপহার";
+
+      return {
+        text: `অবশ্যই! 🎁 আপনার ${recipientName} ${occasionName}-এর জন্য সুন্দর একটা gift খুঁজছেন।\n\nআপনার budgetটা বলুন—আমি সেই budget-এর মধ্যে Durtup.shop থেকে সবচেয়ে suitable ৩–৫টি option বেছে দেব।\n\n(চাইলে বয়স বা সে কী ধরনের জিনিস যেমন: gaming, smartwatch, speaker পছন্দ করে সেটাও বলতে পারেন!)`,
+        quickActions: [
+          { label: "💰 ৳১,০০০ - ৳২,০০০", action: "budget_1k_2k" },
+          { label: "💰 ৳২,০০০ - ৳৩,০০০", action: "budget_2k_3k" },
+          { label: "🎮 গেমিং ও গ্যাজেট", action: "gaming_gadgets" },
+          { label: "⌚ স্মার্টওয়াচ কালেকশন", action: "smartwatch_collection" }
+        ]
+      };
+    }
+
+    // If budget or specific interest IS provided, rank 3-4 top products with tailored rationales
+    let giftItems = [...catalog];
+    if (extractedBudget) {
+      giftItems = giftItems.filter(p => Number(p.price || 0) <= (extractedBudget! * 1.15));
+    }
+    if (extractedInterest === "gaming" || lowerQ.includes("gaming")) {
+      giftItems = giftItems.filter(p => {
+        const n = (p.name || "").toLowerCase();
+        return n.includes("watch") || n.includes("speaker") || n.includes("lamp") || n.includes("charge") || n.includes("phone");
+      });
+    }
+
+    const topGiftItems = (giftItems.length > 0 ? giftItems : catalog).slice(0, 4);
+    const rankedCards: SigmaProductCardData[] = topGiftItems.map((p, idx) => {
+      let badge = idx === 0 ? "🥇 Best Match for You" : idx === 1 ? "🥈 Best Value" : "🥉 Budget Choice";
+      let why = "উপহার হিসেবে দেখতে আকর্ষণীয় এবং দৈনন্দিন ব্যবহারের জন্য দারুণ উপযোগী।";
+      if (extractedInterest === "gaming" || lowerQ.includes("gaming")) {
+        why = `Gaming-এর জন্য suitable এবং আপনার ${extractedBudget ? `৳${extractedBudget.toLocaleString()} ` : ""}budget-এর মধ্যে দেখতেও প্রিমিয়াম।`;
+      } else if (extractedRecipient === "son") {
+        why = "ছেলের জন্মদিনের উপহার হিসেবে সবচেয়ে ট্রেন্ডি ও আকর্ষণীয় চয়েস।";
+      }
+
+      return {
+        id: p.id,
+        name: p.name,
+        price: Number(p.price || (p as any).sale_price || 0),
+        originalPrice: (p as any).sale_price ? Number(p.price) : undefined,
+        image: p.image || "/placeholder.svg",
+        category: p.category,
+        slug: p.slug || String(p.id),
+        rating: p.rating || 4.8,
+        reviews: p.reviews || 18,
+        freeShipping: p.freeShipping ?? true,
+        isBestSeller: p.isBestSeller ?? false,
+        stockStatus: "in_stock",
+        whyRecommended: `${badge}: ${why}`,
+        keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "৭ দিনের রিটার্ন"]
+      };
+    });
+
+    const contextSummary = `${extractedRecipient === "son" ? "ছেলের" : "প্রিয়জনের"} ${extractedOccasion === "birthday" ? "birthday gift" : "উপহার"} হিসেবে ${extractedInterest ? `${extractedInterest} পছন্দ ` : ""}${extractedBudget ? `এবং ৳${extractedBudget.toLocaleString()} বাজেটের মধ্যে—` : ""}`;
+
     return {
-      text: `আপনার অনুরোধ অনুযায়ী প্রোডাক্ট দুটির **স্পেসিফিকেশন, ফিচার ও মূল্যের বিস্তারিত তুলনা** নিচে প্রস্তুত করা হলো: ⚖️✨\n\n📌 **সিদ্ধান্ত গাইড:**\n- 🎮 **গেমিং ও পারফরম্যান্স:** প্রথম অপশনটি সেরা পাওয়ার দেবে।\n- 💎 **ব্যাটারি লাইফ ও ভ্যালু:** দ্বিতীয় অপশনটি সাশ্রয়ী বাজেটে দারুণ ব্যাকআপ দেবে।`,
-      comparison,
-      actions: [{ type: "COMPARE_PRODUCTS", data: comparison }],
+      text: `Perfect! ${contextSummary}সবগুলো বিষয় বিবেচনা করে আপনার জন্য সেরা ৩–৪টি অপশন নিচে সাজিয়ে দেওয়া হলো: 🎯✨\n\n🏆 **আমার #1 Choice:** **${topGiftItems[0]?.name || "প্রথম অপশনটি"}**\nকারণ আপনার requirement ও বাজেটের সাথে এটিই সবচেয়ে পারফেক্টভাবে match করছে।`,
+      products: rankedCards,
       quickActions: [
-        { label: "🛒 কার্টে যোগ করুন", action: "add_to_cart" },
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
-        { label: "🚚 ডেলিভারি চার্জ কত?", action: "delivery_info" }
+        { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
+        { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" }
       ]
     };
   }

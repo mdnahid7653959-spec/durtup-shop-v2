@@ -386,7 +386,29 @@ export async function askSigmaAIAgent(
     };
   }
 
-  // K. Gift Idea, Birthday & Recommendation Intent (ছেলের জন্মদিন / উপহার / কি কেনা যায়)
+  // K. Positive Product Selection Intent (এইটাই ভালো লাগছে / cart এ add koro / eita nebo)
+  if (
+    q.includes("bhalo lagche") ||
+    q.includes("valo lagche") ||
+    q.includes("পছন্দ হয়েছে") ||
+    q.includes("ভালো লাগছে") ||
+    q.includes("eita nebo") ||
+    q.includes("eita kinbo") ||
+    q.includes("cart a add") ||
+    q.includes("cart e add") ||
+    q.includes("কার্টে যোগ")
+  ) {
+    return {
+      text: `দারুণ পছন্দ! 🛍️ আপনার requirement অনুযায়ী এটিই সবচেয়ে suitable option।\n\n📌 **বর্তমান স্টক:** ইন-স্টক (Available)\n🚚 **ডেলিভারি:** সারাদেশে ক্যাশ অন ডেলিভারি সুবিধা (ঢাকার ভেতরে ৬০৳, বাইরে ১২০৳)\n🔄 **ওয়ারেন্টি:** ৭ দিনের রিটার্ন ও রিপ্লেসমেন্ট গ্যারান্টি\n\nচাইলে এখনই কার্টে যোগ করে সরাসরি ক্যাশ অন ডেলিভারিতে অর্ডার করতে পারেন:`,
+      quickActions: [
+        { label: "🛒 কার্ট দেখুন", action: "view_cart" },
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+        { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" }
+      ]
+    };
+  }
+
+  // L. Gift Idea, Birthday & Recommendation Consultation (ছেলের জন্মদিন / উপহার / কি কেনা যায়)
   const isBirthdayOrGift =
     q.includes("gift") ||
     q.includes("উপহার") ||
@@ -414,46 +436,79 @@ export async function askSigmaAIAgent(
     const isMother = q.includes("ma") || q.includes("mayer") || q.includes("ammu");
     const isFather = q.includes("baba") || q.includes("babar") || q.includes("abbu");
 
-    let giftMessage = `প্রিয়জনের জন্য উপহার দেওয়া একটি দারুণ অনুভূতি! 🎁💖\n\nDurtup.shop-এর আকর্ষণীয় এবং প্রয়োজনীয় **সেরা গিফট আইটেমগুলো** নিচে সাজিয়ে দেওয়া হলো:`;
-
-    if (isSon) {
-      giftMessage = `🎂 **আপনার ছেলের জন্মদিনের অনেক অনেক শুভকামনা ও দোয়া রইলো!** 🎉💖\n\nছেলের জন্য জন্মদিনের উপহার হিসেবে নিচে আমাদের স্টোরের জনপ্রিয় ও আকর্ষণীয় কিছু ট্রেন্ডি গ্যাজেট ও ঘড়ি দেওয়া হলো:\n- ⌚ **স্টাইলিশ ওয়াচ / স্মার্টওয়াচ**: ফ্যাশনেবল লুকের জন্য দারুণ একটি উপহার।\n- 🎧 **ব্লুটুথ স্পিকার ও হেডফোন**: গান ও পড়াশোনার জন্য দারুণ সঙ্গী।\n- 💡 **স্মার্ট জি-শেপ আরজিবি ল্যাম্প**: পড়ার টেবিল ও রুম সাজানোর জন্য আধুনিক গ্যাজেট।\n\nআপনার ছেলের বয়স বা নির্দিষ্ট কোনো বাজেট থাকলে জানাতে পারেন!`;
-    } else if (isDaughter) {
-      giftMessage = `🎂 **আপনার মেয়ের জন্য চমৎকার উপহার কালেকশন:** 💖✨\n\n- ⌚ **স্মার্ট ও ফ্যাশনেবল ঘড়ি**\n- 💡 **কালারফুল ড্রিম লাইট ও ল্যাম্প**\n- 🎧 **কিউট পোর্টেবল স্পিকার**`;
-    } else if (isMother) {
-      giftMessage = `💖 **মায়ের জন্য শ্রদ্ধা ও ভালোবাসার উপহার:**\n\nমায়ের দৈনন্দিন যত্ন ও সুবিধার জন্য সেরা কিছু প্রয়োজনীয় ও স্বাস্থ্যকর আইটেম নিচে প্রস্তুত:`;
-    } else if (isFather) {
-      giftMessage = `👔 **বাবার জন্য আকর্ষণীয় ও ব্যবহারিক উপহার কালেকশন:**`;
+    // Extract budget
+    let budget: number | undefined;
+    const kMatch = q.match(/(\d{1,3})\s*k\b/i);
+    if (kMatch) {
+      budget = parseInt(kMatch[1], 10) * 1000;
+    } else {
+      const numMatch = q.match(/(\d{3,6})/);
+      if (numMatch) {
+        budget = parseInt(numMatch[1], 10);
+      }
     }
 
-    const giftItems = catalog.filter(p => {
-      const n = (p.name || "").toLowerCase();
-      const c = (p.category || "").toLowerCase();
-      return n.includes("watch") || n.includes("lamp") || n.includes("speaker") || n.includes("charge") || c.includes("gadget") || c.includes("fashion");
-    }).slice(0, 4);
+    // If budget is NOT yet provided, ask high-value question!
+    if (!budget && (q.includes("ki kena jai") || q.includes("ki kinbo") || q.includes("gift kinte chai") || q.includes("birthday") || q.includes("bartdey"))) {
+      const recipientName = isSon ? "ছেলের" : isDaughter ? "মেয়ের" : isMother ? "আম্মুর" : isFather ? "বাবার" : "প্রিয়জনের";
+      const occasionName = q.includes("birthday") || q.includes("bartdey") || q.includes("bday") || q.includes("jonmodin") ? "birthday" : "উপহার";
 
-    const productCards: SigmaProductCardData[] = (giftItems.length > 0 ? giftItems : catalog.slice(0, 4)).map(p => ({
-      id: p.id,
-      name: p.name,
-      price: Number(p.price || (p as any).sale_price || 0),
-      originalPrice: (p as any).sale_price ? Number(p.price) : undefined,
-      image: p.image || "/placeholder.svg",
-      category: p.category,
-      slug: p.slug || String(p.id),
-      rating: p.rating || 4.8,
-      reviews: p.reviews || 18,
-      freeShipping: p.freeShipping ?? true,
-      isBestSeller: p.isBestSeller ?? false,
-      stockStatus: "in_stock",
-      whyRecommended: isSon ? "ছেলের জন্মদিনের সেরা ও আকর্ষণীয় উপহার" : "সেরা গিফট অপশন",
-      keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "৭ দিনের রিটার্ন"]
-    }));
+      return {
+        text: `অবশ্যই! 🎁 আপনার ${recipientName} ${occasionName}-এর জন্য সুন্দর একটা gift খুঁজছেন।\n\nআপনার budgetটা বলুন—আমি সেই budget-এর মধ্যে Durtup.shop থেকে সবচেয়ে suitable ৩–৫টি option বেছে দেব।\n\n(চাইলে বয়স বা সে কী ধরনের জিনিস যেমন: gaming, smartwatch, speaker পছন্দ করে সেটাও বলতে পারেন!)`,
+        quickActions: [
+          { label: "💰 ৳১,০০০ - ৳২,০০০", action: "budget_1k_2k" },
+          { label: "💰 ৳২,০০০ - ৳৩,০০০", action: "budget_2k_3k" },
+          { label: "🎮 গেমিং ও গ্যাজেট", action: "gaming_gadgets" },
+          { label: "⌚ স্মার্টওয়াচ কালেকশন", action: "smartwatch_collection" }
+        ]
+      };
+    }
+
+    let giftItems = [...catalog];
+    if (budget) {
+      giftItems = giftItems.filter(p => Number(p.price || 0) <= (budget! * 1.15));
+    }
+    if (q.includes("gaming")) {
+      giftItems = giftItems.filter(p => {
+        const n = (p.name || "").toLowerCase();
+        return n.includes("watch") || n.includes("speaker") || n.includes("lamp") || n.includes("charge");
+      });
+    }
+
+    const topItems = (giftItems.length > 0 ? giftItems : catalog).slice(0, 4);
+    const productCards: SigmaProductCardData[] = topItems.map((p, idx) => {
+      let badge = idx === 0 ? "🥇 Best Match for You" : idx === 1 ? "🥈 Best Value" : "🥉 Budget Choice";
+      let why = "উপহার হিসেবে দেখতে চমৎকার এবং ব্যবহারের জন্য উপযোগী।";
+      if (q.includes("gaming")) {
+        why = `Gaming-এর জন্য suitable এবং আপনার ${budget ? `৳${budget.toLocaleString()} ` : ""}budget-এর মধ্যে দেখতেও প্রিমিয়াম।`;
+      } else if (isSon) {
+        why = "ছেলের জন্মদিনের উপহার হিসেবে সবচেয়ে ট্রেন্ডি ও আকর্ষণীয় চয়েস।";
+      }
+
+      return {
+        id: p.id,
+        name: p.name,
+        price: Number(p.price || (p as any).sale_price || 0),
+        originalPrice: (p as any).sale_price ? Number(p.price) : undefined,
+        image: p.image || "/placeholder.svg",
+        category: p.category,
+        slug: p.slug || String(p.id),
+        rating: p.rating || 4.8,
+        reviews: p.reviews || 18,
+        freeShipping: p.freeShipping ?? true,
+        isBestSeller: p.isBestSeller ?? false,
+        stockStatus: "in_stock",
+        whyRecommended: `${badge}: ${why}`,
+        keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "৭ দিনের রিটার্ন"]
+      };
+    });
+
+    const contextSummary = `${isSon ? "ছেলের" : "প্রিয়জনের"} birthday gift হিসেবে ${q.includes("gaming") ? "gaming পছন্দ " : ""}${budget ? `এবং ৳${budget.toLocaleString()} বাজেটের মধ্যে—` : ""}`;
 
     return {
-      text: giftMessage,
+      text: `Perfect! ${contextSummary}সবগুলো বিষয় বিবেচনা করে আপনার জন্য সেরা ৩–৪টি অপশন নিচে সাজিয়ে দেওয়া হলো: 🎯✨\n\n🏆 **আমার #1 Choice:** **${topItems[0]?.name || "প্রথম অপশনটি"}**\nকারণ আপনার requirement ও বাজেটের সাথে এটিই সবচেয়ে পারফেক্টভাবে match করছে।`,
       products: productCards,
       quickActions: [
-        { label: "⌚ সকল ঘড়ির কালেকশন", action: "view_watches", link: "/products?search=watch" },
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
         { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
         { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" }
