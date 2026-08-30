@@ -713,13 +713,13 @@ export default function BuyerMessages() {
         </div>
       )}
 
-      {/* Bottom Dock: Direct Messenger / WhatsApp Style */}
+      {/* Bottom Dock: Dynamic Keyboard-Aware + Clean Gap above Mobile Task Bar */}
       <div 
         className={cn(
           "shrink-0 z-30 pointer-events-auto transition-all duration-150 ease-out px-3 sm:px-4",
           isKeyboardOpen 
             ? "pb-3.5 pt-1.5 bg-white/95 backdrop-blur-2xl border-t border-sky-100 shadow-[0_-6px_24px_rgba(0,0,0,0.1)]" 
-            : "pb-3.5 sm:pb-4 pt-1.5 bg-gradient-to-t from-sky-100/95 via-sky-100/80 to-transparent"
+            : "pb-[78px] md:pb-3 pt-1.5 bg-gradient-to-t from-sky-100/95 via-sky-100/80 to-transparent"
         )}
       >
         <div className="max-w-3xl mx-auto space-y-1.5">

@@ -32,7 +32,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     path.startsWith("/cj-product/");
 
   const isMessages = path.startsWith("/messages");
-  const shouldShowMobileNav = !isCheckout && !isAdmin && !isSeller && !isStaff && !isProductDetail && !isMessages;
+  const shouldShowMobileNav = !isCheckout && !isAdmin && !isSeller && !isStaff && !isProductDetail;
   const shouldShowAIAssistant = !isAdmin && !isSeller && !isStaff && !isMessages;
 
   return (
