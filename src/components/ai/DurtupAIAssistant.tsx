@@ -118,6 +118,152 @@ export function DurtupAIAssistant() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const speechRecognizerRef = useRef<any>(null);
 
+  // Floating Slideable / Draggable Position
+  const [position, setPosition] = useState<{ x: number; y: number }>({
+    x: typeof window !== "undefined" ? Math.max(10, window.innerWidth - (window.innerWidth < 640 ? 68 : 80)) : 300,
+    y: typeof window !== "undefined" ? Math.max(10, window.innerHeight - (window.innerWidth < 640 ? 145 : 90)) : 600,
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const hasMovedRef = useRef(false);
+  const dragStartRef = useRef<{ startX: number; startY: number; posX: number; posY: number; startTime: number }>({
+    startX: 0,
+    startY: 0,
+    posX: 0,
+    posY: 0,
+    startTime: 0,
+  });
+
+  // Initialize and persist position
+  useEffect(() => {
+    const saved = localStorage.getItem("durtup_sigma_pos");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+          const maxX = Math.max(10, window.innerWidth - 65);
+          const maxY = Math.max(10, window.innerHeight - 75);
+          setPosition({
+            x: Math.min(Math.max(10, parsed.x), maxX),
+            y: Math.min(Math.max(10, parsed.y), maxY),
+          });
+          return;
+        }
+      } catch (e) {}
+    }
+
+    const defaultX = Math.max(10, window.innerWidth - (window.innerWidth < 640 ? 68 : 80));
+    const defaultY = Math.max(10, window.innerHeight - (window.innerWidth < 640 ? 145 : 90));
+    setPosition({ x: defaultX, y: defaultY });
+
+    const handleResize = () => {
+      setPosition((prev) => {
+        const maxX = Math.max(10, window.innerWidth - 65);
+        const maxY = Math.max(10, window.innerHeight - 75);
+        return {
+          x: Math.min(Math.max(10, prev.x), maxX),
+          y: Math.min(Math.max(10, prev.y), maxY),
+        };
+      });
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Touch event handlers for mobile sliding
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    dragStartRef.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      posX: position.x,
+      posY: position.y,
+      startTime: Date.now(),
+    };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDraggingRef.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - dragStartRef.current.startX;
+    const dy = touch.clientY - dragStartRef.current.startY;
+
+    if (Math.hypot(dx, dy) > 5) {
+      hasMovedRef.current = true;
+      if (!isDragging) setIsDragging(true);
+      if (e.cancelable) e.preventDefault();
+    }
+
+    const maxX = Math.max(10, window.innerWidth - 65);
+    const maxY = Math.max(10, window.innerHeight - 75);
+    const newX = Math.min(Math.max(10, dragStartRef.current.posX + dx), maxX);
+    const newY = Math.min(Math.max(10, dragStartRef.current.posY + dy), maxY);
+
+    setPosition({ x: newX, y: newY });
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    setIsDragging(false);
+
+    if (hasMovedRef.current) {
+      localStorage.setItem("durtup_sigma_pos", JSON.stringify(position));
+    } else {
+      navigate("/messages");
+    }
+  };
+
+  // Mouse event handlers for desktop dragging
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      posX: position.x,
+      posY: position.y,
+      startTime: Date.now(),
+    };
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const dx = moveEvent.clientX - dragStartRef.current.startX;
+      const dy = moveEvent.clientY - dragStartRef.current.startY;
+
+      if (Math.hypot(dx, dy) > 5) {
+        hasMovedRef.current = true;
+        setIsDragging(true);
+      }
+
+      const maxX = Math.max(10, window.innerWidth - 65);
+      const maxY = Math.max(10, window.innerHeight - 75);
+      const newX = Math.min(Math.max(10, dragStartRef.current.posX + dx), maxX);
+      const newY = Math.min(Math.max(10, dragStartRef.current.posY + dy), maxY);
+
+      setPosition({ x: newX, y: newY });
+    };
+
+    const onMouseUp = () => {
+      isDraggingRef.current = false;
+      setIsDragging(false);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+
+      if (hasMovedRef.current) {
+        localStorage.setItem("durtup_sigma_pos", JSON.stringify(position));
+      } else {
+        navigate("/messages");
+      }
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
   // Preload catalog
   useEffect(() => {
     getCachedMohasagorProducts().then((res) => {
@@ -439,15 +585,29 @@ export function DurtupAIAssistant() {
 
   return (
     <>
-      {/* Floating Trigger Button & Context Pill - Direct Navigate to Fullscreen /messages */}
-      <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 flex items-center gap-2.5">
+      {/* Floating Slideable & Draggable Trigger Button & Context Pill */}
+      <div
+        style={{
+          position: "fixed",
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          touchAction: "none",
+        }}
+        className={cn(
+          "z-[9999] flex items-center gap-2.5 select-none transition-transform duration-75",
+          isDragging && "scale-105"
+        )}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+      >
         {/* Dynamic rotating prompt pill */}
         {unreadPrompt && (
           <button
             type="button"
-            onClick={() => navigate("/messages")}
             className={cn(
-              "hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/90 backdrop-blur-md border border-cyan-400/40 text-slate-800 shadow-xl shadow-cyan-500/10 hover:border-cyan-500 transition-all text-xs font-bold cursor-pointer",
+              "hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/95 backdrop-blur-md border border-cyan-400/40 text-slate-800 shadow-xl shadow-cyan-500/10 text-xs font-bold pointer-events-none",
               fadeAnim ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
             )}
           >
@@ -457,18 +617,17 @@ export function DurtupAIAssistant() {
           </button>
         )}
 
-        {/* Main Floating Bubble Button - Water Droplet Orb */}
+        {/* Main Floating Bubble Button - Water Droplet Orb with Touch Drag */}
         <button
           type="button"
-          onClick={() => navigate("/messages")}
-          className="group relative h-13 w-13 sm:h-14 sm:w-14 rounded-full bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.7),_0_8px_30px_rgba(6,182,212,0.4)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center border-2 border-white/50 cursor-pointer"
+          className="group relative h-13 w-13 sm:h-14 sm:w-14 rounded-full bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.7),_0_8px_30px_rgba(6,182,212,0.4)] hover:scale-105 active:scale-95 transition-all duration-150 flex items-center justify-center border-2 border-white/50 cursor-grab active:cursor-grabbing"
           aria-label="Open Sigma AI Shopping Manager"
         >
-          <div className="relative">
+          <div className="relative pointer-events-none">
             <Bot className="h-6 w-6 sm:h-7 sm:w-7 group-hover:rotate-12 transition-transform duration-300" />
             <Sparkles className="h-3.5 w-3.5 text-cyan-200 absolute -top-1 -right-1 animate-pulse" />
           </div>
-          <span className="absolute -bottom-1 text-[9px] font-black uppercase tracking-wider bg-sky-950/90 text-cyan-300 px-2 py-0.2 rounded-full border border-cyan-400/40 shadow-xs">
+          <span className="pointer-events-none absolute -bottom-1 text-[9px] font-black uppercase tracking-wider bg-sky-950/90 text-cyan-300 px-2 py-0.2 rounded-full border border-cyan-400/40 shadow-xs">
             Sigma
           </span>
         </button>
