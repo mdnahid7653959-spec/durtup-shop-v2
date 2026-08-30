@@ -386,7 +386,82 @@ export async function askSigmaAIAgent(
     };
   }
 
-  // K. Product Search & Catalog Matcher
+  // K. Gift Idea, Birthday & Recommendation Intent (ছেলের জন্মদিন / উপহার / কি কেনা যায়)
+  const isBirthdayOrGift =
+    q.includes("gift") ||
+    q.includes("উপহার") ||
+    q.includes("birthday") ||
+    q.includes("bartdey") ||
+    q.includes("bday") ||
+    q.includes("jonmodin") ||
+    q.includes("anniversary") ||
+    q.includes("mayer jonno") ||
+    q.includes("babar jonno") ||
+    q.includes("cheler") ||
+    q.includes("meyer") ||
+    q.includes("boner jonno") ||
+    q.includes("bhai") ||
+    q.includes("friend") ||
+    q.includes("bondhu") ||
+    q.includes("ki kena jai") ||
+    q.includes("ki kinbo") ||
+    q.includes("suggest koro");
+
+  if (isBirthdayOrGift) {
+    let catalog = options?.catalog || FAST_SEED_PRODUCTS;
+    const isSon = q.includes("chele") || q.includes("cheler") || q.includes("boy") || q.includes("son");
+    const isDaughter = q.includes("meye") || q.includes("meyer") || q.includes("girl") || q.includes("daughter");
+    const isMother = q.includes("ma") || q.includes("mayer") || q.includes("ammu");
+    const isFather = q.includes("baba") || q.includes("babar") || q.includes("abbu");
+
+    let giftMessage = `প্রিয়জনের জন্য উপহার দেওয়া একটি দারুণ অনুভূতি! 🎁💖\n\nDurtup.shop-এর আকর্ষণীয় এবং প্রয়োজনীয় **সেরা গিফট আইটেমগুলো** নিচে সাজিয়ে দেওয়া হলো:`;
+
+    if (isSon) {
+      giftMessage = `🎂 **আপনার ছেলের জন্মদিনের অনেক অনেক শুভকামনা ও দোয়া রইলো!** 🎉💖\n\nছেলের জন্য জন্মদিনের উপহার হিসেবে নিচে আমাদের স্টোরের জনপ্রিয় ও আকর্ষণীয় কিছু ট্রেন্ডি গ্যাজেট ও ঘড়ি দেওয়া হলো:\n- ⌚ **স্টাইলিশ ওয়াচ / স্মার্টওয়াচ**: ফ্যাশনেবল লুকের জন্য দারুণ একটি উপহার।\n- 🎧 **ব্লুটুথ স্পিকার ও হেডফোন**: গান ও পড়াশোনার জন্য দারুণ সঙ্গী।\n- 💡 **স্মার্ট জি-শেপ আরজিবি ল্যাম্প**: পড়ার টেবিল ও রুম সাজানোর জন্য আধুনিক গ্যাজেট।\n\nআপনার ছেলের বয়স বা নির্দিষ্ট কোনো বাজেট থাকলে জানাতে পারেন!`;
+    } else if (isDaughter) {
+      giftMessage = `🎂 **আপনার মেয়ের জন্য চমৎকার উপহার কালেকশন:** 💖✨\n\n- ⌚ **স্মার্ট ও ফ্যাশনেবল ঘড়ি**\n- 💡 **কালারফুল ড্রিম লাইট ও ল্যাম্প**\n- 🎧 **কিউট পোর্টেবল স্পিকার**`;
+    } else if (isMother) {
+      giftMessage = `💖 **মায়ের জন্য শ্রদ্ধা ও ভালোবাসার উপহার:**\n\nমায়ের দৈনন্দিন যত্ন ও সুবিধার জন্য সেরা কিছু প্রয়োজনীয় ও স্বাস্থ্যকর আইটেম নিচে প্রস্তুত:`;
+    } else if (isFather) {
+      giftMessage = `👔 **বাবার জন্য আকর্ষণীয় ও ব্যবহারিক উপহার কালেকশন:**`;
+    }
+
+    const giftItems = catalog.filter(p => {
+      const n = (p.name || "").toLowerCase();
+      const c = (p.category || "").toLowerCase();
+      return n.includes("watch") || n.includes("lamp") || n.includes("speaker") || n.includes("charge") || c.includes("gadget") || c.includes("fashion");
+    }).slice(0, 4);
+
+    const productCards: SigmaProductCardData[] = (giftItems.length > 0 ? giftItems : catalog.slice(0, 4)).map(p => ({
+      id: p.id,
+      name: p.name,
+      price: Number(p.price || (p as any).sale_price || 0),
+      originalPrice: (p as any).sale_price ? Number(p.price) : undefined,
+      image: p.image || "/placeholder.svg",
+      category: p.category,
+      slug: p.slug || String(p.id),
+      rating: p.rating || 4.8,
+      reviews: p.reviews || 18,
+      freeShipping: p.freeShipping ?? true,
+      isBestSeller: p.isBestSeller ?? false,
+      stockStatus: "in_stock",
+      whyRecommended: isSon ? "ছেলের জন্মদিনের সেরা ও আকর্ষণীয় উপহার" : "সেরা গিফট অপশন",
+      keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "৭ দিনের রিটার্ন"]
+    }));
+
+    return {
+      text: giftMessage,
+      products: productCards,
+      quickActions: [
+        { label: "⌚ সকল ঘড়ির কালেকশন", action: "view_watches", link: "/products?search=watch" },
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+        { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
+        { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" }
+      ]
+    };
+  }
+
+  // L. Product Search & Catalog Matcher
   let catalog = options?.catalog;
   if (!catalog || catalog.length === 0) {
     try {
@@ -401,7 +476,7 @@ export async function askSigmaAIAgent(
   const searchTerms = q
     .replace(/[^\w\s\u0980-\u09FF]/gi, " ")
     .split(/\s+/)
-    .filter(w => w.length > 1 && !["the", "and", "dekhao", "chai", "lagbe", "koto", "dam", "price", "tumi", "ami", "kemon", "acho"].includes(w));
+    .filter(w => w.length > 1 && !["the", "and", "dekhao", "chai", "lagbe", "koto", "dam", "price", "tumi", "ami", "kemon", "acho", "tai", "or", "jonno", "ki", "kena", "jai"].includes(w));
 
   const matched = searchTerms.length > 0 ? catalog.filter(p => {
     const nameLower = p.name.toLowerCase();
@@ -432,7 +507,7 @@ export async function askSigmaAIAgent(
     }));
 
     return {
-      text: `আপনার খোঁজা অনুযায়ী **'${trimmed}'**-এর সেরা পণ্যগুলো নিচে দেওয়া হলো:`,
+      text: `আপনার পছন্দ ও চাহিদা অনুযায়ী Durtup.shop-এর **সেরা পণ্যগুলো** নিচে প্রস্তুত করা হলো: 🎯✨`,
       products: productCards,
       quickActions: [
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },

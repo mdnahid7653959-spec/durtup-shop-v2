@@ -1127,23 +1127,51 @@ export async function handleSigmaChatRequest(
     };
   }
 
-  // 5. Gift Idea & Recommendation Intent (মায়ের জন্য গিফট / বন্ধুর জন্য উপহার)
+  // 5. Gift Idea, Birthday & Recommendation Intent (ছেলের জন্মদিন / উপহার / কি কেনা যায়)
   const isGiftIntent =
     lowerQ.includes("gift") ||
     lowerQ.includes("উপহার") ||
+    lowerQ.includes("birthday") ||
+    lowerQ.includes("bartdey") ||
+    lowerQ.includes("bday") ||
+    lowerQ.includes("jonmodin") ||
+    lowerQ.includes("anniversary") ||
     lowerQ.includes("mayer jonno") ||
     lowerQ.includes("babar jonno") ||
+    lowerQ.includes("cheler") ||
+    lowerQ.includes("meyer") ||
     lowerQ.includes("boner jonno") ||
     lowerQ.includes("bhai") ||
     lowerQ.includes("friend") ||
-    lowerQ.includes("bondhu");
+    lowerQ.includes("bondhu") ||
+    lowerQ.includes("ki kena jai") ||
+    lowerQ.includes("ki kinbo") ||
+    lowerQ.includes("suggest koro");
 
   if (isGiftIntent) {
-    const giftProducts = executeSearchProducts({ query: "lamp watch speaker bottle", catalog });
+    const isSon = lowerQ.includes("chele") || lowerQ.includes("cheler") || lowerQ.includes("boy") || lowerQ.includes("son");
+    const isDaughter = lowerQ.includes("meye") || lowerQ.includes("meyer") || lowerQ.includes("girl") || lowerQ.includes("daughter");
+    const isMother = lowerQ.includes("ma") || lowerQ.includes("mayer") || lowerQ.includes("ammu");
+    const isFather = lowerQ.includes("baba") || lowerQ.includes("babar") || lowerQ.includes("abbu");
+
+    let giftMessage = `প্রিয়জনের জন্য উপহার দেওয়া একটি দারুণ অনুভূতি! 🎁💖\n\nDurtup.shop-এর আকর্ষণীয় এবং প্রয়োজনীয় **সেরা গিফট আইটেমগুলো** নিচে সাজিয়ে দেওয়া হলো:`;
+
+    if (isSon) {
+      giftMessage = `🎂 **আপনার ছেলের জন্মদিনের অনেক অনেক শুভকামনা ও দোয়া রইলো!** 🎉💖\n\nছেলের জন্য জন্মদিনের উপহার হিসেবে নিচে আমাদের স্টোরের জনপ্রিয় ও আকর্ষণীয় কিছু ট্রেন্ডি গ্যাজেট ও ঘড়ি দেওয়া হলো:\n- ⌚ **স্টাইলিশ ওয়াচ / স্মার্টওয়াচ**: ফ্যাশনেবল লুকের জন্য দারুণ একটি উপহার।\n- 🎧 **ব্লুটুথ স্পিকার ও হেডফোন**: গান ও পড়াশোনার জন্য দারুণ সঙ্গী।\n- 💡 **স্মার্ট জি-শেপ আরজিবি ল্যাম্প**: পড়ার টেবিল ও রুম সাজানোর জন্য আধুনিক গ্যাজেট।\n\nআপনার ছেলের বয়স বা নির্দিষ্ট কোনো বাজেট থাকলে জানাতে পারেন!`;
+    } else if (isDaughter) {
+      giftMessage = `🎂 **আপনার মেয়ের জন্য চমৎকার উপহার কালেকশন:** 💖✨\n\n- ⌚ **স্মার্ট ও ফ্যাশনেবল ঘড়ি**\n- 💡 **কালারফুল ড্রিম লাইট ও ল্যাম্প**\n- 🎧 **কিউট পোর্টেবল স্পিকার**`;
+    } else if (isMother) {
+      giftMessage = `💖 **মায়ের জন্য শ্রদ্ধা ও ভালোবাসার উপহার:**\n\nমায়ের দৈনন্দিন যত্ন ও সুবিধার জন্য সেরা কিছু প্রয়োজনীয় ও স্বাস্থ্যকর আইটেম নিচে প্রস্তুত:`;
+    } else if (isFather) {
+      giftMessage = `👔 **বাবার জন্য আকর্ষণীয় ও ব্যবহারিক উপহার কালেকশন:**`;
+    }
+
+    const giftProducts = executeSearchProducts({ query: "watch lamp speaker charger", catalog });
     return {
-      text: `প্রিয়জনের জন্য উপহার দেওয়া একটি দারুণ অনুভূতি! 🎁💖\n\nDurtup.shop-এর আকর্ষণীয় এবং প্রয়োজনীয় **সেরা গিফট আইটেমগুলো** নিচে সাজিয়ে দেওয়া হলো:`,
+      text: giftMessage,
       products: giftProducts.length > 0 ? giftProducts.slice(0, 4) : undefined,
       quickActions: [
+        { label: "⌚ সকল ঘড়ির কালেকশন", action: "view_watches", link: "/products?search=watch" },
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
         { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
         { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" }
