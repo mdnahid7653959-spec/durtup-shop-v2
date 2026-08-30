@@ -118,151 +118,157 @@ export function DurtupAIAssistant() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const speechRecognizerRef = useRef<any>(null);
 
-  // Floating Slideable / Draggable Position
-  const [position, setPosition] = useState<{ x: number; y: number }>({
-    x: typeof window !== "undefined" ? Math.max(10, window.innerWidth - (window.innerWidth < 640 ? 68 : 80)) : 300,
-    y: typeof window !== "undefined" ? Math.max(10, window.innerHeight - (window.innerWidth < 640 ? 145 : 90)) : 600,
-  });
-  const [isDragging, setIsDragging] = useState(false);
-  const isDraggingRef = useRef(false);
-  const hasMovedRef = useRef(false);
-  const dragStartRef = useRef<{ startX: number; startY: number; posX: number; posY: number; startTime: number }>({
-    startX: 0,
-    startY: 0,
-    posX: 0,
-    posY: 0,
-    startTime: 0,
-  });
+  // Floating Slideable / Draggable Position Ref
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const posRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Initialize and persist position
+  // Native non-passive touch event listeners for 100% reliable mobile sliding
   useEffect(() => {
+    const el = bubbleRef.current;
+    if (!el) return;
+
+    // Load initial position
     const saved = localStorage.getItem("durtup_sigma_pos");
+    let initX = window.innerWidth - (window.innerWidth < 640 ? 68 : 80);
+    let initY = window.innerHeight - (window.innerWidth < 640 ? 140 : 90);
+
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (typeof parsed.x === "number" && typeof parsed.y === "number") {
-          const maxX = Math.max(10, window.innerWidth - 65);
-          const maxY = Math.max(10, window.innerHeight - 75);
-          setPosition({
-            x: Math.min(Math.max(10, parsed.x), maxX),
-            y: Math.min(Math.max(10, parsed.y), maxY),
-          });
-          return;
+          initX = Math.min(Math.max(10, parsed.x), window.innerWidth - 65);
+          initY = Math.min(Math.max(10, parsed.y), window.innerHeight - 75);
         }
       } catch (e) {}
     }
 
-    const defaultX = Math.max(10, window.innerWidth - (window.innerWidth < 640 ? 68 : 80));
-    const defaultY = Math.max(10, window.innerHeight - (window.innerWidth < 640 ? 145 : 90));
-    setPosition({ x: defaultX, y: defaultY });
+    posRef.current = { x: initX, y: initY };
+    el.style.left = `${initX}px`;
+    el.style.top = `${initY}px`;
+    el.style.visibility = "visible";
 
-    const handleResize = () => {
-      setPosition((prev) => {
-        const maxX = Math.max(10, window.innerWidth - 65);
-        const maxY = Math.max(10, window.innerHeight - 75);
-        return {
-          x: Math.min(Math.max(10, prev.x), maxX),
-          y: Math.min(Math.max(10, prev.y), maxY),
-        };
-      });
+    let isDragging = false;
+    let hasMoved = false;
+    let startTouchX = 0;
+    let startTouchY = 0;
+    let initialPosX = 0;
+    let initialPosY = 0;
+    let startTime = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      isDragging = true;
+      hasMoved = false;
+      startTime = Date.now();
+      startTouchX = t.clientX;
+      startTouchY = t.clientY;
+      initialPosX = posRef.current.x;
+      initialPosY = posRef.current.y;
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDragging || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      const dx = t.clientX - startTouchX;
+      const dy = t.clientY - startTouchY;
 
-  // Touch event handlers for mobile sliding
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    isDraggingRef.current = true;
-    hasMovedRef.current = false;
-    dragStartRef.current = {
-      startX: touch.clientX,
-      startY: touch.clientY,
-      posX: position.x,
-      posY: position.y,
-      startTime: Date.now(),
-    };
-  };
+      if (Math.hypot(dx, dy) > 4) {
+        hasMoved = true;
+        if (e.cancelable) e.preventDefault(); // Prevents mobile browser page scroll!
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDraggingRef.current) return;
-    const touch = e.touches[0];
-    const dx = touch.clientX - dragStartRef.current.startX;
-    const dy = touch.clientY - dragStartRef.current.startY;
+        const maxX = window.innerWidth - 60;
+        const maxY = window.innerHeight - 70;
+        const newX = Math.min(Math.max(8, initialPosX + dx), maxX);
+        const newY = Math.min(Math.max(8, initialPosY + dy), maxY);
 
-    if (Math.hypot(dx, dy) > 5) {
-      hasMovedRef.current = true;
-      if (!isDragging) setIsDragging(true);
-      if (e.cancelable) e.preventDefault();
-    }
-
-    const maxX = Math.max(10, window.innerWidth - 65);
-    const maxY = Math.max(10, window.innerHeight - 75);
-    const newX = Math.min(Math.max(10, dragStartRef.current.posX + dx), maxX);
-    const newY = Math.min(Math.max(10, dragStartRef.current.posY + dy), maxY);
-
-    setPosition({ x: newX, y: newY });
-  };
-
-  const handleTouchEnd = () => {
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
-    setIsDragging(false);
-
-    if (hasMovedRef.current) {
-      localStorage.setItem("durtup_sigma_pos", JSON.stringify(position));
-    } else {
-      navigate("/messages");
-    }
-  };
-
-  // Mouse event handlers for desktop dragging
-  const handleMouseDown = (e: React.MouseEvent) => {
-    isDraggingRef.current = true;
-    hasMovedRef.current = false;
-    dragStartRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      posX: position.x,
-      posY: position.y,
-      startTime: Date.now(),
-    };
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      const dx = moveEvent.clientX - dragStartRef.current.startX;
-      const dy = moveEvent.clientY - dragStartRef.current.startY;
-
-      if (Math.hypot(dx, dy) > 5) {
-        hasMovedRef.current = true;
-        setIsDragging(true);
+        posRef.current = { x: newX, y: newY };
+        el.style.left = `${newX}px`;
+        el.style.top = `${newY}px`;
       }
-
-      const maxX = Math.max(10, window.innerWidth - 65);
-      const maxY = Math.max(10, window.innerHeight - 75);
-      const newX = Math.min(Math.max(10, dragStartRef.current.posX + dx), maxX);
-      const newY = Math.min(Math.max(10, dragStartRef.current.posY + dy), maxY);
-
-      setPosition({ x: newX, y: newY });
     };
 
-    const onMouseUp = () => {
-      isDraggingRef.current = false;
-      setIsDragging(false);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+    const onTouchEnd = () => {
+      if (!isDragging) return;
+      isDragging = false;
 
-      if (hasMovedRef.current) {
-        localStorage.setItem("durtup_sigma_pos", JSON.stringify(position));
-      } else {
+      const elapsed = Date.now() - startTime;
+      if (hasMoved) {
+        localStorage.setItem("durtup_sigma_pos", JSON.stringify(posRef.current));
+      } else if (elapsed < 350) {
         navigate("/messages");
       }
     };
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  };
+    // Mouse events for desktop
+    const onMouseDown = (e: MouseEvent) => {
+      isDragging = true;
+      hasMoved = false;
+      startTime = Date.now();
+      startTouchX = e.clientX;
+      startTouchY = e.clientY;
+      initialPosX = posRef.current.x;
+      initialPosY = posRef.current.y;
+
+      const onMouseMove = (moveEvt: MouseEvent) => {
+        if (!isDragging) return;
+        const dx = moveEvt.clientX - startTouchX;
+        const dy = moveEvt.clientY - startTouchY;
+
+        if (Math.hypot(dx, dy) > 4) {
+          hasMoved = true;
+          const maxX = window.innerWidth - 60;
+          const maxY = window.innerHeight - 70;
+          const newX = Math.min(Math.max(8, initialPosX + dx), maxX);
+          const newY = Math.min(Math.max(8, initialPosY + dy), maxY);
+
+          posRef.current = { x: newX, y: newY };
+          el.style.left = `${newX}px`;
+          el.style.top = `${newY}px`;
+        }
+      };
+
+      const onMouseUp = () => {
+        isDragging = false;
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+
+        const elapsed = Date.now() - startTime;
+        if (hasMoved) {
+          localStorage.setItem("durtup_sigma_pos", JSON.stringify(posRef.current));
+        } else if (elapsed < 350) {
+          navigate("/messages");
+        }
+      };
+
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    };
+
+    const onResize = () => {
+      const maxX = window.innerWidth - 60;
+      const maxY = window.innerHeight - 70;
+      const currentX = Math.min(Math.max(8, posRef.current.x), maxX);
+      const currentY = Math.min(Math.max(8, posRef.current.y), maxY);
+      posRef.current = { x: currentX, y: currentY };
+      el.style.left = `${currentX}px`;
+      el.style.top = `${currentY}px`;
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [navigate]);
 
   // Preload catalog
   useEffect(() => {
@@ -587,50 +593,43 @@ export function DurtupAIAssistant() {
     <>
       {/* Floating Slideable & Draggable Trigger Button & Context Pill */}
       <div
+        ref={bubbleRef}
         style={{
           position: "fixed",
-          left: `${position.x}px`,
-          top: `${position.y}px`,
+          zIndex: 9999,
           touchAction: "none",
+          userSelect: "none",
+          WebkitUserSelect: "none",
         }}
-        className={cn(
-          "z-[9999] flex items-center gap-2.5 select-none transition-transform duration-75",
-          isDragging && "scale-105"
-        )}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleMouseDown}
+        className="flex items-center gap-2.5 select-none cursor-grab active:cursor-grabbing will-change-[left,top]"
       >
         {/* Dynamic rotating prompt pill */}
         {unreadPrompt && (
-          <button
-            type="button"
+          <div
             className={cn(
-              "hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/95 backdrop-blur-md border border-cyan-400/40 text-slate-800 shadow-xl shadow-cyan-500/10 text-xs font-bold pointer-events-none",
+              "hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/95 backdrop-blur-md border border-cyan-400/40 text-slate-800 shadow-xl shadow-cyan-500/10 text-xs font-bold pointer-events-none select-none",
               fadeAnim ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
             )}
           >
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
             <span>{currentPromptText}</span>
             <ChevronRight className="h-3.5 w-3.5 text-cyan-600" />
-          </button>
+          </div>
         )}
 
         {/* Main Floating Bubble Button - Water Droplet Orb with Touch Drag */}
-        <button
-          type="button"
-          className="group relative h-13 w-13 sm:h-14 sm:w-14 rounded-full bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.7),_0_8px_30px_rgba(6,182,212,0.4)] hover:scale-105 active:scale-95 transition-all duration-150 flex items-center justify-center border-2 border-white/50 cursor-grab active:cursor-grabbing"
+        <div
+          className="group relative h-13 w-13 sm:h-14 sm:w-14 rounded-full bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.7),_0_8px_30px_rgba(6,182,212,0.4)] hover:scale-105 active:scale-95 transition-transform duration-100 flex items-center justify-center border-2 border-white/50 cursor-grab active:cursor-grabbing select-none"
           aria-label="Open Sigma AI Shopping Manager"
         >
           <div className="relative pointer-events-none">
             <Bot className="h-6 w-6 sm:h-7 sm:w-7 group-hover:rotate-12 transition-transform duration-300" />
             <Sparkles className="h-3.5 w-3.5 text-cyan-200 absolute -top-1 -right-1 animate-pulse" />
           </div>
-          <span className="pointer-events-none absolute -bottom-1 text-[9px] font-black uppercase tracking-wider bg-sky-950/90 text-cyan-300 px-2 py-0.2 rounded-full border border-cyan-400/40 shadow-xs">
+          <span className="pointer-events-none absolute -bottom-1 text-[9px] font-black uppercase tracking-wider bg-sky-950/90 text-cyan-300 px-2 py-0.2 rounded-full border border-cyan-400/40 shadow-xs select-none">
             Sigma
           </span>
-        </button>
+        </div>
       </div>
 
       {/* Expandable Assistant Drawer - Liquid Water Droplet Glass */}
