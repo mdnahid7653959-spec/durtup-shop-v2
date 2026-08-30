@@ -1024,6 +1024,75 @@ export async function handleSigmaChatRequest(
   }
 
   // Comprehensive fallback intent matcher if external Gemini API is unreachable
+
+  // 1. Greetings & Well-being (কেমন আছো / Hello / Hi / Salam)
+  const isGreeting = 
+    /^(hlw|hello|hi|helo|hey|hola|salam|assalamu|as-salamu|asalam|kemon|kmn|valoi|valo|ki obostha|ki obstha|kemon achen|kemon acho|tumi kemon acho|apni kemon achen)/i.test(lowerQ) ||
+    lowerQ.includes("kemon acho") ||
+    lowerQ.includes("kemon achen") ||
+    lowerQ.includes("kmn aso") ||
+    lowerQ.includes("kmn acho") ||
+    lowerQ.includes("valo acho") ||
+    lowerQ.includes("ki khobor") ||
+    lowerQ.includes("ki obstha") ||
+    lowerQ.includes("ki obostha") ||
+    lowerQ.includes("tumi kemon") ||
+    lowerQ.includes("apni kemon") ||
+    lowerQ === "hi" ||
+    lowerQ === "hlw" ||
+    lowerQ === "hello" ||
+    lowerQ === "hey";
+
+  if (isGreeting) {
+    const greetingName = userName ? ` **${userName}**` : "";
+    return {
+      text: `আলহামদুলিল্লাহ, আমি খুব ভালো আছি! 😊${greetingName ? `\n\nস্বাগতম${greetingName}!` : ""}\n\nআমি **Sigma** — Durtup.shop-এর অফিসিয়াল Personal Shopping Manager। আপনি কেমন আছেন? আজ আপনাকে কী ধরনের প্রোডাক্ট খুঁজতে বা কেনাকাটায় সাহায্য করতে পারি?`,
+      quickActions: [
+        { label: "🔥 সেরা গ্যাজেট দেখাও", action: "best_gadgets" },
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+        { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
+        { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" }
+      ]
+    };
+  }
+
+  // 2. Identity / Who are you (তুমি কে / তোমার নাম কী)
+  if (
+    lowerQ.includes("tumi ke") ||
+    lowerQ.includes("tomar nam") ||
+    lowerQ.includes("who are you") ||
+    lowerQ.includes("what is your name") ||
+    lowerQ.includes("about you") ||
+    lowerQ.includes("sigma ke") ||
+    lowerQ.includes("sigma ki")
+  ) {
+    return {
+      text: `আমি **Sigma**, Durtup.shop-এর অফিশিয়াল AI পার্সোনাল শপিং ম্যানেজার! 🛍️✨\n\nআমি আপনাকে সেরা ও জেনুইন প্রোডাক্ট খুঁজে পেতে, দাম ও স্পেসিফিকেশন তুলনা করতে, কার্ট ম্যানেজ করতে এবং সরাসরি অর্ডার করতে সাহায্য করি। আজ কী খুঁজতে চান বলুন?`,
+      quickActions: [
+        { label: "🔥 সেরা গ্যাজেট দেখাও", action: "best_gadgets" },
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+        { label: "⚡ সব প্রোডাক্ট দেখুন", action: "view_products", link: "/products" }
+      ]
+    };
+  }
+
+  // 3. Gratitude & Appreciation (ধন্যবাদ / Thanks / Good / Valo)
+  if (
+    /^(thanks|thank you|thx|dhonnobad|dhonnobaad|shukriya|valo|bhalo|onek valo|great|nice|super|osadharon|ok|thik ache|accha|acha|hmm)$/i.test(lowerQ) ||
+    lowerQ.includes("dhonnobad") ||
+    lowerQ.includes("thank you") ||
+    lowerQ.includes("thanks")
+  ) {
+    return {
+      text: `আপনাকে অনেক অনেক ধন্যবাদ! ❤️\n\nযেকোনো প্রোডাক্টের তথ্য, ওয়ারেন্টি বা অর্ডার সংক্রান্ত প্রয়োজনে আমি সবসময় আছি। আর কিছু কি জানতে চান?`,
+      quickActions: [
+        { label: "🔥 সেরা অফারগুলো দেখাও", action: "best_offers" },
+        { label: "📦 অর্ডার ট্র্যাক করুন", action: "track_order" },
+        { label: "⚡ শপ ঘুরে দেখুন", action: "view_products", link: "/products" }
+      ]
+    };
+  }
+
   const isTrackingIntent =
     lowerQ.includes("track") ||
     lowerQ.includes("ট্র্যাক") ||
@@ -1044,9 +1113,7 @@ export async function handleSigmaChatRequest(
     lowerQ.includes("order draft") ||
     lowerQ.includes("checkout") ||
     lowerQ.includes("buy now") ||
-    lowerQ.includes("কিনতে চাই") ||
-    (lowerQ.includes("order") && !lowerQ.includes("track") && !lowerQ.includes("নিয়ম")) ||
-    (lowerQ.includes("অর্ডার") && !lowerQ.includes("ট্র্যাক") && !lowerQ.includes("নিয়ম"));
+    lowerQ.includes("কিনতে চাই");
 
   if (isTrackingIntent) {
     const orderMatch = query.match(/ORD-[\w-]+/i);
