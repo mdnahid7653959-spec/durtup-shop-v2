@@ -104,20 +104,26 @@ export async function askSigmaAIAgent(
   // 2. Built-in High Precision Conversational & Shopping NLU Engine
 
   // A. Greetings & Well-being (কেমন আছো / Hello / Hi / Salam)
+  const isNegativeMood = q.includes("lagche na") || q.includes("lagche nah") || q.includes("bhalo na") || q.includes("valo na");
+
   const isGreeting = 
-    /^(hlw|hello|hi|helo|hey|hola|salam|assalamu|as-salamu|asalam|kemon|kmn|valoi|valo|ki obostha|ki obstha|kemon achen|kemon acho)/i.test(q) ||
-    q.includes("kemon acho") ||
-    q.includes("kemon achen") ||
-    q.includes("kmn aso") ||
-    q.includes("kmn acho") ||
-    q.includes("valo acho") ||
-    q.includes("ki khobor") ||
-    q.includes("ki obstha") ||
-    q.includes("ki obostha") ||
-    q === "hi" ||
-    q === "hlw" ||
-    q === "hello" ||
-    q === "hey";
+    !isNegativeMood && (
+      /^(hlw|hello|hi|helo|hey|hola|salam|assalamu|as-salamu|asalam|kemon|kmn|ki obostha|ki obstha|kemon achen|kemon acho|tumi kemon acho)/i.test(q) ||
+      q.includes("kemon acho") ||
+      q.includes("kemon achen") ||
+      q.includes("kmn aso") ||
+      q.includes("kmn acho") ||
+      q.includes("valo acho") ||
+      q.includes("ki khobor") ||
+      q.includes("ki obstha") ||
+      q.includes("ki obostha") ||
+      q.includes("tumi kemon") ||
+      q.includes("apni kemon") ||
+      q === "hi" ||
+      q === "hlw" ||
+      q === "hello" ||
+      q === "hey"
+    );
 
   if (isGreeting) {
     const greetingName = userName ? ` **${userName}**` : "";
@@ -251,26 +257,95 @@ export async function askSigmaAIAgent(
     };
   }
 
-  // H. Customer Support / Contact (কাস্টমার কেয়ার)
+  // H. Mood / Casual Conversation / Jokes (মন ভালো নেই / কিছু বলো / কী করছ)
   if (
-    q.includes("support") ||
-    q.includes("helpline") ||
-    q.includes("customer care") ||
-    q.includes("agent") ||
-    q.includes("call") ||
-    q.includes("number") ||
-    q.includes("manush")
+    q.includes("valo lagche na") ||
+    q.includes("bhalo lagche na") ||
+    q.includes("kichu bolo") ||
+    q.includes("joke") ||
+    q.includes("mojar kotha") ||
+    q.includes("ki korcho") ||
+    q.includes("ki koro") ||
+    q.includes("kotha bolo") ||
+    q.includes("ami valo") ||
+    q.includes("ami bhalo")
   ) {
+    if (q.includes("ami valo") || q.includes("ami bhalo")) {
+      return {
+        text: `মাশাআল্লাহ, শুনে খুব ভালো লাগলো! 🥰\n\nআজকে আপনাকে কীভাবে সাহায্য করতে পারি? কোনো নতুন ট্রেন্ডিং প্রোডাক্ট দেখতে চান?`,
+        quickActions: [
+          { label: "🔥 সেরা গ্যাজেট দেখাও", action: "best_gadgets" },
+          { label: "⚡ সব ক্যাটাগরি", action: "view_categories", link: "/categories" }
+        ]
+      };
+    }
     return {
-      text: `**Durtup.shop কাস্টমার কেয়ার ও হেল্পলাইন:** 📞\n\n📱 **হটলাইন / হোয়াটসঅ্যাপ**: +880 1700-000000 (সকাল ৯টা - রাত ১০টা)\n✉️ **ইমেইল**: support@durtup.shop\n💬 **ফেসবুক পেজ**: fb.com/durtupshop\n\nআমাদের সাপোর্ট টিম সবসময় আপনাকে সর্বোচ্চ সেবা দিতে প্রস্তুত!`,
+      text: `মন খারাপ করবেন না! 😊 আমি আপনার সাথে আছি। আপনি চাইলে Durtup.shop-এর চমৎকার সব লাইফস্টাইল গ্যাজেট ও আকর্ষণীয় অফার ঘুরে দেখতে পারেন, অথবা আমার সাথে যেকোনো কেনাকাটার বিষয়ে কথা বলতে পারেন! আজ আপনার দিনটি কেমন কাটল? 🌟`,
       quickActions: [
+        { label: "🔥 সেরা গ্যাজেট দেখাও", action: "best_gadgets" },
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
-        { label: "📦 অর্ডার ট্র্যাক করুন", action: "track_order" }
+        { label: "⚡ শপ ঘুরে দেখুন", action: "view_products", link: "/products" }
       ]
     };
   }
 
-  // I. Product Search & Catalog Matcher
+  // I. Office / Store Location (দোকান কোথায় / অফিস কোথায়)
+  if (
+    q.includes("kothai") ||
+    q.includes("office") ||
+    q.includes("dokan") ||
+    q.includes("thikana") ||
+    q.includes("address") ||
+    q.includes("location")
+  ) {
+    return {
+      text: `🏢 **Durtup.shop অফিস ও সেন্ট্রাল ওয়্যারহাউস:**\n\n📍 **ঠিকানা**: ঢাকা, বাংলাদেশ।\n🚚 আমরা **অনলাইন ই-কমার্স প্ল্যাটফর্ম** হিসেবে সারাদেশের ৬৪ জেলায় ক্যাশ অন ডেলিভারিতে ডোরস্টেপ হোম ডেলিভারি প্রদান করে থাকি! ঘরে বসেই অর্ডার করে নিরাপদে পণ্য বুঝে নিন।`,
+      quickActions: [
+        { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+        { label: "📞 কাস্টমার সাপোর্ট", action: "customer_support" }
+      ]
+    };
+  }
+
+  // J. Low Price / Budget Shopping (কম দামি প্রোডাক্ট / বাজেট)
+  if (
+    q.includes("kom dam") ||
+    q.includes("kom dame") ||
+    q.includes("budget") ||
+    q.includes("shobcheye kom") ||
+    q.includes("cheap")
+  ) {
+    let catalog = options?.catalog || FAST_SEED_PRODUCTS;
+    const sortedByPrice = [...catalog].sort((a, b) => Number(a.price || 0) - Number(b.price || 0)).slice(0, 4);
+    const productCards: SigmaProductCardData[] = sortedByPrice.map(p => ({
+      id: p.id,
+      name: p.name,
+      price: Number(p.price || (p as any).sale_price || 0),
+      originalPrice: (p as any).sale_price ? Number(p.price) : undefined,
+      image: p.image || "/placeholder.svg",
+      category: p.category,
+      slug: p.slug || String(p.id),
+      rating: p.rating || 4.8,
+      reviews: p.reviews || 18,
+      freeShipping: p.freeShipping ?? true,
+      isBestSeller: p.isBestSeller ?? false,
+      stockStatus: "in_stock",
+      keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "৭ দিনের রিটার্ন"]
+    }));
+
+    return {
+      text: `আমাদের স্টোরের সবচেয়ে **সাশ্রয়ী ও কম বাজেটের সেরা প্রোডাক্টগুলো** নিচে দেওয়া হলো: 🏷️✨`,
+      products: productCards,
+      quickActions: [
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+        { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
+        { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" }
+      ]
+    };
+  }
+
+  // K. Product Search & Catalog Matcher
   let catalog = options?.catalog;
   if (!catalog || catalog.length === 0) {
     try {
@@ -285,9 +360,9 @@ export async function askSigmaAIAgent(
   const searchTerms = q
     .replace(/[^\w\s\u0980-\u09FF]/gi, " ")
     .split(/\s+/)
-    .filter(w => w.length > 1 && !["the", "and", "dekhao", "chai", "lagbe", "koto", "dam", "price"].includes(w));
+    .filter(w => w.length > 1 && !["the", "and", "dekhao", "chai", "lagbe", "koto", "dam", "price", "tumi", "ami", "kemon", "acho"].includes(w));
 
-  const matched = catalog.filter(p => {
+  const matched = searchTerms.length > 0 ? catalog.filter(p => {
     const nameLower = p.name.toLowerCase();
     const catLower = (p.category || "").toLowerCase();
     const descLower = (p.description || "").toLowerCase();
@@ -296,7 +371,7 @@ export async function askSigmaAIAgent(
       catLower.includes(term) || 
       descLower.includes(term)
     );
-  }).slice(0, 6);
+  }).slice(0, 6) : [];
 
   if (matched.length > 0) {
     const productCards: SigmaProductCardData[] = matched.map(p => ({
@@ -326,26 +401,9 @@ export async function askSigmaAIAgent(
     };
   }
 
-  // J. Fallback for generic/unrecognized queries
-  const popularSample = catalog.slice(0, 4).map(p => ({
-    id: p.id,
-    name: p.name,
-    price: Number(p.price || (p as any).sale_price || 0),
-    originalPrice: (p as any).sale_price ? Number(p.price) : undefined,
-    image: p.image || "/placeholder.svg",
-    category: p.category,
-    slug: p.slug || String(p.id),
-    rating: p.rating || 4.8,
-    reviews: p.reviews || 22,
-    freeShipping: true,
-    isBestSeller: true,
-    stockStatus: "in_stock" as const,
-    keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "৭ দিনের রিটার্ন"]
-  }));
-
+  // L. Friendly conversational fallback for any other general message (No blind product dumps!)
   return {
-    text: `আমি বুঝতে পেরেছি! আপনি কি নির্দিষ্ট কোনো গ্যাজেট, ঘড়ি, হেডফোন বা পোশাক খুঁজছেন? নিচে আমাদের স্টোরের জনপ্রিয় কিছু ট্রেন্ডিং আইটেম দেখতে পারেন:`,
-    products: popularSample,
+    text: `আমি বুঝতে পেরেছি! 😊 আমি **Sigma** — Durtup.shop-এর পার্সোনাল শপিং ম্যানেজার। আপনি কি নির্দিষ্ট কোনো গ্যাজেট, স্মার্টওয়াচ, হেডফোন বা ফ্যাশন আইটেম খুঁজছেন? আমাকে বলুন, আমি সেরা অফারগুলো এনে দিচ্ছি!`,
     quickActions: [
       { label: "🔥 সেরা গ্যাজেট দেখাও", action: "best_gadgets" },
       { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },

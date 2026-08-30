@@ -840,7 +840,7 @@ export async function handleSigmaChatRequest(
   let returnedTracking: SigmaTrackingData | undefined;
   let returnedTicket: SigmaSupportTicketData | undefined;
 
-  const modelsToTry = ["gemini-3.5-flash-lite", "gemini-3.5-flash"];
+  const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
 
   for (const model of modelsToTry) {
     try {
@@ -1026,22 +1026,26 @@ export async function handleSigmaChatRequest(
   // Comprehensive fallback intent matcher if external Gemini API is unreachable
 
   // 1. Greetings & Well-being (কেমন আছো / Hello / Hi / Salam)
+  const isNegativeMood = lowerQ.includes("lagche na") || lowerQ.includes("lagche nah") || lowerQ.includes("bhalo na") || lowerQ.includes("valo na");
+
   const isGreeting = 
-    /^(hlw|hello|hi|helo|hey|hola|salam|assalamu|as-salamu|asalam|kemon|kmn|valoi|valo|ki obostha|ki obstha|kemon achen|kemon acho|tumi kemon acho|apni kemon achen)/i.test(lowerQ) ||
-    lowerQ.includes("kemon acho") ||
-    lowerQ.includes("kemon achen") ||
-    lowerQ.includes("kmn aso") ||
-    lowerQ.includes("kmn acho") ||
-    lowerQ.includes("valo acho") ||
-    lowerQ.includes("ki khobor") ||
-    lowerQ.includes("ki obstha") ||
-    lowerQ.includes("ki obostha") ||
-    lowerQ.includes("tumi kemon") ||
-    lowerQ.includes("apni kemon") ||
-    lowerQ === "hi" ||
-    lowerQ === "hlw" ||
-    lowerQ === "hello" ||
-    lowerQ === "hey";
+    !isNegativeMood && (
+      /^(hlw|hello|hi|helo|hey|hola|salam|assalamu|as-salamu|asalam|kemon|kmn|ki obostha|ki obstha|kemon achen|kemon acho|tumi kemon acho|apni kemon achen)/i.test(lowerQ) ||
+      lowerQ.includes("kemon acho") ||
+      lowerQ.includes("kemon achen") ||
+      lowerQ.includes("kmn aso") ||
+      lowerQ.includes("kmn acho") ||
+      lowerQ.includes("valo acho") ||
+      lowerQ.includes("ki khobor") ||
+      lowerQ.includes("ki obstha") ||
+      lowerQ.includes("ki obostha") ||
+      lowerQ.includes("tumi kemon") ||
+      lowerQ.includes("apni kemon") ||
+      lowerQ === "hi" ||
+      lowerQ === "hlw" ||
+      lowerQ === "hello" ||
+      lowerQ === "hey"
+    );
 
   if (isGreeting) {
     const greetingName = userName ? ` **${userName}**` : "";
@@ -1196,7 +1200,14 @@ export async function handleSigmaChatRequest(
     lowerQ.includes("অর্ডার করার নিয়ম") ||
     lowerQ.includes("অর্ডার করার পদ্ধতি") ||
     lowerQ.includes("how to order") ||
-    lowerQ.includes("কীভাবে কিনব");
+    lowerQ.includes("কীভাবে কিনব") ||
+    lowerQ.includes("kivabe order") ||
+    lowerQ.includes("kibhabe order") ||
+    lowerQ.includes("order kivabe") ||
+    lowerQ.includes("order kibhabe") ||
+    lowerQ.includes("order korbo") ||
+    lowerQ.includes("order korar") ||
+    lowerQ.includes("order system");
 
   const isSupportIntent =
     lowerQ.includes("support") ||
@@ -1397,6 +1408,77 @@ Sigma সাধারণ কোনো চ্যাটবট নয়; এটি �
         { label: "👕 পাঞ্জাবি ও মেনস ফ্যাশন", action: "view_panjabi" },
         { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
         { label: "💵 ক্যাশ অন ডেলিভারি নিয়ম", action: "payment_info" }
+      ]
+    };
+  }
+
+  // Mood / Casual Conversation / Jokes (মন ভালো নেই / কিছু বলো / কী করছ)
+  if (
+    lowerQ.includes("valo lagche na") ||
+    lowerQ.includes("bhalo lagche na") ||
+    lowerQ.includes("kichu bolo") ||
+    lowerQ.includes("joke") ||
+    lowerQ.includes("mojar kotha") ||
+    lowerQ.includes("ki korcho") ||
+    lowerQ.includes("ki koro") ||
+    lowerQ.includes("kotha bolo") ||
+    lowerQ.includes("ami valo") ||
+    lowerQ.includes("ami bhalo")
+  ) {
+    if (lowerQ.includes("ami valo") || lowerQ.includes("ami bhalo")) {
+      return {
+        text: `মাশাআল্লাহ, শুনে খুব ভালো লাগলো! 🥰\n\nআজকে আপনাকে কীভাবে সাহায্য করতে পারি? কোনো নতুন ট্রেন্ডিং প্রোডাক্ট দেখতে চান?`,
+        quickActions: [
+          { label: "🔥 সেরা গ্যাজেট দেখাও", action: "best_gadgets" },
+          { label: "⚡ সব ক্যাটাগরি", action: "view_categories", link: "/categories" }
+        ]
+      };
+    }
+    return {
+      text: `মন খারাপ করবেন না! 😊 আমি আপনার সাথে আছি। আপনি চাইলে Durtup.shop-এর চমৎকার সব লাইফস্টাইল গ্যাজেট ও আকর্ষণীয় অফার ঘুরে দেখতে পারেন, অথবা আমার সাথে যেকোনো কেনাকাটার বিষয়ে কথা বলতে পারেন! আজ আপনার দিনটি কেমন কাটল? 🌟`,
+      quickActions: [
+        { label: "🔥 সেরা গ্যাজেট দেখাও", action: "best_gadgets" },
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+        { label: "⚡ শপ ঘুরে দেখুন", action: "view_products", link: "/products" }
+      ]
+    };
+  }
+
+  // Office / Store Location (দোকান কোথায় / অফিস কোথায়)
+  if (
+    lowerQ.includes("kothai") ||
+    lowerQ.includes("office") ||
+    lowerQ.includes("dokan") ||
+    lowerQ.includes("thikana") ||
+    lowerQ.includes("address") ||
+    lowerQ.includes("location")
+  ) {
+    return {
+      text: `🏢 **Durtup.shop অফিস ও সেন্ট্রাল ওয়্যারহাউস:**\n\n📍 **ঠিকানা**: ঢাকা, বাংলাদেশ।\n🚚 আমরা **অনলাইন ই-কমার্স প্ল্যাটফর্ম** হিসেবে সারাদেশের ৬৪ জেলায় ক্যাশ অন ডেলিভারিতে ডোরস্টেপ হোম ডেলিভারি প্রদান করে থাকি! ঘরে বসেই অর্ডার করে নিরাপদে পণ্য বুঝে নিন।`,
+      quickActions: [
+        { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+        { label: "📞 কাস্টমার সাপোর্ট", action: "customer_support", link: "/help" }
+      ]
+    };
+  }
+
+  // Low Price / Budget Shopping (কম দামি প্রোডাক্ট / বাজেট)
+  if (
+    lowerQ.includes("kom dam") ||
+    lowerQ.includes("kom dame") ||
+    lowerQ.includes("budget") ||
+    lowerQ.includes("shobcheye kom") ||
+    lowerQ.includes("cheap")
+  ) {
+    const sortedByPrice = [...catalog].sort((a, b) => Number(a.price || 0) - Number(b.price || 0)).slice(0, 4);
+    return {
+      text: `আমাদের স্টোরের সবচেয়ে **সাশ্রয়ী ও কম বাজেটের সেরা প্রোডাক্টগুলো** নিচে দেওয়া হলো: 🏷️✨`,
+      products: sortedByPrice,
+      quickActions: [
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+        { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
+        { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" }
       ]
     };
   }
