@@ -118,129 +118,6 @@ export function DurtupAIAssistant() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const speechRecognizerRef = useRef<any>(null);
 
-  // Floating Draggable Position
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
-  const isDraggingRef = useRef(false);
-  const dragStartRef = useRef<{ startX: number; startY: number; posX: number; posY: number }>({
-    startX: 0,
-    startY: 0,
-    posX: 0,
-    posY: 0,
-  });
-  const hasMovedRef = useRef(false);
-
-  // Initialize position from localStorage or default to bottom-right
-  useEffect(() => {
-    const updatePosition = () => {
-      const saved = localStorage.getItem("sigma_bubble_pos");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (typeof parsed.x === "number" && typeof parsed.y === "number") {
-            const maxX = Math.max(10, window.innerWidth - 65);
-            const maxY = Math.max(10, window.innerHeight - 75);
-            setPosition({
-              x: Math.min(Math.max(10, parsed.x), maxX),
-              y: Math.min(Math.max(10, parsed.y), maxY),
-            });
-            return;
-          }
-        } catch (e) {}
-      }
-
-      // Default position: bottom-right
-      const defaultX = Math.max(10, window.innerWidth - (window.innerWidth < 640 ? 68 : 80));
-      const defaultY = Math.max(10, window.innerHeight - (window.innerWidth < 640 ? 145 : 90));
-      setPosition({ x: defaultX, y: defaultY });
-    };
-
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    return () => window.removeEventListener("resize", updatePosition);
-  }, []);
-
-  // Handle Touch Dragging
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!position) return;
-    const touch = e.touches[0];
-    isDraggingRef.current = true;
-    hasMovedRef.current = false;
-    dragStartRef.current = {
-      startX: touch.clientX,
-      startY: touch.clientY,
-      posX: position.x,
-      posY: position.y,
-    };
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDraggingRef.current) return;
-    const touch = e.touches[0];
-    const dx = touch.clientX - dragStartRef.current.startX;
-    const dy = touch.clientY - dragStartRef.current.startY;
-
-    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-      hasMovedRef.current = true;
-    }
-
-    const maxX = Math.max(10, window.innerWidth - 65);
-    const maxY = Math.max(10, window.innerHeight - 75);
-    const newX = Math.min(Math.max(10, dragStartRef.current.posX + dx), maxX);
-    const newY = Math.min(Math.max(10, dragStartRef.current.posY + dy), maxY);
-
-    setPosition({ x: newX, y: newY });
-  };
-
-  const handleTouchEnd = () => {
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
-    if (position) {
-      localStorage.setItem("sigma_bubble_pos", JSON.stringify(position));
-    }
-  };
-
-  // Handle Mouse Dragging
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!position) return;
-    isDraggingRef.current = true;
-    hasMovedRef.current = false;
-    dragStartRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      posX: position.x,
-      posY: position.y,
-    };
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      const dx = moveEvent.clientX - dragStartRef.current.startX;
-      const dy = moveEvent.clientY - dragStartRef.current.startY;
-
-      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-        hasMovedRef.current = true;
-      }
-
-      const maxX = Math.max(10, window.innerWidth - 65);
-      const maxY = Math.max(10, window.innerHeight - 75);
-      const newX = Math.min(Math.max(10, dragStartRef.current.posX + dx), maxX);
-      const newY = Math.min(Math.max(10, dragStartRef.current.posY + dy), maxY);
-
-      setPosition({ x: newX, y: newY });
-    };
-
-    const onMouseUp = () => {
-      isDraggingRef.current = false;
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-      if (position) {
-        localStorage.setItem("sigma_bubble_pos", JSON.stringify(position));
-      }
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  };
-
   // Preload catalog
   useEffect(() => {
     getCachedMohasagorProducts().then((res) => {
@@ -562,33 +439,13 @@ export function DurtupAIAssistant() {
 
   return (
     <>
-      {/* Floating Draggable Trigger Button & Context Pill */}
-      <div
-        style={{
-          position: "fixed",
-          left: position ? `${position.x}px` : "auto",
-          top: position ? `${position.y}px` : "auto",
-          right: position ? "auto" : "1rem",
-          bottom: position ? "auto" : "5rem",
-          touchAction: "none",
-        }}
-        className="z-50 flex items-center gap-2.5 select-none"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleMouseDown}
-      >
+      {/* Floating Trigger Button & Context Pill - Direct Navigate to Fullscreen /messages */}
+      <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 flex items-center gap-2.5">
         {/* Dynamic rotating prompt pill */}
         {unreadPrompt && (
           <button
             type="button"
-            onClick={(e) => {
-              if (hasMovedRef.current) {
-                e.preventDefault();
-                return;
-              }
-              navigate("/messages");
-            }}
+            onClick={() => navigate("/messages")}
             className={cn(
               "hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/90 backdrop-blur-md border border-cyan-400/40 text-slate-800 shadow-xl shadow-cyan-500/10 hover:border-cyan-500 transition-all text-xs font-bold cursor-pointer",
               fadeAnim ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
@@ -600,24 +457,18 @@ export function DurtupAIAssistant() {
           </button>
         )}
 
-        {/* Main Floating Bubble Button - Water Droplet Orb with Drag & Slide Capability */}
+        {/* Main Floating Bubble Button - Water Droplet Orb */}
         <button
           type="button"
-          onClick={(e) => {
-            if (hasMovedRef.current) {
-              e.preventDefault();
-              return;
-            }
-            navigate("/messages");
-          }}
-          className="group relative h-13 w-13 sm:h-14 sm:w-14 rounded-full bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.7),_0_8px_30px_rgba(6,182,212,0.4)] hover:scale-105 active:scale-95 transition-transform duration-150 flex items-center justify-center border-2 border-white/50 cursor-grab active:cursor-grabbing"
+          onClick={() => navigate("/messages")}
+          className="group relative h-13 w-13 sm:h-14 sm:w-14 rounded-full bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.7),_0_8px_30px_rgba(6,182,212,0.4)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center border-2 border-white/50 cursor-pointer"
           aria-label="Open Sigma AI Shopping Manager"
         >
-          <div className="relative pointer-events-none">
+          <div className="relative">
             <Bot className="h-6 w-6 sm:h-7 sm:w-7 group-hover:rotate-12 transition-transform duration-300" />
             <Sparkles className="h-3.5 w-3.5 text-cyan-200 absolute -top-1 -right-1 animate-pulse" />
           </div>
-          <span className="pointer-events-none absolute -bottom-1 text-[9px] font-black uppercase tracking-wider bg-sky-950/90 text-cyan-300 px-2 py-0.2 rounded-full border border-cyan-400/40 shadow-xs">
+          <span className="absolute -bottom-1 text-[9px] font-black uppercase tracking-wider bg-sky-950/90 text-cyan-300 px-2 py-0.2 rounded-full border border-cyan-400/40 shadow-xs">
             Sigma
           </span>
         </button>
