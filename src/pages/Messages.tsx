@@ -396,6 +396,7 @@ export default function BuyerMessages() {
     await addToCart(String(p.id), 1);
     handleSendMessage(`আমি "${p.name}" অর্ডার করতে চাই। অর্ডার সামারি ড্রাফট তৈরি করো।`);
   };
+  const [viewportTop, setViewportTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
@@ -425,12 +426,18 @@ export default function BuyerMessages() {
     if (typeof window === "undefined") return;
 
     const handleResize = () => {
-      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-      setViewportHeight(vh);
-      const isKb = (window.innerHeight - vh) > 100;
-      setIsKeyboardOpen(isKb);
-
-      // Lock window scroll so header stays at 0px
+      if (window.visualViewport) {
+        const vv = window.visualViewport;
+        const vh = vv.height;
+        const vt = vv.offsetTop || 0;
+        setViewportTop(vt);
+        setViewportHeight(vh);
+        setIsKeyboardOpen((window.innerHeight - vh) > 80);
+      } else {
+        setViewportTop(0);
+        setViewportHeight(window.innerHeight);
+        setIsKeyboardOpen(false);
+      }
       window.scrollTo(0, 0);
     };
 
@@ -463,10 +470,11 @@ export default function BuyerMessages() {
   return (
     <div 
       style={{ 
+        top: `${viewportTop}px`,
         height: viewportHeight ? `${viewportHeight}px` : "100dvh",
         maxHeight: viewportHeight ? `${viewportHeight}px` : "100dvh"
       }}
-      className="fixed inset-x-0 top-0 w-full flex flex-col bg-gradient-to-br from-sky-100/90 via-cyan-50/80 to-blue-100/90 text-slate-900 overflow-hidden font-sans select-none selection:bg-cyan-500 selection:text-white"
+      className="fixed inset-x-0 w-full flex flex-col bg-gradient-to-br from-sky-100/90 via-cyan-50/80 to-blue-100/90 text-slate-900 overflow-hidden font-sans select-none selection:bg-cyan-500 selection:text-white"
     >
       {/* Liquid Water Ambient Glows */}
       <div className="pointer-events-none absolute -top-32 -left-32 w-80 h-80 bg-cyan-300/30 rounded-full blur-3xl" />
@@ -699,10 +707,10 @@ export default function BuyerMessages() {
       {/* Bottom Dock: Dynamic Keyboard-Aware + Clean Gap above Mobile Task Bar */}
       <div 
         className={cn(
-          "shrink-0 z-30 pointer-events-auto transition-all duration-150 ease-out px-3 sm:px-4 pt-1.5",
+          "shrink-0 z-30 pointer-events-auto transition-all duration-150 ease-out px-3 sm:px-4",
           isKeyboardOpen 
-            ? "pb-2.5 bg-white/70 backdrop-blur-2xl border-t border-white/60 shadow-lg" 
-            : "pb-[78px] md:pb-3 bg-gradient-to-t from-sky-100/95 via-sky-100/80 to-transparent"
+            ? "pb-3.5 pt-1.5 bg-white/95 backdrop-blur-2xl border-t border-sky-100 shadow-[0_-6px_24px_rgba(0,0,0,0.1)]" 
+            : "pb-[78px] md:pb-3 pt-1.5 bg-gradient-to-t from-sky-100/95 via-sky-100/80 to-transparent"
         )}
       >
         <div className="max-w-3xl mx-auto space-y-1.5">
@@ -735,7 +743,7 @@ export default function BuyerMessages() {
               e.preventDefault();
               handleSendMessage();
             }}
-            className="flex items-center gap-2 bg-white/95 backdrop-blur-2xl p-1 rounded-full border border-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),_0_6px_20px_rgba(14,165,233,0.18)]"
+            className="flex items-center gap-2 bg-white/95 backdrop-blur-2xl p-1.5 rounded-full border border-sky-200 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),_0_6px_20px_rgba(14,165,233,0.18)]"
           >
             <input
               ref={inputRef}
@@ -750,13 +758,13 @@ export default function BuyerMessages() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="প্রোডাক্টের নাম লিখুন বা প্রশ্ন করুন (বাংলা / Banglish)..."
               disabled={isTyping}
-              className="flex-1 h-10 sm:h-11 bg-transparent px-4 text-xs sm:text-sm text-slate-900 placeholder:text-sky-900/40 focus:outline-none"
+              className="flex-1 h-11 bg-transparent px-4 text-xs sm:text-sm text-slate-900 placeholder:text-sky-900/40 focus:outline-none"
             />
 
             <Button
               type="submit"
               disabled={(!inputValue.trim() && !attachedImage) || isTyping}
-              className="h-10 w-10 sm:h-11 sm:w-11 p-0 rounded-full bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shrink-0 shadow-[inset_0_1px_2px_rgba(255,255,255,0.6),_0_4px_16px_rgba(6,182,212,0.35)] active:scale-95 transition-all flex items-center justify-center"
+              className="h-11 w-11 p-0 rounded-full bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shrink-0 shadow-[inset_0_1px_2px_rgba(255,255,255,0.6),_0_4px_16px_rgba(6,182,212,0.35)] active:scale-95 transition-all flex items-center justify-center"
             >
               <Send className="h-4 w-4" />
             </Button>
