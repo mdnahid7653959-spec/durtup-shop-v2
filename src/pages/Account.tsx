@@ -561,8 +561,8 @@ export default function Account() {
           {/* Durtup Mobile App Section */}
           <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-primary/10 via-orange-500/5 to-amber-500/10 border border-primary/20 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
             <div className="flex items-center gap-3.5 text-center sm:text-left">
-              <div className="w-12 h-12 rounded-2xl bg-white p-1 shadow-md flex items-center justify-center shrink-0 border border-primary/20">
-                <img src="/durtup-logo-transparent.png" alt="Durtup" className="w-full h-full object-contain" />
+              <div className="w-12 h-12 rounded-2xl bg-white p-1 shadow-md flex items-center justify-center shrink-0 border border-primary/20 overflow-hidden">
+                <img src="/icon-192.png" alt="Durtup" className="w-full h-full object-cover rounded-xl" onError={(e) => { (e.target as HTMLImageElement).src = '/apple-touch-icon.png'; }} />
               </div>
               <div>
                 <div className="flex items-center justify-center sm:justify-start gap-1.5">
