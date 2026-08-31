@@ -6,11 +6,20 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const DISMISS_KEY = 'durtup_pwa_prompt_dismissed_at';
+const INSTALLED_KEY = 'durtup_pwa_is_installed';
 const DISMISS_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true ||
+      document.referrer.includes('android-app://') ||
+      localStorage.getItem(INSTALLED_KEY) === 'true'
+    );
+  });
   const [canInstall, setCanInstall] = useState(false);
   const [isPromptOpen, setIsPromptOpen] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -34,7 +43,8 @@ export function usePWAInstall() {
     const isStandalone = 
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true ||
-      document.referrer.includes('android-app://');
+      document.referrer.includes('android-app://') ||
+      localStorage.getItem(INSTALLED_KEY) === 'true';
 
     if (isStandalone) {
       setIsInstalled(true);
@@ -80,6 +90,7 @@ export function usePWAInstall() {
 
     // 5. Listen for successful install
     const handleAppInstalled = () => {
+      localStorage.setItem(INSTALLED_KEY, 'true');
       setIsInstalled(true);
       setCanInstall(false);
       setIsPromptOpen(false);
@@ -111,6 +122,7 @@ export function usePWAInstall() {
         await deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
+          localStorage.setItem(INSTALLED_KEY, 'true');
           setIsInstalled(true);
           setCanInstall(false);
           setIsPromptOpen(false);

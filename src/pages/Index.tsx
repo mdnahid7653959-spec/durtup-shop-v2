@@ -15,7 +15,6 @@ import { PersonalizedFeed } from "@/components/home/PersonalizedFeed";
 import { Flame, Sparkles, TrendingUp, ThumbsUp, Clock } from "lucide-react";
 import { InfiniteProductFeed } from "@/components/home/InfiniteProductFeed";
 import { HomeMidBanner } from "@/components/home/HomeMidBanner";
-import { AppDownloadBanner } from "@/components/home/AppDownloadBanner";
 import { SEOHead } from "@/components/SEOHead";
 
 
@@ -307,9 +306,6 @@ const Index = () => {
 
         {/* 3. Trust & Service Feature Strip */}
         <TrustBadges />
-
-        {/* App Download Banner */}
-        <AppDownloadBanner />
 
         {/* 4. Flash Sale Header + 8 Quick Category Shortcut Cards */}
         <FlashSaleSection />

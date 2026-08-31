@@ -28,6 +28,7 @@ import { SmartSearchBar } from "@/components/search/SmartSearchBar";
 import { cn } from "@/lib/utils";
 import { CATEGORIES_DATA, findCategoryOrSubcategory } from "@/data/categoriesData";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { TopAppInstallBanner } from "@/components/pwa/TopAppInstallBanner";
 
 export function Header() {
   const [searchParams] = useSearchParams();
@@ -329,6 +330,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full max-w-[100vw] bg-white dark:bg-slate-900 shadow-xs border-b border-slate-100 dark:border-slate-800" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       
+      {/* 0. Locked Smart App Banner (Only visible on browser/web until installed) */}
+      <TopAppInstallBanner />
+
       {/* 1. Main Header Row (Logo, Search, Actions) */}
       <div className="px-3 sm:px-4 py-2 max-w-7xl mx-auto">
         <div className="flex items-center justify-between gap-3 sm:gap-6">
