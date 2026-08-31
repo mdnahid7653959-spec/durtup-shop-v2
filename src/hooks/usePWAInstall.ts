@@ -16,6 +16,7 @@ export function usePWAInstall() {
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [showAndroidGuide, setShowAndroidGuide] = useState(false);
 
   useEffect(() => {
