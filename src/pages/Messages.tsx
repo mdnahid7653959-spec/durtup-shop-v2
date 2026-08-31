@@ -3,26 +3,18 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { 
-  Send, 
-  Bot, 
-  Sparkles, 
   RotateCcw, 
   ShoppingBag, 
   Truck, 
-  CreditCard, 
   HelpCircle, 
   ChevronRight,
-  User as UserIcon,
-  ImagePlus,
-  X,
-  Mic,
-  MicOff,
-  Lock,
-  MessageSquare,
   MoreVertical,
-  Info,
   PackageCheck,
-  ArrowLeft
+  ArrowLeft,
+  Search,
+  Grid,
+  Sparkles,
+  X
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -32,20 +24,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
 import { 
   askSigmaAIAgent, 
   confirmSigmaOrder, 
-  initSpeechRecognition, 
   type AIMessage,
   type SigmaProductCardData 
 } from "@/lib/durtupAIAgent";
+import { 
+  QUESTION_CATEGORIES, 
+  RECOMMENDED_QUESTIONS, 
+  type RecommendedQuestion 
+} from "@/data/sigmaKnowledgeBase";
 import { SigmaProductCard } from "@/components/ai/SigmaProductCard";
 import { SigmaComparisonCard } from "@/components/ai/SigmaComparisonCard";
-import { SigmaCartCard } from "@/components/ai/SigmaCartCard";
 import { SigmaOrderConfirmationCard } from "@/components/ai/SigmaOrderConfirmationCard";
 import { SigmaOrderTrackingCard } from "@/components/ai/SigmaOrderTrackingCard";
 import { SigmaSupportTicketCard } from "@/components/ai/SigmaSupportTicketCard";
@@ -89,11 +89,11 @@ function FormattedMessageText({ text }: { text: string }) {
           );
         }
 
-        if (line.startsWith("- ")) {
+        if (line.startsWith("- ") || line.startsWith("• ")) {
           return (
             <div key={lineIdx} className="flex items-start gap-2 pl-1 my-0.5">
               <span className="text-orange-500 font-bold">•</span>
-              <div className="flex-1">{renderFormattedSpan(line.replace(/^- \s*/, ""))}</div>
+              <div className="flex-1">{renderFormattedSpan(line.replace(/^[-•]\s*/, ""))}</div>
             </div>
           );
         }
@@ -109,18 +109,16 @@ export default function BuyerMessages() {
   const { items: cartItems, addToCart, removeItem, clearCart } = useCart();
   const navigate = useNavigate();
 
-  const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [toolStatus, setToolStatus] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<Product[]>([]);
-  const [attachedImage, setAttachedImage] = useState<{ base64: string; mimeType: string; previewUrl: string } | null>(null);
-  const [isListening, setIsListening] = useState(false);
-  
+  const [selectedCategory, setSelectedCategory] = useState<string>("popular");
+  const [isAllQuestionsOpen, setIsAllQuestionsOpen] = useState(false);
+  const [searchQuestionTerm, setSearchQuestionTerm] = useState("");
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const speechRecognizerRef = useRef<any>(null);
 
   // Extract clean personal first name
   const rawName = profile?.full_name || user?.user_metadata?.full_name || profile?.name || "";
@@ -135,52 +133,22 @@ export default function BuyerMessages() {
     }).catch(() => {});
   }, []);
 
-  // Voice Input Setup
-  useEffect(() => {
-    const recognizer = initSpeechRecognition(
-      (transcript) => {
-        setInputValue((prev) => (prev ? `${prev} ${transcript}` : transcript));
-      },
-      (error) => {
-        console.warn("Speech recognition error:", error);
-        setIsListening(false);
-      }
-    );
-    speechRecognizerRef.current = recognizer;
-  }, []);
-
-  const toggleVoiceInput = () => {
-    if (!speechRecognizerRef.current?.isSupported) {
-      toast.error("আপনার ব্রাউজারে ভয়েস রিকগনিশন সুবিধা উপলব্ধ নেই। অনুগ্রহ করে টাইপ করুন।");
-      return;
-    }
-
-    if (isListening) {
-      speechRecognizerRef.current.stop();
-      setIsListening(false);
-    } else {
-      setIsListening(true);
-      speechRecognizerRef.current.start();
-      toast.info("ভয়েসে বলুন, আমি শুনছি... 🎙️");
-    }
-  };
-
   // Welcome Initial Message
   const initialGreeting: AIMessage = {
     id: "welcome-1",
     sender: "ai",
     text: cleanName 
-      ? `আসসালামু আলাইকুম **${cleanName}**! 👋 আমি **Sigma** — Durtup.shop-এর অফিসিয়াল Personal Shopping Manager।\n\nProduct খোঁজা, comparison, cart manage করা, order তৈরি করা বা tracking—সবকিছুতেই আমি আপনাকে সাহায্য করতে পারি। আজ কী খুঁজছেন?`
-      : `হাই! আমি **Sigma** — Durtup.shop-এর অফিসিয়াল Personal Shopping Manager (Powered by Durtup.shop)।\n\nআমাদের স্টোরের প্রোডাক্ট খোঁজা, পণ্যের স্পেক্স তুলনা করা, কার্টে যোগ বা যেকোনো অর্ডারে সহায়তা পেতে আমাকে লিখুন অথবা ছবি আপলোড করুন:`,
+      ? `আসসালামু আলাইকুম **${cleanName}**! 👋 আমি **Sigma** — Durtup.shop-এর অফিসিয়াল Personal Shopping Manager।\n\nপ্রোডাক্ট নির্বাচন, অর্ডার নিয়ম, ডেলিভারি চার্জ বা রিটার্ন পলিসি সম্পর্কে জানতে নিচের **যেকোনো অপশনে ক্লিক করুন** — আমি সাথে সাথে সঠিক উত্তর ও প্রোডাক্টের তথ্য প্রদর্শন করব!`
+      : `স্বাগতম! আমি **Sigma** — Durtup.shop-এর অফিসিয়াল Personal Shopping Manager (Powered by Durtup.shop)।\n\nপণ্য খোঁজা, স্পেসিফিকেশন ও দাম জানা, কার্টে যোগ বা অর্ডারে সহায়তা পেতে নিচের **রেকমেন্ডেড প্রশ্নসমূহে ক্লিক করুন**:`,
     timestamp: "Just now",
     quickActions: [
-      { label: "🔥 সেরা গ্যাজেট দেখাও", action: "best_gadgets" },
-      { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
-      { label: "💰 কম বাজেটের প্রোডাক্ট", action: "budget_search" },
-      { label: "⚖️ প্রোডাক্ট তুলনা করুন", action: "compare_products" },
-      { label: "🎁 উপহার আইডিয়া", action: "gift_finder" },
-      { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
-      { label: "💵 ক্যাশ অন ডেলিভারি নিয়ম", action: "payment_info" },
+      { label: "🛍️ কীভাবে সহজে অর্ডার করবেন?", action: "pop-1" },
+      { label: "🔥 সেরা ট্রেন্ডিং গ্যাজেট দেখাও", action: "pop-2" },
+      { label: "🚚 ডেলিভারি চার্জ ও সময় কত?", action: "pop-3" },
+      { label: "💵 ক্যাশ অন ডেলিভারি নিয়ম", action: "pop-4" },
+      { label: "🔄 ৭ দিনের রিটার্ন পলিসি", action: "pop-5" },
+      { label: "💰 কম বাজেটের সেরা প্রোডাক্ট", action: "pop-6" },
+      { label: "📦 অর্ডার ট্র্যাকিং করার নিয়ম", action: "pop-7" },
     ],
   };
 
@@ -193,62 +161,35 @@ export default function BuyerMessages() {
     }
   }, [cleanName]);
 
-  // Auto scroll to bottom of messages container only (NEVER scrolling the window document)
+  // Auto scroll to bottom of messages container
   useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
-  }, [messages, isTyping, attachedImage, toolStatus]);
+  }, [messages, isTyping, toolStatus]);
 
-  // Image Upload Handler
-  const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Handle Question Click Execution
+  const handleSelectQuestion = async (queryTextOrId: string, customDisplayLabel?: string) => {
+    if (isTyping) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("অনুগ্রহ করে একটি ছবি ফাইল নির্বাচন করুন");
-      return;
-    }
+    const matchedKb = RECOMMENDED_QUESTIONS.find(
+      (q) => q.id === queryTextOrId || q.question === queryTextOrId || q.shortLabel === queryTextOrId
+    );
 
-    if (file.size > 8 * 1024 * 1024) {
-      toast.error("ছবির সাইজ সর্বোচ্চ 8MB হতে পারবে");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64Data = result.split(",")[1];
-      setAttachedImage({
-        base64: base64Data,
-        mimeType: file.type,
-        previewUrl: result,
-      });
-      toast.success("প্রোডাক্টের ছবি যুক্ত হয়েছে! এবার মেসেজ পাঠান।");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Send Message Logic
-  const handleSendMessage = async (customQuery?: string) => {
-    const query = (customQuery || inputValue).trim();
-    if (!query && !attachedImage) return;
-
+    const questionDisplayText = customDisplayLabel || matchedKb?.question || queryTextOrId;
     const userMessageId = `user-${Date.now()}`;
+
     const newMsg: AIMessage = {
       id: userMessageId,
       sender: "user",
-      text: query || "প্রোডাক্টের ছবি অনুযায়ী অপশন দেখাও",
+      text: questionDisplayText,
       timestamp: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
-      userImage: attachedImage?.previewUrl,
     };
 
     setMessages((prev) => [...prev, newMsg]);
-    setInputValue("");
-    const sentImage = attachedImage;
-    setAttachedImage(null);
     setIsTyping(true);
-    setToolStatus("🔎 Sigma তথ্য বিশ্লেষণ করছে...");
+    setActiveQuestionId(matchedKb?.id || queryTextOrId);
+    setToolStatus("⚡ Sigma তথ্য প্রস্তুত করছে...");
 
     try {
       const conversationHistory = messages.map((m) => ({
@@ -256,19 +197,18 @@ export default function BuyerMessages() {
         text: m.text,
       }));
 
-      const res = await askSigmaAIAgent(query, {
+      const res = await askSigmaAIAgent(matchedKb?.id || questionDisplayText, {
         userName: cleanName,
         userId: user?.id || `guest_${Date.now()}`,
         catalog,
         cartState: cartItems,
-        imageAttachment: sentImage ? { base64: sentImage.base64, mimeType: sentImage.mimeType } : undefined,
         history: conversationHistory,
         pageContext: {
           currentPath: "/messages",
         },
       });
 
-      // Handle Real-Time Actions
+      // Handle Real-Time Actions if any
       if (res.actions && res.actions.length > 0) {
         for (const action of res.actions) {
           if (action.type === "ADD_TO_CART" && action.data?.productId) {
@@ -299,18 +239,19 @@ export default function BuyerMessages() {
 
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err) {
-      console.error("[Sigma Messages Page Error]:", err);
+      console.error("[Sigma Messages Question Error]:", err);
       setMessages((prev) => [
         ...prev,
         {
           id: `ai-err-${Date.now()}`,
           sender: "ai",
-          text: "দুঃখিত, এই মুহূর্তে তথ্যটি আনতে সমস্যা হচ্ছে। একটু পরে আবার চেষ্টা করুন।",
+          text: "দুঃখিত, এই মুহূর্তে তথ্যটি আনতে সমস্যা হচ্ছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
           timestamp: "Just now",
         },
       ]);
     } finally {
       setIsTyping(false);
+      setActiveQuestionId(null);
       setToolStatus(null);
     }
   };
@@ -387,8 +328,13 @@ export default function BuyerMessages() {
       {
         id: `ai-cart-note-${Date.now()}`,
         sender: "ai",
-        text: `**${p.name}** সফলভাবে আপনার কার্টে যোগ করা হয়েছে! 🛍️✨\n\nআপনি চাইলে এখনই অর্ডার ড্রাফট তৈরি করতে পারেন বা আরও প্রোডাক্ট দেখতে পারেন।`,
-        timestamp: "Just now"
+        text: `**${p.name}** সফলভাবে আপনার কার্টে যোগ করা হয়েছে! 🛍️✨\n\nআপনি চাইলে এখনই চেকআউট করতে পারেন অথবা আরও প্রোডাক্ট দেখতে পারেন।`,
+        timestamp: "Just now",
+        quickActions: [
+          { label: "🛒 কার্ট দেখুন ও চেকআউট করুন", action: "view_cart", link: "/cart" },
+          { label: "🚚 ডেলিভারি চার্জ কত?", action: "pop-3" },
+          { label: "🔥 আরও সেরা গ্যাজেট দেখাও", action: "pop-2" }
+        ]
       }
     ]);
   };
@@ -396,97 +342,33 @@ export default function BuyerMessages() {
   // Order now direct draft flow
   const handleProductCardOrderNow = async (p: SigmaProductCardData) => {
     await addToCart(String(p.id), 1);
-    handleSendMessage(`আমি "${p.name}" অর্ডার করতে চাই। অর্ডার সামারি ড্রাফট তৈরি করো।`);
+    navigate(`/checkout?productId=${p.id}`);
   };
-  const [viewportTop, setViewportTop] = useState(0);
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
-  // Prevent mobile document window scrolling so header & greeting NEVER move
-  useEffect(() => {
-    const originalBodyOverflow = document.body.style.overflow;
-    const originalHtmlOverflow = document.documentElement.style.overflow;
-    const originalBodyPosition = document.body.style.position;
-
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.width = "100%";
-    document.body.style.height = "100%";
-
-    return () => {
-      document.body.style.overflow = originalBodyOverflow;
-      document.documentElement.style.overflow = originalHtmlOverflow;
-      document.body.style.position = originalBodyPosition;
-      document.body.style.width = "";
-      document.body.style.height = "";
-    };
-  }, []);
-
-  const initialHeightRef = useRef<number>(0);
-
-  // Dynamic mobile viewport and keyboard tracking
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    initialHeightRef.current = window.visualViewport?.height || window.innerHeight;
-
-    const handleResize = () => {
-      if (window.visualViewport) {
-        const vv = window.visualViewport;
-        const vh = vv.height;
-        const vt = vv.offsetTop || 0;
-        setViewportTop(vt);
-        setViewportHeight(vh);
-        const baseH = Math.max(initialHeightRef.current, 600);
-        setIsKeyboardOpen((baseH - vh) > 120);
-      } else {
-        setViewportTop(0);
-        setViewportHeight(window.innerHeight);
-      }
-      window.scrollTo(0, 0);
-    };
-
-    handleResize();
-
-    window.visualViewport?.addEventListener("resize", handleResize);
-    window.visualViewport?.addEventListener("scroll", handleResize);
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.visualViewport?.removeEventListener("resize", handleResize);
-      window.visualViewport?.removeEventListener("scroll", handleResize);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  // Determine current active quick action suggestions (from latest AI message or default)
-  const lastAiMessageWithQuickActions = [...messages].reverse().find(
-    (m) => m.sender === "ai" && m.quickActions && m.quickActions.length > 0
+  // Active category questions
+  const currentCategoryQuestions = RECOMMENDED_QUESTIONS.filter(
+    (q) => q.category === selectedCategory
   );
-  const activeQuickActions = lastAiMessageWithQuickActions?.quickActions || [
-    { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
-    { label: "🔥 সেরা গ্যাজেট দেখাও", action: "best_gadgets" },
-    { label: "🚚 ডেলিভারি চার্জ ও সময়", action: "delivery_info" },
-    { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" },
-    { label: "🔄 ৭ দিনের রিটার্ন পলিসি", action: "return_policy" },
-    { label: "📦 অর্ডার ট্র্যাক করার নিয়ম", action: "track_order" }
-  ];
+
+  // Filtered list for "All Questions" search dialog
+  const allFilteredQuestions = RECOMMENDED_QUESTIONS.filter((q) => {
+    if (!searchQuestionTerm.trim()) return true;
+    const term = searchQuestionTerm.toLowerCase();
+    return (
+      q.question.toLowerCase().includes(term) ||
+      (q.shortLabel && q.shortLabel.toLowerCase().includes(term)) ||
+      q.answerText.toLowerCase().includes(term)
+    );
+  });
 
   return (
-    <div 
-      style={{ 
-        top: `${viewportTop}px`,
-        height: viewportHeight ? `${viewportHeight}px` : "100dvh",
-        maxHeight: viewportHeight ? `${viewportHeight}px` : "100dvh"
-      }}
-      className="fixed inset-x-0 w-full flex flex-col bg-gradient-to-br from-sky-100/90 via-cyan-50/80 to-blue-100/90 text-slate-900 overflow-hidden font-sans select-none selection:bg-cyan-500 selection:text-white"
-    >
+    <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-gradient-to-br from-sky-100/90 via-cyan-50/80 to-blue-100/90 text-slate-900 overflow-hidden font-sans select-none selection:bg-cyan-500 selection:text-white">
       {/* Liquid Water Ambient Glows */}
       <div className="pointer-events-none absolute -top-32 -left-32 w-80 h-80 bg-cyan-300/30 rounded-full blur-3xl" />
       <div className="pointer-events-none absolute top-1/3 -right-32 w-80 h-80 bg-sky-300/30 rounded-full blur-3xl" />
       <div className="pointer-events-none absolute -bottom-32 left-1/4 w-80 h-80 bg-blue-300/25 rounded-full blur-3xl" />
 
-      {/* Top Header - Liquid Water Droplet Crystal Bar (Firmly at the top) */}
+      {/* Top Header */}
       <header className="shrink-0 z-30 bg-gradient-to-r from-sky-500/95 via-cyan-500/90 to-blue-600/95 backdrop-blur-2xl text-white px-3 sm:px-4 py-2.5 shadow-[0_4px_20px_rgba(2,132,199,0.22)] border-b border-white/40 flex items-center justify-between">
         {/* Left: Back Button & Title */}
         <div className="flex items-center gap-2">
@@ -507,12 +389,12 @@ export default function BuyerMessages() {
               </Badge>
             </div>
             <p className="text-[10px] text-white/95 font-medium mt-0.5 drop-shadow-xs">
-              Powered by Durtup.shop
+              Powered by Durtup.shop • স্বয়ংক্রিয় প্রশ্নোত্তর গাইড
             </p>
           </div>
         </div>
 
-        {/* Right Actions & 3-Dot Menu */}
+        {/* Right Actions & Menu */}
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -535,7 +417,7 @@ export default function BuyerMessages() {
                 <MoreVertical className="h-5 w-5" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-white/90 backdrop-blur-2xl border border-sky-100/90 text-slate-800 shadow-[0_12px_40px_rgba(14,165,233,0.18)] rounded-3xl p-1.5 z-50">
+            <DropdownMenuContent align="end" className="w-56 bg-white/95 backdrop-blur-2xl border border-sky-100/90 text-slate-800 shadow-[0_12px_40px_rgba(14,165,233,0.18)] rounded-3xl p-1.5 z-50">
               <DropdownMenuLabel className="text-xs font-bold text-sky-900/70 px-3 py-1.5">
                 Sigma AI অপশনসমূহ
               </DropdownMenuLabel>
@@ -547,6 +429,14 @@ export default function BuyerMessages() {
               >
                 <RotateCcw className="h-4 w-4 text-cyan-500" />
                 <span>নতুন চ্যাট শুরু করুন</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => setIsAllQuestionsOpen(true)}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
+              >
+                <Grid className="h-4 w-4 text-sky-500" />
+                <span>সকল প্রশ্ন একত্রে দেখুন ({RECOMMENDED_QUESTIONS.length})</span>
               </DropdownMenuItem>
 
               <DropdownMenuItem
@@ -580,24 +470,12 @@ export default function BuyerMessages() {
                 <HelpCircle className="h-4 w-4 text-purple-500" />
                 <span>কাস্টমার সাপোর্ট ও হেল্প</span>
               </DropdownMenuItem>
-
-              <DropdownMenuSeparator className="bg-sky-100 my-1" />
-
-              <DropdownMenuItem
-                onClick={() => {
-                  handleSendMessage("Durtup.shop এবং Sigma AI সম্পর্কে বিস্তারিত বলো");
-                }}
-                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
-              >
-                <Info className="h-4 w-4 text-slate-400" />
-                <span>Sigma AI সম্পর্কে</span>
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </header>
 
-      {/* Messages Scroll Area - Flex-1 takes remaining height */}
+      {/* Messages Scroll Area */}
       <div 
         ref={messagesContainerRef}
         className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3.5 max-w-3xl w-full mx-auto relative z-10 overscroll-contain"
@@ -619,26 +497,54 @@ export default function BuyerMessages() {
               </div>
             )}
 
-            {/* Message Bubble - Liquid Water Droplet Glass */}
+            {/* Message Bubble */}
             <div
               className={cn(
-                "max-w-[92%] sm:max-w-[82%] p-4 sm:p-5 transition-all",
+                "max-w-[94%] sm:max-w-[85%] p-4 sm:p-5 transition-all",
                 msg.sender === "user"
                   ? "bg-gradient-to-tr from-cyan-600 via-sky-600 to-blue-600 text-white rounded-3xl rounded-tr-md font-medium shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_0_8px_25px_rgba(2,132,199,0.3)] border border-sky-300/40"
-                  : "bg-white/80 backdrop-blur-2xl border border-white/90 text-slate-800 rounded-3xl rounded-tl-md shadow-[inset_0_2px_4px_rgba(255,255,255,1),_0_10px_30px_rgba(14,165,233,0.12),_0_2px_8px_rgba(0,0,0,0.03)]"
+                  : "bg-white/85 backdrop-blur-2xl border border-white/90 text-slate-800 rounded-3xl rounded-tl-md shadow-[inset_0_2px_4px_rgba(255,255,255,1),_0_10px_30px_rgba(14,165,233,0.12),_0_2px_8px_rgba(0,0,0,0.03)]"
               )}
             >
-              {msg.userImage && (
-                <img
-                  src={msg.userImage}
-                  alt="Attachment"
-                  className="max-h-56 rounded-2xl mb-2.5 object-cover border border-white/40 shadow-sm"
-                />
-              )}
               {msg.sender === "user" ? (
-                <p className="text-xs sm:text-sm leading-relaxed">{msg.text}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">👤</span>
+                  <p className="text-xs sm:text-sm font-semibold leading-relaxed">{msg.text}</p>
+                </div>
               ) : (
-                <FormattedMessageText text={msg.text} />
+                <div className="space-y-3">
+                  <FormattedMessageText text={msg.text} />
+
+                  {/* Contextual Follow-up Chips inside AI Message */}
+                  {msg.quickActions && msg.quickActions.length > 0 && (
+                    <div className="pt-2.5 border-t border-sky-100/80 mt-2 space-y-1.5">
+                      <p className="text-[11px] font-bold text-sky-900/60 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3 text-amber-500" />
+                        <span>প্রাসঙ্গিক অপশন ও পরবর্তী পদক্ষেপ:</span>
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {msg.quickActions.map((qa, qIdx) => (
+                          <button
+                            key={qIdx}
+                            type="button"
+                            disabled={isTyping}
+                            onClick={() => {
+                              if (qa.link) {
+                                navigate(qa.link);
+                              } else {
+                                handleSelectQuestion(qa.action || qa.label, qa.label);
+                              }
+                            }}
+                            className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-sky-50/95 hover:bg-sky-100 active:scale-95 border border-sky-200/90 hover:border-cyan-400 text-sky-950 hover:text-cyan-700 transition-all flex items-center gap-1 shadow-xs cursor-pointer backdrop-blur-md"
+                          >
+                            <span>{qa.label}</span>
+                            <ChevronRight className="h-3 w-3 opacity-60 text-cyan-600" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
@@ -660,7 +566,7 @@ export default function BuyerMessages() {
             {msg.comparison && (
               <SigmaComparisonCard
                 data={msg.comparison}
-                onAddToCart={(id, name) => addToCart(String(id), 1)}
+                onAddToCart={(id) => addToCart(String(id), 1)}
               />
             )}
 
@@ -696,112 +602,154 @@ export default function BuyerMessages() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Attached Image Thumbnail Bar */}
-      {attachedImage && (
-        <div className="px-4 py-2 bg-white/85 backdrop-blur-xl border-t border-white/60 flex items-center justify-between max-w-3xl w-full mx-auto shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <img
-              src={attachedImage.previewUrl}
-              alt="Preview"
-              className="h-10 w-10 rounded-xl object-cover border-2 border-cyan-500 shadow-sm"
-            />
-            <span className="text-xs text-sky-950 font-semibold">প্রোডাক্টের ছবি স্ক্যান করার জন্য প্রস্তুত</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setAttachedImage(null)}
-            className="h-7 w-7 rounded-full bg-sky-100 hover:bg-rose-100 text-sky-700 hover:text-rose-600 flex items-center justify-center transition-colors shadow-xs"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      {/* Bottom Horizontal Recommended Question Pills Hub */}
+      <footer className="shrink-0 z-30 bg-white/90 backdrop-blur-2xl border-t border-sky-200/80 shadow-[0_-6px_25px_rgba(2,132,199,0.12)] px-3 py-2 sm:px-4 sm:py-2.5">
+        <div className="max-w-3xl mx-auto space-y-2">
+          {/* Category Filter Pills Row */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+            {QUESTION_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.id)}
+                className={cn(
+                  "whitespace-nowrap shrink-0 px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95",
+                  selectedCategory === cat.id
+                    ? "bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white shadow-[0_2px_8px_rgba(6,182,212,0.35)]"
+                    : "bg-sky-50/90 hover:bg-sky-100 text-sky-950 border border-sky-200/70"
+                )}
+              >
+                <span>{cat.icon}</span>
+                <span>{cat.label.replace(/^.+?\s/, "")}</span>
+              </button>
+            ))}
 
-      {/* Bottom Dock: Direct Messenger / WhatsApp Style */}
-      <div 
-        className={cn(
-          "shrink-0 z-30 pointer-events-auto transition-all duration-150 ease-out px-3 sm:px-4",
-          isKeyboardOpen 
-            ? "pb-3.5 pt-1.5 bg-white/95 backdrop-blur-2xl border-t border-sky-100 shadow-[0_-6px_24px_rgba(0,0,0,0.1)]" 
-            : "pb-3.5 sm:pb-4 pt-1.5 bg-gradient-to-t from-sky-100/95 via-sky-100/80 to-transparent"
-        )}
-      >
-        <div className="max-w-3xl mx-auto space-y-1.5">
-          {/* Horizontally Scrollable Floating Quick Action Chips */}
-          {activeQuickActions.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-0.5 scrollbar-none">
-              {activeQuickActions.map((qa, idx) => (
+            <button
+              type="button"
+              onClick={() => setIsAllQuestionsOpen(true)}
+              className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full text-xs font-bold bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 flex items-center gap-1 transition-all active:scale-95"
+              title="সব প্রশ্ন একসাথে দেখুন"
+            >
+              <Grid className="h-3 w-3 text-cyan-600" />
+              <span>সব ({RECOMMENDED_QUESTIONS.length})</span>
+            </button>
+          </div>
+
+          {/* Horizontally Scrollable Question Pills Deck (Matching exactly the pill chip style) */}
+          <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none">
+            {currentCategoryQuestions.map((q) => {
+              const isCurrentActive = activeQuestionId === q.id && isTyping;
+
+              return (
                 <button
-                  key={idx}
+                  key={q.id}
                   type="button"
-                  onClick={() => {
-                    if (qa.link) {
-                      navigate(qa.link);
-                    } else {
-                      handleSendMessage(qa.label);
-                    }
-                  }}
-                  className="whitespace-nowrap shrink-0 text-xs font-bold px-3.5 py-1.5 rounded-full bg-white/95 hover:bg-white backdrop-blur-xl border border-sky-200/90 text-sky-950 hover:text-cyan-700 shadow-[inset_0_1px_2px_rgba(255,255,255,1),_0_4px_12px_rgba(14,165,233,0.12)] hover:shadow-[0_6px_18px_rgba(14,165,233,0.2)] hover:border-cyan-400 transition-all flex items-center gap-1 active:scale-95 cursor-pointer"
+                  disabled={isTyping}
+                  onClick={() => handleSelectQuestion(q.id, q.question)}
+                  className={cn(
+                    "whitespace-nowrap shrink-0 text-xs font-bold px-3.5 py-2 rounded-full border transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs",
+                    isCurrentActive
+                      ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_4px_12px_rgba(6,182,212,0.3)]"
+                      : "bg-white/95 hover:bg-white text-slate-800 hover:text-cyan-700 border-sky-200 hover:border-cyan-400 hover:shadow-sm"
+                  )}
                 >
-                  <span>{qa.label}</span>
+                  <span className="text-sm">{q.icon}</span>
+                  <span>{q.shortLabel || q.question}</span>
                   <ChevronRight className="h-3 w-3 opacity-60 text-cyan-600" />
                 </button>
-              ))}
-            </div>
-          )}
-
-          {/* Integrated Water Droplet Glass Input Field */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-            autoComplete="off"
-            role="search"
-            className="flex items-center gap-2 bg-white/95 backdrop-blur-2xl p-1.5 rounded-full border border-sky-200 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),_0_6px_20px_rgba(14,165,233,0.18)]"
-          >
-            <input
-              ref={inputRef}
-              id="sigma-chat-query"
-              name="sigma_chat_query"
-              type="text"
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              data-form-type="other"
-              data-lpignore="true"
-              data-1p-ignore="true"
-              inputMode="text"
-              enterKeyHint="send"
-              value={inputValue}
-              onFocus={() => {
-                setIsKeyboardOpen(true);
-                window.scrollTo(0, 0);
-              }}
-              onBlur={() => {
-                setTimeout(() => {
-                  const currentVh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-                  const baseH = Math.max(initialHeightRef.current, 600);
-                  setIsKeyboardOpen((baseH - currentVh) > 120);
-                }, 100);
-              }}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="প্রোডাক্টের নাম লিখুন বা প্রশ্ন করুন (বাংলা / Banglish)..."
-              disabled={isTyping}
-              className="flex-1 h-11 bg-transparent px-4 text-xs sm:text-sm text-slate-900 placeholder:text-sky-900/40 focus:outline-none"
-            />
-
-            <Button
-              type="submit"
-              disabled={(!inputValue.trim() && !attachedImage) || isTyping}
-              className="h-11 w-11 p-0 rounded-full bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shrink-0 shadow-[inset_0_1px_2px_rgba(255,255,255,0.6),_0_4px_16px_rgba(6,182,212,0.35)] active:scale-95 transition-all flex items-center justify-center"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </form>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </footer>
+
+      {/* "All Questions" Knowledge Base Modal */}
+      <Dialog open={isAllQuestionsOpen} onOpenChange={setIsAllQuestionsOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-4 sm:p-6 bg-white rounded-3xl shadow-2xl border border-sky-100 overflow-hidden">
+          <DialogHeader className="pb-3 border-b border-sky-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-cyan-500 text-white flex items-center justify-center shadow-sm">
+                  <Grid className="h-4 w-4" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base sm:text-lg font-black text-slate-900">
+                    রেকমেন্ডেড সকল প্রশ্ন ও বিষয়সমূহ
+                  </DialogTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    যেকোনো প্রশ্নে ক্লিক করে সরাসরি উত্তর ও প্রোডাক্ট দেখুন
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Search Input for Questions */}
+            <div className="relative mt-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-600" />
+              <input
+                type="text"
+                placeholder="প্রশ্ন বা বিষয় খুঁজুন (যেমন: ডেলিভারি, ক্যাশ অন ডেলিভারি, ঘড়ি)..."
+                value={searchQuestionTerm}
+                onChange={(e) => setSearchQuestionTerm(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-2xl bg-sky-50 border border-sky-200 focus:outline-none focus:border-cyan-500 text-slate-800 placeholder:text-slate-400"
+              />
+              {searchQuestionTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuestionTerm("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </DialogHeader>
+
+          {/* List of Questions in Modal */}
+          <div className="flex-1 overflow-y-auto py-2 space-y-4 pr-1">
+            {QUESTION_CATEGORIES.map((cat) => {
+              const catQuestions = allFilteredQuestions.filter((q) => q.category === cat.id);
+              if (catQuestions.length === 0) return null;
+
+              return (
+                <div key={cat.id} className="space-y-2">
+                  <div className="flex items-center gap-1.5 px-1 py-1">
+                    <span className="text-sm">{cat.icon}</span>
+                    <h3 className="text-xs font-extrabold text-sky-950">{cat.label}</h3>
+                    <span className="text-[10px] text-slate-400 font-medium">({catQuestions.length})</span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {catQuestions.map((q) => (
+                      <button
+                        key={q.id}
+                        type="button"
+                        onClick={() => {
+                          setIsAllQuestionsOpen(false);
+                          handleSelectQuestion(q.id, q.question);
+                        }}
+                        className="text-left px-3.5 py-2 rounded-full bg-sky-50/80 hover:bg-cyan-50 border border-sky-200/80 hover:border-cyan-300 transition-all flex items-center gap-2 group cursor-pointer active:scale-95 shadow-2xs"
+                      >
+                        <span className="text-sm shrink-0">{q.icon}</span>
+                        <span className="text-xs font-bold text-slate-800 group-hover:text-cyan-800">
+                          {q.shortLabel || q.question}
+                        </span>
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400 group-hover:text-cyan-600" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+
+            {allFilteredQuestions.length === 0 && (
+              <div className="text-center py-8 text-slate-400 text-xs">
+                কোনো প্রশ্ন পাওয়া যায়নি। অন্য শব্দ দিয়ে সার্চ করুন।
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
