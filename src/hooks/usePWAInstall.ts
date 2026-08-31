@@ -141,14 +141,8 @@ export function usePWAInstall() {
   }, []);
 
   const openPrompt = useCallback(() => {
-    if (deferredPrompt) {
-      installApp();
-    } else if (isIOS) {
-      setShowIOSGuide(true);
-    } else {
-      setShowAndroidGuide(true);
-    }
-  }, [deferredPrompt, installApp, isIOS]);
+    setIsPromptOpen(true);
+  }, []);
 
   return {
     canInstall,

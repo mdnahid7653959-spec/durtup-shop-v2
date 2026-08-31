@@ -8,7 +8,8 @@ import {
   ChevronRight,
   ShoppingCart, 
   MessageCircle, 
-  LogOut
+  LogOut,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -26,6 +27,7 @@ import { supabase } from "@/lib/firebaseAdapter";
 import { SmartSearchBar } from "@/components/search/SmartSearchBar";
 import { cn } from "@/lib/utils";
 import { CATEGORIES_DATA, findCategoryOrSubcategory } from "@/data/categoriesData";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
 
 export function Header() {
   const [searchParams] = useSearchParams();
@@ -51,6 +53,7 @@ export function Header() {
   const { user, profile, signOut } = useAuth();
   const { itemCount: cartCount } = useCart();
   const { itemCount: wishlistCount } = useWishlist();
+  const { isInstalled, openPrompt } = usePWAInstall();
   const { toast } = useToast();
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
@@ -365,9 +368,25 @@ export function Header() {
             </div>
           )}
 
-          {/* Right Action Icons (Wishlist, Messages, Cart, Account) */}
+          {/* Right Action Icons (Wishlist, Messages, Cart, Account, Get App) */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             
+            {/* Get App Button (Always visible if not already installed as standalone app) */}
+            {!isInstalled && (
+              <button
+                type="button"
+                onClick={openPrompt}
+                className="flex flex-col items-center justify-center p-1 sm:px-2 rounded-xl text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-all relative group cursor-pointer"
+                title="Durtup App ইনস্টল করুন"
+              >
+                <div className="relative">
+                  <Download className="h-5 w-5 animate-bounce group-hover:scale-110 transition-transform" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-orange-600 animate-pulse" />
+                </div>
+                <span className="text-[10px] font-extrabold leading-none mt-1 text-orange-600 dark:text-orange-400">Get App</span>
+              </button>
+            )}
+
             {/* Wishlist */}
             <Link to="/wishlist" className="flex flex-col items-center justify-center p-1 sm:px-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-orange-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all relative group">
               <div className="relative">

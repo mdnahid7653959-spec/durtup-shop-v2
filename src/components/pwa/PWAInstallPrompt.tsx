@@ -250,16 +250,16 @@ export const PWAInstallPrompt: React.FC = () => {
         </div>
       )}
 
-      {/* 3. PERSISTENT FLOATING QUICK INSTALL PILL (When dismissed on mobile) */}
-      {!isPromptOpen && canInstall && (
-        <div className="md:hidden fixed bottom-18 right-3 z-40 animate-in fade-in zoom-in duration-300">
+      {/* 3. PERSISTENT FLOATING QUICK INSTALL PILL (Always accessible when app is not installed) */}
+      {!isPromptOpen && !isInstalled && (
+        <div className="fixed bottom-20 md:bottom-6 right-3 md:right-6 z-40 animate-in fade-in zoom-in duration-300">
           <button
             onClick={openPrompt}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-gradient-to-r from-primary to-orange-500 text-white font-bold text-xs shadow-xl hover:shadow-2xl active:scale-95 transition-all border-2 border-white/40"
-            aria-label="Install App"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-primary text-white font-bold text-xs sm:text-sm shadow-xl hover:shadow-2xl active:scale-95 transition-all border-2 border-white/80 cursor-pointer backdrop-blur-md"
+            aria-label="Install Durtup App"
           >
             <Download className="w-4 h-4 animate-bounce" />
-            <span>অ্যাপ ইনস্টল</span>
+            <span>অ্যাপ ইনস্টল করুন</span>
           </button>
         </div>
       )}

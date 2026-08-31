@@ -41,7 +41,7 @@ function TrustBadgesComponent() {
             <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 text-slate-800 dark:text-slate-200 shrink-0 stroke-[1.75]" />
             <div className="min-w-0">
               <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate">Easy Returns</h4>
-              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">7 Day Return Policy</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">Instant Check & Return</p>
             </div>
           </div>
 
