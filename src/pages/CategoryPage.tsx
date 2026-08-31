@@ -256,7 +256,7 @@ export default function CategoryPage() {
   const categoryName = category?.name || (slug ? slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Products");
 
   return (
-    <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
         title={generateCategorySEOTitle({ name: categoryName, slug: slug || "" })}
         description={generateCategorySEODescription({ name: categoryName, slug: slug || "" })}

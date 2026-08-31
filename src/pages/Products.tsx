@@ -129,7 +129,7 @@ export default function Products() {
     : "All Products";
 
   return (
-    <div className="min-h-screen flex flex-col bg-background overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-background">
       <SEOHead 
         title={`${pageHeading} in Bangladesh | Durtup.shop`}
         description={`Explore ${pageHeading} online at Durtup.shop. Best prices in Bangladesh, Cash on Delivery, genuine quality, and fast home delivery.`}

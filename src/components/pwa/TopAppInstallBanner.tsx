@@ -1,50 +1,29 @@
-import { useState, memo } from "react";
-import { Download, X } from "lucide-react";
+import { memo } from "react";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 
-const TOP_BANNER_DISMISS_KEY = "durtup_top_app_banner_dismissed";
-
 function TopAppInstallBannerComponent() {
   const { isInstalled, installApp, openPrompt } = usePWAInstall();
-  const [dismissed, setDismissed] = useState(() => {
-    return sessionStorage.getItem(TOP_BANNER_DISMISS_KEY) === "true";
-  });
 
-  // If already installed, opened in standalone app, or dismissed in current session, do not render
-  if (isInstalled || dismissed) return null;
-
-  const handleDismiss = () => {
-    setDismissed(true);
-    sessionStorage.setItem(TOP_BANNER_DISMISS_KEY, "true");
-  };
+  // If already installed or opened in standalone app, do not render
+  if (isInstalled) return null;
 
   const handleInstall = async () => {
+    openPrompt();
     try {
-      const installed = await installApp();
-      if (!installed) {
-        openPrompt();
-      }
+      await installApp();
     } catch {
       openPrompt();
     }
   };
 
   return (
-    <div className="w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 text-white shadow-xs border-b border-orange-700/20 select-none animate-in fade-in slide-in-from-top duration-300">
+    <div className="block lg:hidden w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 text-white shadow-xs border-b border-orange-700/20 select-none animate-in fade-in slide-in-from-top duration-300">
       <div className="max-w-7xl mx-auto px-2.5 sm:px-4 py-1.5 flex items-center justify-between gap-2 sm:gap-4">
         
-        {/* Left: Close button + App Icon + Title & description */}
+        {/* Left: App Icon + Title & description */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-          <button
-            onClick={handleDismiss}
-            className="p-1 rounded-full text-white/80 hover:text-white hover:bg-black/15 active:scale-95 transition-all shrink-0 cursor-pointer"
-            aria-label="Dismiss banner"
-            title="বন্ধ করুন"
-          >
-            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </button>
-
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white p-0.5 shadow-sm flex items-center justify-center shrink-0 border border-white/90 overflow-hidden">
             <img
               src="/icon-192.png"

@@ -39,7 +39,20 @@ export const PWAInstallPrompt: React.FC = () => {
   const handleInstallClick = async () => {
     setInstalling(true);
     try {
-      await installApp();
+      const installed = await installApp();
+      if (!installed) {
+        if (isIOS) {
+          setShowIOSGuide(true);
+        } else {
+          setShowAndroidGuide(true);
+        }
+      }
+    } catch {
+      if (isIOS) {
+        setShowIOSGuide(true);
+      } else {
+        setShowAndroidGuide(true);
+      }
     } finally {
       setInstalling(false);
     }

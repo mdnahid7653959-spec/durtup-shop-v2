@@ -7,165 +7,155 @@ interface BeforeInstallPromptEvent extends Event {
 
 const DISMISS_KEY = 'durtup_pwa_prompt_dismissed_at';
 const INSTALLED_KEY = 'durtup_pwa_is_installed';
-const DISMISS_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// Global shared singleton state
+let globalDeferredPrompt: BeforeInstallPromptEvent | null = null;
+let globalIsPromptOpen = false;
+let globalShowIOSGuide = false;
+let globalShowAndroidGuide = false;
+let globalIsInstalled = false;
+let globalCanInstall = false;
+
+const listeners = new Set<() => void>();
+
+function notify() {
+  listeners.forEach((listener) => {
+    try {
+      listener();
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
+
+if (typeof window !== 'undefined') {
+  // Check standalone mode initially
+  globalIsInstalled = 
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true ||
+    document.referrer.includes('android-app://') ||
+    localStorage.getItem(INSTALLED_KEY) === 'true';
+
+  // Listen for beforeinstallprompt globally
+  window.addEventListener('beforeinstallprompt', (e: Event) => {
+    e.preventDefault();
+    globalDeferredPrompt = e as BeforeInstallPromptEvent;
+    globalCanInstall = true;
+    notify();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    localStorage.setItem(INSTALLED_KEY, 'true');
+    globalIsInstalled = true;
+    globalCanInstall = false;
+    globalIsPromptOpen = false;
+    globalShowIOSGuide = false;
+    globalShowAndroidGuide = false;
+    globalDeferredPrompt = null;
+    localStorage.removeItem(DISMISS_KEY);
+    notify();
+  });
+}
 
 export function usePWAInstall() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return (
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true ||
-      document.referrer.includes('android-app://') ||
-      localStorage.getItem(INSTALLED_KEY) === 'true'
-    );
-  });
-  const [canInstall, setCanInstall] = useState(false);
-  const [isPromptOpen, setIsPromptOpen] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isAndroid, setIsAndroid] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [showIOSGuide, setShowIOSGuide] = useState(false);
-  const [showAndroidGuide, setShowAndroidGuide] = useState(false);
+  const [, setTick] = useState(0);
 
   useEffect(() => {
-    // 1. Detect device & OS
-    const ua = window.navigator.userAgent.toLowerCase();
-    const isIOSDevice = /iphone|ipad|ipod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isAndroidDevice = /android/.test(ua);
-    const isMobileDevice = isIOSDevice || isAndroidDevice || /mobile|tablet/.test(ua) || window.innerWidth <= 768;
-
-    setIsIOS(isIOSDevice);
-    setIsAndroid(isAndroidDevice);
-    setIsMobile(isMobileDevice);
-
-    // 2. Check if already installed (standalone mode)
-    const isStandalone = 
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true ||
-      document.referrer.includes('android-app://') ||
-      localStorage.getItem(INSTALLED_KEY) === 'true';
-
-    if (isStandalone) {
-      setIsInstalled(true);
-      setIsPromptOpen(false);
-      return;
-    }
-
-    // 3. Handle Android/Desktop Chrome beforeinstallprompt event
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setCanInstall(true);
-
-      // Check if dismissed recently
-      const dismissedAt = localStorage.getItem(DISMISS_KEY);
-      const isRecentlyDismissed = dismissedAt && Date.now() - parseInt(dismissedAt, 10) < DISMISS_DURATION_MS;
-
-      // Auto-show prompt on mobile if not recently dismissed
-      if (isMobileDevice && !isRecentlyDismissed) {
-        // Smooth 1.5s delay to let the initial page render first
-        const timer = setTimeout(() => {
-          setIsPromptOpen(true);
-        }, 1500);
-        return () => clearTimeout(timer);
-      }
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-
-    // 4. If iOS and not installed and not dismissed, auto-show prompt
-    if (isIOSDevice && !isStandalone) {
-      setCanInstall(true);
-      const dismissedAt = localStorage.getItem(DISMISS_KEY);
-      const isRecentlyDismissed = dismissedAt && Date.now() - parseInt(dismissedAt, 10) < DISMISS_DURATION_MS;
-
-      if (!isRecentlyDismissed) {
-        const timer = setTimeout(() => {
-          setIsPromptOpen(true);
-        }, 2000);
-        return () => clearTimeout(timer);
-      }
-    }
-
-    // 5. Listen for successful install
-    const handleAppInstalled = () => {
-      localStorage.setItem(INSTALLED_KEY, 'true');
-      setIsInstalled(true);
-      setCanInstall(false);
-      setIsPromptOpen(false);
-      setShowIOSGuide(false);
-      setShowAndroidGuide(false);
-      setDeferredPrompt(null);
-      localStorage.removeItem(DISMISS_KEY);
-    };
-
-    window.addEventListener('appinstalled', handleAppInstalled);
-
+    const handleUpdate = () => setTick((t) => t + 1);
+    listeners.add(handleUpdate);
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-      window.removeEventListener('appinstalled', handleAppInstalled);
+      listeners.delete(handleUpdate);
     };
   }, []);
+
+  // Device checks
+  const ua = typeof window !== 'undefined' ? window.navigator.userAgent.toLowerCase() : '';
+  const isIOS = /iphone|ipad|ipod/.test(ua) || (typeof navigator !== 'undefined' && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /android/.test(ua);
+  const isMobile = isIOS || isAndroid || /mobile|tablet/.test(ua) || (typeof window !== 'undefined' && window.innerWidth <= 768);
 
   const installApp = useCallback(async () => {
     // If iOS Safari
     if (isIOS) {
-      setIsPromptOpen(false);
-      setShowIOSGuide(true);
+      globalIsPromptOpen = false;
+      globalShowIOSGuide = true;
+      globalShowAndroidGuide = false;
+      notify();
       return false;
     }
 
-    // If Android / Desktop Chrome with deferredPrompt
-    if (deferredPrompt) {
+    // If native browser prompt available (Android Chrome / Edge / Desktop Chrome)
+    if (globalDeferredPrompt) {
       try {
-        await deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
+        await globalDeferredPrompt.prompt();
+        const { outcome } = await globalDeferredPrompt.userChoice;
         if (outcome === 'accepted') {
           localStorage.setItem(INSTALLED_KEY, 'true');
-          setIsInstalled(true);
-          setCanInstall(false);
-          setIsPromptOpen(false);
-          setShowAndroidGuide(false);
+          globalIsInstalled = true;
+          globalCanInstall = false;
+          globalIsPromptOpen = false;
+          globalShowAndroidGuide = false;
         }
-        setDeferredPrompt(null);
+        globalDeferredPrompt = null;
+        notify();
         return outcome === 'accepted';
       } catch (err) {
         console.error('PWA install error:', err);
-        setShowAndroidGuide(true);
+        globalIsPromptOpen = true;
+        notify();
         return false;
       }
     } else {
-      // Direct visual guide if deferredPrompt is not yet triggered
-      setIsPromptOpen(false);
-      setShowAndroidGuide(true);
+      // Show full install popup / guided instructions
+      globalIsPromptOpen = true;
+      notify();
       return false;
     }
-  }, [deferredPrompt, isIOS]);
+  }, [isIOS]);
 
   const dismissPrompt = useCallback((temporary = true) => {
-    setIsPromptOpen(false);
-    setShowIOSGuide(false);
-    setShowAndroidGuide(false);
+    globalIsPromptOpen = false;
+    globalShowIOSGuide = false;
+    globalShowAndroidGuide = false;
     if (temporary) {
       localStorage.setItem(DISMISS_KEY, Date.now().toString());
     }
+    notify();
   }, []);
 
   const openPrompt = useCallback(() => {
-    setIsPromptOpen(true);
+    if (isIOS) {
+      globalShowIOSGuide = true;
+      globalIsPromptOpen = false;
+      globalShowAndroidGuide = false;
+    } else if (globalDeferredPrompt) {
+      installApp();
+    } else {
+      globalIsPromptOpen = true;
+    }
+    notify();
+  }, [isIOS, installApp]);
+
+  const setShowIOSGuide = useCallback((val: boolean) => {
+    globalShowIOSGuide = val;
+    notify();
+  }, []);
+
+  const setShowAndroidGuide = useCallback((val: boolean) => {
+    globalShowAndroidGuide = val;
+    notify();
   }, []);
 
   return {
-    canInstall,
-    isInstalled,
-    isPromptOpen,
+    canInstall: globalCanInstall,
+    isInstalled: globalIsInstalled,
+    isPromptOpen: globalIsPromptOpen,
     isIOS,
     isAndroid,
     isMobile,
-    showIOSGuide,
+    showIOSGuide: globalShowIOSGuide,
     setShowIOSGuide,
-    showAndroidGuide,
+    showAndroidGuide: globalShowAndroidGuide,
     setShowAndroidGuide,
     installApp,
     dismissPrompt,

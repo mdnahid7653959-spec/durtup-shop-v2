@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { TopAppInstallBanner } from "@/components/pwa/TopAppInstallBanner";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useToast } from "@/hooks/use-toast";
@@ -72,25 +73,25 @@ const getYouTubeEmbedUrl = (url: string): string | null => {
 function MobileProductTopBar() {
   const navigate = useNavigate();
   return (
-    <div className="md:hidden sticky top-0 z-40 bg-primary text-primary-foreground shadow-sm w-full max-w-[100vw] overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+    <div className="md:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-foreground border-b border-slate-100 dark:border-slate-800 shadow-xs w-full max-w-[100vw]">
       <div className="flex items-center justify-between gap-2 px-3 py-2 w-full max-w-full">
         <button 
           onClick={() => navigate(-1)} 
-          className="p-1.5 hover:bg-white/10 active:scale-95 rounded-full shrink-0 flex items-center justify-center text-white" 
+          className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full shrink-0 flex items-center justify-center text-slate-800 dark:text-slate-100 cursor-pointer" 
           aria-label="Back"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
 
-        <span className="font-bold text-sm tracking-tight text-white truncate flex-1 text-center">
+        <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-slate-100 truncate flex-1 text-center">
           Product Details
         </span>
 
         <div className="flex items-center gap-1 shrink-0">
-          <Link to="/wishlist" className="p-1.5 hover:bg-white/10 active:scale-95 rounded-full text-white" aria-label="Wishlist">
+          <Link to="/wishlist" className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full text-slate-700 dark:text-slate-200" aria-label="Wishlist">
             <Heart className="h-5 w-5" />
           </Link>
-          <Link to="/cart" className="p-1.5 hover:bg-white/10 active:scale-95 rounded-full text-white" aria-label="Cart">
+          <Link to="/cart" className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full text-slate-700 dark:text-slate-200" aria-label="Cart">
             <ShoppingCart className="h-5 w-5" />
           </Link>
         </div>
@@ -939,7 +940,12 @@ export default function ProductDetail() {
           ]}
           faqs={DEFAULT_BANGLADESH_PRODUCT_FAQS}
         />
-        <div className="hidden md:block"><Header /></div>
+        <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+          <TopAppInstallBanner />
+        </div>
+        <div className="hidden md:block">
+          <Header />
+        </div>
         <MobileProductTopBar />
         <main className="flex-1 container py-4 sm:py-8 pb-20 md:pb-8">
           <div className="animate-pulse">
@@ -965,7 +971,12 @@ export default function ProductDetail() {
           description="The product you are looking for is currently unavailable. Browse thousands of other deals at Durtup.shop."
           noindex={true}
         />
-        <div className="hidden md:block"><Header /></div>
+        <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+          <TopAppInstallBanner />
+        </div>
+        <div className="hidden md:block">
+          <Header />
+        </div>
         <MobileProductTopBar />
         <main className="flex-1 container py-8 pb-20 md:pb-8">
           <div className="text-center py-16">
@@ -1014,7 +1025,12 @@ export default function ProductDetail() {
         ]}
         faqs={DEFAULT_BANGLADESH_PRODUCT_FAQS}
       />
-      <div className="hidden md:block"><Header /></div>
+      <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <TopAppInstallBanner />
+      </div>
+      <div className="hidden md:block">
+        <Header />
+      </div>
       <MobileProductTopBar />
 
       <main className="flex-1 pb-40 md:pb-8 w-full max-w-full overflow-hidden">

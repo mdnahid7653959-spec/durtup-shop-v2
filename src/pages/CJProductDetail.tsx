@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { TopAppInstallBanner } from "@/components/pwa/TopAppInstallBanner";
 import { useCJCart } from "@/hooks/useCJCart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -201,7 +202,24 @@ export default function CJProductDetail() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
+        <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+          <TopAppInstallBanner />
+        </div>
+        <div className="hidden md:block">
+          <Header />
+        </div>
+        <div className="md:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-foreground border-b border-slate-100 dark:border-slate-800 shadow-xs w-full max-w-[100vw]">
+          <div className="flex items-center justify-between gap-2 px-3 py-2 w-full max-w-full">
+            <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full shrink-0 flex items-center justify-center text-slate-800 dark:text-slate-100 cursor-pointer" aria-label="Back">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-slate-100 truncate flex-1 text-center">Product Details</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <Link to="/wishlist" className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full text-slate-700 dark:text-slate-200"><Heart className="h-5 w-5" /></Link>
+              <Link to="/cart" className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full text-slate-700 dark:text-slate-200"><ShoppingCart className="h-5 w-5" /></Link>
+            </div>
+          </div>
+        </div>
         <main className="flex-1 container py-4 sm:py-8 pb-20 md:pb-8">
           <div className="animate-pulse">
             <div className="grid md:grid-cols-2 gap-4 sm:gap-8">
@@ -222,7 +240,24 @@ export default function CJProductDetail() {
   if (error || !product) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
+        <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+          <TopAppInstallBanner />
+        </div>
+        <div className="hidden md:block">
+          <Header />
+        </div>
+        <div className="md:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-foreground border-b border-slate-100 dark:border-slate-800 shadow-xs w-full max-w-[100vw]">
+          <div className="flex items-center justify-between gap-2 px-3 py-2 w-full max-w-full">
+            <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full shrink-0 flex items-center justify-center text-slate-800 dark:text-slate-100 cursor-pointer" aria-label="Back">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-slate-100 truncate flex-1 text-center">Product Details</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <Link to="/wishlist" className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full text-slate-700 dark:text-slate-200"><Heart className="h-5 w-5" /></Link>
+              <Link to="/cart" className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full text-slate-700 dark:text-slate-200"><ShoppingCart className="h-5 w-5" /></Link>
+            </div>
+          </div>
+        </div>
         <main className="flex-1 container py-8 pb-20 md:pb-8">
           <div className="text-center py-16">
             <h1 className="text-2xl font-bold text-foreground mb-4">Product Not Found</h1>
@@ -249,7 +284,7 @@ export default function CJProductDetail() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
         title={generateProductSEOTitle({ name: product.nameEn || product.name, price: currentBdtPrice })}
         description={generateProductSEODescription({ name: product.nameEn || product.name, description: product.descriptionEn || product.description, price: currentBdtPrice })}
@@ -278,7 +313,24 @@ export default function CJProductDetail() {
         ]}
         faqs={DEFAULT_BANGLADESH_PRODUCT_FAQS}
       />
-      <Header />
+      <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <TopAppInstallBanner />
+      </div>
+      <div className="hidden md:block">
+        <Header />
+      </div>
+      <div className="md:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-foreground border-b border-slate-100 dark:border-slate-800 shadow-xs w-full max-w-[100vw]">
+        <div className="flex items-center justify-between gap-2 px-3 py-2 w-full max-w-full">
+          <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full shrink-0 flex items-center justify-center text-slate-800 dark:text-slate-100 cursor-pointer" aria-label="Back">
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-slate-100 truncate flex-1 text-center">Product Details</span>
+          <div className="flex items-center gap-1 shrink-0">
+            <Link to="/wishlist" className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full text-slate-700 dark:text-slate-200"><Heart className="h-5 w-5" /></Link>
+            <Link to="/cart" className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full text-slate-700 dark:text-slate-200"><ShoppingCart className="h-5 w-5" /></Link>
+          </div>
+        </div>
+      </div>
       <main className="flex-1 pb-44 md:pb-8 overflow-x-hidden">
         <div className="w-full max-w-full px-3 sm:px-6 lg:container py-3 sm:py-6 overflow-x-hidden">
           {/* Breadcrumb - Desktop only */}

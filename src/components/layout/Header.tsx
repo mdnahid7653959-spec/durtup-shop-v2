@@ -8,8 +8,7 @@ import {
   ChevronRight,
   ShoppingCart, 
   MessageCircle, 
-  LogOut,
-  Download
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -27,7 +26,6 @@ import { supabase } from "@/lib/firebaseAdapter";
 import { SmartSearchBar } from "@/components/search/SmartSearchBar";
 import { cn } from "@/lib/utils";
 import { CATEGORIES_DATA, findCategoryOrSubcategory } from "@/data/categoriesData";
-import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { TopAppInstallBanner } from "@/components/pwa/TopAppInstallBanner";
 
 export function Header() {
@@ -54,7 +52,6 @@ export function Header() {
   const { user, profile, signOut } = useAuth();
   const { itemCount: cartCount } = useCart();
   const { itemCount: wishlistCount } = useWishlist();
-  const { isInstalled, openPrompt } = usePWAInstall();
   const { toast } = useToast();
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
@@ -328,10 +325,14 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full max-w-[100vw] bg-white dark:bg-slate-900 shadow-xs border-b border-slate-100 dark:border-slate-800" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-      
-      {/* 0. Locked Smart App Banner (Only visible on browser/web until installed) */}
-      <TopAppInstallBanner />
+    <>
+      {/* 0. Locked Smart App Banner (Only banner is sticky/locked at the top until installed) */}
+      <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <TopAppInstallBanner />
+      </div>
+
+      {/* 1. Main Header (Scrolls naturally with page content) */}
+      <header className="relative w-full max-w-[100vw] bg-white dark:bg-slate-900 shadow-xs border-b border-slate-100 dark:border-slate-800">
 
       {/* 1. Main Header Row (Logo, Search, Actions) */}
       <div className="px-3 sm:px-4 py-2 max-w-7xl mx-auto">
@@ -372,24 +373,8 @@ export function Header() {
             </div>
           )}
 
-          {/* Right Action Icons (Wishlist, Messages, Cart, Account, Get App) */}
+          {/* Right Action Icons (Wishlist, Messages, Cart, Account) */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            
-            {/* Get App Button (Always visible if not already installed as standalone app) */}
-            {!isInstalled && (
-              <button
-                type="button"
-                onClick={openPrompt}
-                className="flex flex-col items-center justify-center p-1 sm:px-2 rounded-xl text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-all relative group cursor-pointer"
-                title="Durtup App ইনস্টল করুন"
-              >
-                <div className="relative">
-                  <Download className="h-5 w-5 animate-bounce group-hover:scale-110 transition-transform" />
-                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-orange-600 animate-pulse" />
-                </div>
-                <span className="text-[10px] font-extrabold leading-none mt-1 text-orange-600 dark:text-orange-400">Get App</span>
-              </button>
-            )}
 
             {/* Wishlist */}
             <Link to="/wishlist" className="flex flex-col items-center justify-center p-1 sm:px-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-orange-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all relative group">
@@ -687,6 +672,7 @@ export function Header() {
       )}
 
     </header>
+    </>
   );
 }
 
