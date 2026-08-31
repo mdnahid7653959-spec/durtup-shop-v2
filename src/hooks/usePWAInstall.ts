@@ -16,7 +16,7 @@ export function usePWAInstall() {
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [showAndroidGuide, setShowAndroidGuide] = useState(false);
 
   useEffect(() => {
     // 1. Detect device & OS
@@ -82,6 +82,8 @@ export function usePWAInstall() {
       setIsInstalled(true);
       setCanInstall(false);
       setIsPromptOpen(false);
+      setShowIOSGuide(false);
+      setShowAndroidGuide(false);
       setDeferredPrompt(null);
       localStorage.removeItem(DISMISS_KEY);
     };
@@ -97,6 +99,7 @@ export function usePWAInstall() {
   const installApp = useCallback(async () => {
     // If iOS Safari
     if (isIOS) {
+      setIsPromptOpen(false);
       setShowIOSGuide(true);
       return false;
     }
@@ -110,35 +113,41 @@ export function usePWAInstall() {
           setIsInstalled(true);
           setCanInstall(false);
           setIsPromptOpen(false);
+          setShowAndroidGuide(false);
         }
         setDeferredPrompt(null);
         return outcome === 'accepted';
       } catch (err) {
         console.error('PWA install error:', err);
+        setShowAndroidGuide(true);
         return false;
       }
     } else {
-      // Fallback instruction for browsers without beforeinstallprompt event
-      if (isAndroid) {
-        alert('অ্যাপটি ইনস্টল করতে ব্রাউজারের উপরে/নিচে ৩-ডট (⋮) মেনু থেকে "Add to Home Screen" অথবা "Install App" সিলেক্ট করুন।');
-      } else {
-        setShowIOSGuide(true);
-      }
+      // Direct visual guide if deferredPrompt is not yet triggered
+      setIsPromptOpen(false);
+      setShowAndroidGuide(true);
       return false;
     }
-  }, [deferredPrompt, isIOS, isAndroid]);
+  }, [deferredPrompt, isIOS]);
 
   const dismissPrompt = useCallback((temporary = true) => {
     setIsPromptOpen(false);
     setShowIOSGuide(false);
+    setShowAndroidGuide(false);
     if (temporary) {
       localStorage.setItem(DISMISS_KEY, Date.now().toString());
     }
   }, []);
 
   const openPrompt = useCallback(() => {
-    setIsPromptOpen(true);
-  }, []);
+    if (deferredPrompt) {
+      installApp();
+    } else if (isIOS) {
+      setShowIOSGuide(true);
+    } else {
+      setShowAndroidGuide(true);
+    }
+  }, [deferredPrompt, installApp, isIOS]);
 
   return {
     canInstall,
@@ -149,6 +158,8 @@ export function usePWAInstall() {
     isMobile,
     showIOSGuide,
     setShowIOSGuide,
+    showAndroidGuide,
+    setShowAndroidGuide,
     installApp,
     dismissPrompt,
     openPrompt,

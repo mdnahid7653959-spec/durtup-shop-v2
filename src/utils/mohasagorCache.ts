@@ -595,6 +595,29 @@ export function inferCategory(name: string, currentCategory?: string): string {
   }
 
   const n = (name || "").toLowerCase();
+
+  // 1. Women's Fashion Priority Keywords
+  const womenKws = [
+    "saree", "sari", "sharee", "lehenga", "kurti", "salwar", "kameez", "tunic", "palazzo",
+    "two piece", "three piece", "hijab", "abaya", "borkha", "burqa", "khimar", "scarf",
+    "niqab", "borka", "ring", "necklace", "earring", "chain", "pendant", "bangle", "bracelet",
+    "jewel", "diamond", "bra", "lingerie", "nighty", "women", "womens", "ladies", "female",
+    "মহিলা", "শাড়ি", "লেহেঙ্গা", "কুর্তি", "বোরকা", "হিজাব"
+  ];
+  if (womenKws.some(k => n.includes(k))) {
+    return "womens-fashion";
+  }
+
+  // 2. Men's Fashion Keywords
+  const menKws = [
+    "panjabi", "punjabi", "pajama", "payjama", "t-shirt", "tshirt", "polo", "shirt",
+    "pant", "gabardine", "jeans", "trouser", "jogger", "boxer", "men", "mens", "gents",
+    "পাঞ্জাবি", "পায়জামা", "প্যান্ট", "টি-শার্ট"
+  ];
+  if (menKws.some(k => n.includes(k))) {
+    return "mens-fashion";
+  }
+
   for (const cat of CATEGORIES_DATA) {
     for (const sub of cat.subcategories) {
       if (sub.keywords.some(k => n.includes(k.toLowerCase()))) {

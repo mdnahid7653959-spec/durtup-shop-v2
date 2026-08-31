@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { User, Mail, Phone, MapPin, Lock, Camera, Save, Eye, EyeOff, Store, Clock, CheckCircle, ShieldCheck, Download, Smartphone, Sparkles } from "lucide-react";
+import { User, Mail, Phone, MapPin, Lock, Camera, Save, Eye, EyeOff, Store, Clock, CheckCircle, ShieldCheck, Download, Smartphone, Sparkles, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,11 +19,26 @@ import { auth } from "@/integrations/firebase/client";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 
 export default function Account() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const { status: sellerStatus, sellerInfo, isApprovedSeller, isPendingSeller, hasApplied } = useSellerStatus();
   const { canInstall, isInstalled, installApp, openPrompt } = usePWAInstall();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true);
+      await signOut();
+      toast({ title: "সফলভাবে লগআউট হয়েছে", description: "Logged out successfully" });
+      navigate("/");
+    } catch (err: any) {
+      toast({ title: "লগআউট ত্রুটি", description: err.message, variant: "destructive" });
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   
   const [fullName, setFullName] = useState("");
@@ -224,7 +239,19 @@ export default function Account() {
       <Header />
       <main className="flex-1 py-4 sm:py-6 lg:py-8 pb-24 md:pb-8">
         <div className="container max-w-4xl px-3 sm:px-4">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 lg:mb-8">Account Settings</h1>
+          <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Account Settings</h1>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="rounded-xl border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-700 font-bold text-xs sm:text-sm flex items-center gap-1.5 active:scale-95 transition-all shadow-xs"
+            >
+              <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>লগআউট (Logout)</span>
+            </Button>
+          </div>
 
           <Tabs defaultValue="profile" className="space-y-4 sm:space-y-6">
             {/* Mobile-friendly horizontal scroll tabs */}
@@ -320,7 +347,11 @@ export default function Account() {
                     </div>
                   </div>
 
-                  <Button onClick={handleSaveProfile} disabled={saving} className="w-full sm:w-auto h-11 sm:h-10 text-sm touch-manipulation active:scale-[0.98]">
+                  <Button
+                    onClick={handleSaveProfile}
+                    className="w-full sm:w-auto h-11 sm:h-10 text-sm font-semibold touch-manipulation active:scale-[0.98]"
+                    disabled={saving}
+                  >
                     <Save className="w-4 h-4 mr-2" />
                     {saving ? "Saving..." : "Save Changes"}
                   </Button>
@@ -332,107 +363,121 @@ export default function Account() {
             <TabsContent value="address">
               <Card className="border-0 sm:border shadow-sm">
                 <CardHeader className="p-4 sm:p-6">
-                  <CardTitle className="text-base sm:text-lg">Shipping Address</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Manage your default shipping address.</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">Delivery Address</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">This address will be auto-filled during checkout.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
-                  <div className="space-y-1.5 sm:space-y-2">
-                    <Label htmlFor="address" className="text-xs sm:text-sm">Street Address</Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Textarea
-                        id="address"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        className="pl-10 min-h-[70px] sm:min-h-[80px] text-sm"
-                        placeholder="House/Flat No., Street, Area"
-                      />
+                <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0">
+                  <div className="grid gap-3 sm:gap-4">
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <Label htmlFor="address" className="text-xs sm:text-sm">Street Address / House & Road</Label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Textarea
+                          id="address"
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          className="pl-10 min-h-[70px] sm:min-h-[80px] text-sm"
+                          placeholder="House #, Road #, Area / Thana, District"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <Label htmlFor="city" className="text-xs sm:text-sm">City / District</Label>
+                        <Input
+                          id="city"
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="e.g. Dhaka, Chittagong"
+                          className="h-11 sm:h-10 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <Label htmlFor="state" className="text-xs sm:text-sm">Division / State</Label>
+                        <Input
+                          id="state"
+                          value={state}
+                          onChange={(e) => setState(e.target.value)}
+                          placeholder="e.g. Dhaka Division"
+                          className="h-11 sm:h-10 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <Label htmlFor="zipCode" className="text-xs sm:text-sm">Postal Code</Label>
+                        <Input
+                          id="zipCode"
+                          value={zipCode}
+                          onChange={(e) => setZipCode(e.target.value)}
+                          placeholder="e.g. 1209"
+                          className="h-11 sm:h-10 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <Label htmlFor="country" className="text-xs sm:text-sm">Country</Label>
+                        <Input
+                          id="country"
+                          value={country}
+                          onChange={(e) => setCountry(e.target.value)}
+                          placeholder="Bangladesh"
+                          className="h-11 sm:h-10 text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="city" className="text-xs sm:text-sm">City</Label>
-                      <Input
-                        id="city"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="Dhaka"
-                        className="h-11 sm:h-10 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="state" className="text-xs sm:text-sm">State/Division</Label>
-                      <Input
-                        id="state"
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        placeholder="Dhaka Division"
-                        className="h-11 sm:h-10 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="zipCode" className="text-xs sm:text-sm">Postal/ZIP Code</Label>
-                      <Input
-                        id="zipCode"
-                        value={zipCode}
-                        onChange={(e) => setZipCode(e.target.value)}
-                        placeholder="1205"
-                        className="h-11 sm:h-10 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="country" className="text-xs sm:text-sm">Country</Label>
-                      <Input
-                        id="country"
-                        value={country}
-                        onChange={(e) => setCountry(e.target.value)}
-                        placeholder="Bangladesh"
-                        className="h-11 sm:h-10 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <Button onClick={async () => {
-                    if (!user) return;
-                    if (!address || !city || !zipCode) {
-                      toast({ title: "Error", description: "Please fill in street address, city, and postal code.", variant: "destructive" });
-                      return;
-                    }
-                    setSavingAddress(true);
-                    try {
-                      const addressData = {
-                        address_line1: address,
-                        city,
-                        state,
-                        postal_code: zipCode,
-                        country: country || "Bangladesh",
-                        full_name: fullName || profile?.full_name || "",
-                        phone: phone || (profile as any)?.phone || "",
-                        is_default: true,
-                        user_id: user.id,
-                      };
-
-                      if (defaultAddressId) {
-                        const { error } = await supabase.from("addresses").update({ ...addressData, updated_at: new Date().toISOString() }).eq("id", defaultAddressId);
-                        if (error) throw error;
-                      } else {
-                        const { data, error } = await supabase.from("addresses").insert(addressData).select("id").single();
-                        if (error) throw error;
-                        setDefaultAddressId(data.id);
+                  <Button
+                    onClick={async () => {
+                      if (!user) return;
+                      setSavingAddress(true);
+                      try {
+                        if (defaultAddressId) {
+                          const { error } = await supabase
+                            .from("addresses")
+                            .update({
+                              address_line1: address,
+                              city: city,
+                              state: state,
+                              postal_code: zipCode,
+                              country: country || "Bangladesh",
+                              updated_at: new Date().toISOString()
+                            })
+                            .eq("id", defaultAddressId);
+                          if (error) throw error;
+                        } else {
+                          const { data, error } = await supabase
+                            .from("addresses")
+                            .insert({
+                              user_id: user.id,
+                              address_line1: address,
+                              city: city,
+                              state: state,
+                              postal_code: zipCode,
+                              country: country || "Bangladesh",
+                              is_default: true,
+                              full_name: fullName || user.email?.split("@")[0] || "User",
+                              phone: phone || ""
+                            })
+                            .select()
+                            .single();
+                          if (error) throw error;
+                          if (data) setDefaultAddressId(data.id);
+                        }
+                        toast({ title: "Address saved!", description: "Your delivery address has been updated." });
+                      } catch (err: any) {
+                        toast({ title: "Save failed", description: err.message, variant: "destructive" });
+                      } finally {
+                        setSavingAddress(false);
                       }
-                      toast({ title: "Address saved!", description: "Your shipping address has been updated." });
-                    } catch (error: any) {
-                      toast({ title: "Error", description: error.message || "Failed to save address", variant: "destructive" });
-                    } finally {
-                      setSavingAddress(false);
-                    }
-                  }} className="w-full sm:w-auto h-11 sm:h-10 text-sm touch-manipulation active:scale-[0.98]" disabled={savingAddress}>
+                    }}
+                    className="w-full sm:w-auto h-11 sm:h-10 text-sm font-semibold touch-manipulation active:scale-[0.98]"
+                    disabled={savingAddress}
+                  >
                     <Save className="w-4 h-4 mr-2" />
-                    {savingAddress ? "Saving..." : "Save Address"}
+                    {savingAddress ? "Saving Address..." : "Save Address"}
                   </Button>
                 </CardContent>
               </Card>
@@ -444,7 +489,7 @@ export default function Account() {
                 <CardHeader className="p-4 sm:p-6">
                   <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                     <ShieldCheck className="h-5 w-5 text-primary" />
-                    Change Password via Gmail
+                    Change Password via Email
                   </CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
                     For your account security, a password reset verification link will be sent to your registered Gmail address.
@@ -514,7 +559,7 @@ export default function Account() {
           </Tabs>
 
           {/* Durtup Mobile App Section */}
-          <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-primary/10 via-orange-500/5 to-amber-500/10 border border-primary/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-primary/10 via-orange-500/5 to-amber-500/10 border border-primary/20 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
             <div className="flex items-center gap-3.5 text-center sm:text-left">
               <div className="w-12 h-12 rounded-2xl bg-white p-1 shadow-md flex items-center justify-center shrink-0 border border-primary/20">
                 <img src="/durtup-logo-transparent.png" alt="Durtup" className="w-full h-full object-contain" />
@@ -540,8 +585,14 @@ export default function Account() {
                 </div>
               ) : (
                 <Button
-                  onClick={openPrompt}
-                  className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-primary to-orange-500 text-white font-bold text-xs sm:text-sm h-10 px-5 shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+                  onClick={async () => {
+                    try {
+                      await installApp();
+                    } catch {
+                      openPrompt();
+                    }
+                  }}
+                  className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-primary to-orange-500 text-white font-bold text-xs sm:text-sm h-11 sm:h-10 px-5 shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Download className="w-4 h-4 animate-bounce" />
                   <span>ইন্সটল করুন (Install App)</span>
@@ -549,6 +600,24 @@ export default function Account() {
               )}
             </div>
           </div>
+
+          {/* Bottom Account Status & Logout Section */}
+          <div className="mt-4 p-4 rounded-2xl bg-card border border-border/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-center sm:text-left">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">বর্তমানে লগইন আছেন</p>
+              <p className="text-xs sm:text-sm font-bold text-foreground truncate max-w-xs">{user.email}</p>
+            </div>
+            <Button
+              variant="destructive"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="w-full sm:w-auto rounded-xl font-bold text-xs sm:text-sm h-10 px-5 shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>{loggingOut ? "লগআউট হচ্ছে..." : "লগআউট করুন (Log Out)"}</span>
+            </Button>
+          </div>
+
         </div>
       </main>
       <Footer />

@@ -146,7 +146,7 @@ export default function BuyerMessages() {
       { label: "🔥 সেরা ট্রেন্ডিং গ্যাজেট দেখাও", action: "pop-2" },
       { label: "🚚 ডেলিভারি চার্জ ও সময় কত?", action: "pop-3" },
       { label: "💵 ক্যাশ অন ডেলিভারি নিয়ম", action: "pop-4" },
-      { label: "🔄 ৭ দিনের রিটার্ন পলিসি", action: "pop-5" },
+      { label: "🔄 ইনস্ট্যান্ট রিটার্ন পলিসি", action: "pop-5" },
       { label: "💰 কম বাজেটের সেরা প্রোডাক্ট", action: "pop-6" },
       { label: "📦 অর্ডার ট্র্যাকিং করার নিয়ম", action: "pop-7" },
     ],
@@ -197,7 +197,7 @@ export default function BuyerMessages() {
         text: m.text,
       }));
 
-      const res = await askSigmaAIAgent(matchedKb?.id || questionDisplayText, {
+      const res = await askSigmaAIAgent(queryTextOrId || matchedKb?.id || questionDisplayText, {
         userName: cleanName,
         userId: user?.id || `guest_${Date.now()}`,
         catalog,
@@ -603,7 +603,7 @@ export default function BuyerMessages() {
       </div>
 
       {/* Bottom Horizontal Recommended Question Pills Hub */}
-      <footer className="shrink-0 z-30 bg-white/90 backdrop-blur-2xl border-t border-sky-200/80 shadow-[0_-6px_25px_rgba(2,132,199,0.12)] px-3 py-2 sm:px-4 sm:py-2.5">
+      <footer className="shrink-0 z-30 bg-white/90 backdrop-blur-2xl border-t border-sky-200/80 shadow-[0_-6px_25px_rgba(2,132,199,0.12)] px-3 pt-2 pb-20 sm:px-4 sm:py-2.5">
         <div className="max-w-3xl mx-auto space-y-2">
           {/* Category Filter Pills Row */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">

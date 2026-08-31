@@ -491,19 +491,21 @@ export function findCategoryOrSubcategory(queryOrSlug: string): {
   canonicalCategoryName?: string;
   keywords?: string[];
 } {
-  const norm = (queryOrSlug || "").toLowerCase().trim();
-  if (!norm || norm === "all") {
+  const raw = (queryOrSlug || "").trim();
+  if (!raw || raw.toLowerCase() === "all") {
     return { type: "all" };
   }
 
-  // 1. Direct category match
+  const cleanStr = (s: string) => s.toLowerCase().trim().replace(/['"’]/g, "");
+  const norm = cleanStr(raw);
+
+  // 1. Direct EXACT category match first (slug, name, id, bangla)
   for (const cat of CATEGORIES_DATA) {
     if (
-      cat.slug.toLowerCase() === norm ||
-      cat.name.toLowerCase() === norm ||
-      cat.id.toLowerCase() === norm ||
-      norm.includes(cat.slug.toLowerCase()) ||
-      norm.includes(cat.name.toLowerCase())
+      cleanStr(cat.slug) === norm ||
+      cleanStr(cat.name) === norm ||
+      cleanStr(cat.id) === norm ||
+      (cat.bangla && cleanStr(cat.bangla) === norm)
     ) {
       return {
         type: "category",
@@ -513,15 +515,14 @@ export function findCategoryOrSubcategory(queryOrSlug: string): {
     }
   }
 
-  // 2. Subcategory match
+  // 2. Direct EXACT subcategory match next (slug, name, id, bangla)
   for (const cat of CATEGORIES_DATA) {
     for (const sub of cat.subcategories) {
       if (
-        sub.slug.toLowerCase() === norm ||
-        sub.name.toLowerCase() === norm ||
-        sub.id.toLowerCase() === norm ||
-        norm.includes(sub.slug.toLowerCase()) ||
-        norm.includes(sub.name.toLowerCase())
+        cleanStr(sub.slug) === norm ||
+        cleanStr(sub.name) === norm ||
+        cleanStr(sub.id) === norm ||
+        (sub.bangla && cleanStr(sub.bangla) === norm)
       ) {
         return {
           type: "subcategory",
@@ -534,44 +535,92 @@ export function findCategoryOrSubcategory(queryOrSlug: string): {
     }
   }
 
-  // 3. Fallback fuzzy checks
-  if (norm.includes("gadget") || norm.includes("electr") || norm.includes("phone") || norm.includes("tech")) {
-    const cat = CATEGORIES_DATA.find(c => c.slug === "gadgets-electronics")!;
-    return { type: "category", category: cat, canonicalCategoryName: cat.name };
-  }
-  if (norm.includes("men") && !norm.includes("women")) {
-    const cat = CATEGORIES_DATA.find(c => c.slug === "mens-fashion")!;
-    return { type: "category", category: cat, canonicalCategoryName: cat.name };
-  }
-  if (norm.includes("women")) {
+  // 3. Priority disambiguation: Women's Fashion MUST precede Men's Fashion
+  // (because "women's fashion".includes("men's fashion") is true!)
+  if (
+    norm.includes("women") ||
+    norm.includes("female") ||
+    norm.includes("ladies") ||
+    norm.includes("মহিলা") ||
+    norm.includes("মেয়ে") ||
+    norm.includes("নারী")
+  ) {
     const cat = CATEGORIES_DATA.find(c => c.slug === "womens-fashion")!;
     return { type: "category", category: cat, canonicalCategoryName: cat.name };
   }
-  if (norm.includes("home") || norm.includes("kitchen") || norm.includes("life")) {
+
+  if (
+    (norm.includes("men") && !norm.includes("women")) ||
+    norm.includes("male") ||
+    norm.includes("gents") ||
+    norm.includes("পুরুষ") ||
+    norm.includes("ছেলে")
+  ) {
+    const cat = CATEGORIES_DATA.find(c => c.slug === "mens-fashion")!;
+    return { type: "category", category: cat, canonicalCategoryName: cat.name };
+  }
+
+  // 4. Safe category substring match (excluding mens-fashion which was handled above)
+  for (const cat of CATEGORIES_DATA) {
+    if (cat.slug === "mens-fashion") continue;
+    const catClean = cleanStr(cat.slug);
+    const catNameClean = cleanStr(cat.name);
+    if (norm.includes(catClean) || norm.includes(catNameClean)) {
+      return {
+        type: "category",
+        category: cat,
+        canonicalCategoryName: cat.name
+      };
+    }
+  }
+
+  // 5. Subcategory substring match
+  for (const cat of CATEGORIES_DATA) {
+    for (const sub of cat.subcategories) {
+      const subClean = cleanStr(sub.slug);
+      const subNameClean = cleanStr(sub.name);
+      if (norm.includes(subClean) || norm.includes(subNameClean)) {
+        return {
+          type: "subcategory",
+          category: cat,
+          subcategory: sub,
+          canonicalCategoryName: cat.name,
+          keywords: sub.keywords
+        };
+      }
+    }
+  }
+
+  // 6. Domain-specific fallbacks
+  if (norm.includes("gadget") || norm.includes("electr") || norm.includes("phone") || norm.includes("tech") || norm.includes("গ্যাজেট")) {
+    const cat = CATEGORIES_DATA.find(c => c.slug === "gadgets-electronics")!;
+    return { type: "category", category: cat, canonicalCategoryName: cat.name };
+  }
+  if (norm.includes("home") || norm.includes("kitchen") || norm.includes("life") || norm.includes("হোম") || norm.includes("কিচেন")) {
     const cat = CATEGORIES_DATA.find(c => c.slug === "home-lifestyle")!;
     return { type: "category", category: cat, canonicalCategoryName: cat.name };
   }
-  if (norm.includes("kid") || norm.includes("toy") || norm.includes("baby")) {
+  if (norm.includes("kid") || norm.includes("toy") || norm.includes("baby") || norm.includes("বাচ্চা") || norm.includes("খেলনা")) {
     const cat = CATEGORIES_DATA.find(c => c.slug === "kids-zone")!;
     return { type: "category", category: cat, canonicalCategoryName: cat.name };
   }
-  if (norm.includes("food") || norm.includes("honey") || norm.includes("oil")) {
+  if (norm.includes("food") || norm.includes("honey") || norm.includes("oil") || norm.includes("খাবার") || norm.includes("মধু")) {
     const cat = CATEGORIES_DATA.find(c => c.slug === "foods")!;
     return { type: "category", category: cat, canonicalCategoryName: cat.name };
   }
-  if (norm.includes("winter") || norm.includes("hoodie")) {
+  if (norm.includes("winter") || norm.includes("hoodie") || norm.includes("শীত")) {
     const cat = CATEGORIES_DATA.find(c => c.slug === "winter")!;
     return { type: "category", category: cat, canonicalCategoryName: cat.name };
   }
-  if (norm.includes("watch")) {
+  if (norm.includes("watch") || norm.includes("ঘড়ি")) {
     const cat = CATEGORIES_DATA.find(c => c.slug === "watch")!;
     return { type: "category", category: cat, canonicalCategoryName: cat.name };
   }
-  if (norm.includes("gift") || norm.includes("custom")) {
+  if (norm.includes("gift") || norm.includes("custom") || norm.includes("উপহার")) {
     const cat = CATEGORIES_DATA.find(c => c.slug === "customize-gift")!;
     return { type: "category", category: cat, canonicalCategoryName: cat.name };
   }
-  if (norm.includes("offer") || norm.includes("deal")) {
+  if (norm.includes("offer") || norm.includes("deal") || norm.includes("অফার")) {
     const cat = CATEGORIES_DATA.find(c => c.slug === "offer")!;
     return { type: "category", category: cat, canonicalCategoryName: cat.name };
   }

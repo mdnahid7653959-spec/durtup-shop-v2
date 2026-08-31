@@ -2,6 +2,7 @@ import { ReactNode, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { PushNotificationInitializer } from "@/components/PushNotificationInitializer";
+import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -30,13 +31,13 @@ export function AppLayout({ children }: AppLayoutProps) {
     path.startsWith("/item/") || 
     path.startsWith("/cj-product/");
 
-  const isMessages = path.startsWith("/messages");
-  const shouldShowMobileNav = !isCheckout && !isAdmin && !isSeller && !isStaff && !isProductDetail && !isMessages;
+  const shouldShowMobileNav = !isCheckout && !isAdmin && !isSeller && !isStaff && !isProductDetail;
 
   return (
     <>
       <PushNotificationInitializer />
       {children}
+      <PWAInstallPrompt />
       {shouldShowMobileNav && <MobileBottomNav />}
     </>
   );

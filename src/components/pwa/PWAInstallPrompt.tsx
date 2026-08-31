@@ -24,6 +24,8 @@ export const PWAInstallPrompt: React.FC = () => {
     isMobile,
     showIOSGuide,
     setShowIOSGuide,
+    showAndroidGuide,
+    setShowAndroidGuide,
     installApp,
     dismissPrompt,
     openPrompt
@@ -202,6 +204,66 @@ export const PWAInstallPrompt: React.FC = () => {
             <Button 
               onClick={() => setShowIOSGuide(false)}
               className="w-full h-11 rounded-xl bg-primary text-white font-bold"
+            >
+              বুঝেছি (Got it)
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 3. ANDROID / CHROME / BROWSER STEP-BY-STEP INSTALL GUIDE */}
+      {showAndroidGuide && (
+        <div className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-300">
+          <div 
+            className="w-full max-w-md bg-card text-card-foreground rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl p-6 space-y-5 animate-in slide-in-from-bottom duration-300"
+            style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}
+          >
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2.5">
+                <img src="/durtup-logo-transparent.png" alt="Durtup" className="w-8 h-8 object-contain" />
+                <h3 className="font-bold text-base text-foreground">সরাসরি অ্যাপ ইনস্টল করার নিয়ম</h3>
+              </div>
+              <button 
+                onClick={() => setShowAndroidGuide(false)}
+                className="p-1 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-sm">
+              <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/60 border">
+                <div className="p-2 rounded-xl bg-primary text-white shrink-0 mt-0.5 font-black text-xs">
+                  ⋮
+                </div>
+                <div>
+                  <p className="font-bold text-foreground">১. ব্রাউজারের উপরে ৩-ডট (⋮) চাপুন</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">ডানপাশের উপরে থাকা ৩-ডট (⋮) অপশন মেনুতে ক্লিক করুন।</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/60 border">
+                <div className="p-2 rounded-xl bg-primary text-white shrink-0 mt-0.5">
+                  <Download className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-bold text-foreground">২. "Install app" বা "Add to Home screen" চাপুন</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">মেনু থেকে Install App / Add to Home screen সিলেক্ট করুন।</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400">
+                <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5 text-green-600" />
+                <div>
+                  <p className="font-bold text-xs">৩. সম্পন্ন!</p>
+                  <p className="text-[11px] mt-0.5">আপনার ফোনে সরাসরি অফিশিয়াল Durtup Mobile App তৈরি হয়ে যাবে!</p>
+                </div>
+              </div>
+            </div>
+
+            <Button 
+              onClick={() => setShowAndroidGuide(false)}
+              className="w-full h-11 rounded-xl bg-gradient-to-r from-primary to-orange-500 text-white font-bold text-sm shadow-md active:scale-95 transition-all"
             >
               বুঝেছি (Got it)
             </Button>

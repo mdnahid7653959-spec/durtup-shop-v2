@@ -88,7 +88,7 @@ function getFilterProducts(filter: string, catalog: Product[]): SigmaProductCard
     freeShipping: p.freeShipping ?? true,
     isBestSeller: p.isBestSeller ?? false,
     stockStatus: "in_stock",
-    keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "৭ দিনের রিটার্ন"]
+    keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "ডেলিভারিতে চেকিং"]
   }));
 }
 
@@ -111,24 +111,86 @@ export async function askSigmaAIAgent(
     };
   }
 ): Promise<SigmaChatResponse> {
-  const trimmed = query.trim();
-  const q = trimmed.toLowerCase();
+  const cleanEmoji = (s: string) => s.replace(/[\p{Emoji}\u200d\uFE0F\uFE0E]+/gu, "").trim().toLowerCase();
+  const qRaw = query.trim().toLowerCase();
+  const qClean = cleanEmoji(query);
   const userName = options?.userName || "";
 
-  // 1. Direct Knowledge Base Match for Recommended Questions
-  const matchedKb = RECOMMENDED_QUESTIONS.find(item => {
+  // 1. Direct Knowledge Base Match for Recommended Questions (Checks IDs, questions, labels, quick actions, and clean versions)
+  let matchedKb = RECOMMENDED_QUESTIONS.find(item => {
     const qLower = item.question.toLowerCase();
+    const qCleanItem = cleanEmoji(item.question);
     const shortLower = (item.shortLabel || "").toLowerCase();
+    const shortCleanItem = cleanEmoji(item.shortLabel || "");
     const idLower = item.id.toLowerCase();
+
     return (
-      q === qLower ||
-      q === shortLower ||
-      q === idLower ||
-      q.includes(qLower) ||
-      (shortLower.length > 3 && q.includes(shortLower)) ||
-      (qLower.length > 5 && qLower.includes(q))
+      qRaw === idLower ||
+      qClean === idLower ||
+      qRaw === qLower ||
+      qClean === qCleanItem ||
+      qRaw === shortLower ||
+      qClean === shortCleanItem ||
+      (qClean.length > 2 && qCleanItem.includes(qClean)) ||
+      (qClean.length > 2 && shortCleanItem.includes(qClean)) ||
+      (qCleanItem.length > 4 && qClean.includes(qCleanItem)) ||
+      (shortCleanItem.length > 3 && qClean.includes(shortCleanItem)) ||
+      item.quickActions.some(qa => qa.action.toLowerCase() === qRaw || qa.action.toLowerCase() === qClean || cleanEmoji(qa.label) === qClean || qa.label.toLowerCase() === qRaw)
     );
   });
+
+  // 2. High-Priority Direct Intent Aliases if not matched by text
+  if (!matchedKb) {
+    if (qClean.includes("সাপোর্ট") || qClean.includes("support") || qClean.includes("হেল্পলাইন") || qClean.includes("helpline") || qClean.includes("কাস্টমার কেয়ার") || qClean.includes("কাস্টমার") || qClean.includes("যোগাযোগ") || qRaw === "customer_support") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "sup-2");
+    } else if (qClean.includes("ডেলিভারি চার্জ") || qClean.includes("ডেলিভারি সময়") || qClean.includes("ডেলিভারি খরচ") || qRaw === "delivery_info" || (qClean.includes("ডেলিভারি") && (qClean.includes("চার্জ") || qClean.includes("সময়") || qClean.includes("কত")))) {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "pop-3");
+    } else if (qClean.includes("ক্যাশ অন") || qClean.includes("পেমেন্ট") || qClean.includes("payment") || qClean.includes("বিকাশ") || qClean.includes("bkash") || qRaw === "payment_info") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "del-4") || RECOMMENDED_QUESTIONS.find(k => k.id === "pop-4");
+    } else if (qClean.includes("অর্ডার করার নিয়ম") || qClean.includes("কীভাবে অর্ডার") || (qClean.includes("অর্ডার") && (qClean.includes("সহজ") || qClean.includes("পদ্ধতি") || qClean.includes("করব"))) || qRaw === "how_to_order") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "pop-1");
+    } else if (qClean.includes("ট্র্যাক") || qClean.includes("ট্র্যাকিং") || qClean.includes("track") || qRaw === "track_order") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "pop-7");
+    } else if (qClean.includes("রিটার্ন") || qClean.includes("রিপ্লেসমেন্ট") || qClean.includes("ফেরত") || qRaw === "return_policy") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "pop-5");
+    } else if (qClean.includes("কম বাজেট") || qClean.includes("কম দাম") || qClean.includes("budget") || qRaw === "budget_search") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "pop-6");
+    } else if (qClean.includes("সেরা গ্যাজেট") || qClean.includes("ট্রেন্ডিং") || qClean.includes("trending") || qRaw === "best_gadgets") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "pop-2");
+    } else if (qClean.includes("স্মার্টওয়াচ") || qClean.includes("smartwatch") || qRaw === "smartwatch_collection") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "prd-2");
+    } else if (qClean.includes("ইয়ারবাড") || qClean.includes("হেডফোন") || qClean.includes("audio") || qClean.includes("earbud") || qRaw === "audio_collection") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "prd-1");
+    } else if (qClean.includes("চার্জার") || qClean.includes("পাওয়ার ব্যাংক") || qClean.includes("charger") || qClean.includes("powerbank") || qRaw === "charger_collection") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "prd-3");
+    } else if (qClean.includes("অফিস") || qClean.includes("ওয়্যারহাউস") || qClean.includes("লোকেশন") || qRaw === "office_location") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "sup-3");
+    } else if (qClean.includes("রিফান্ড") || qClean.includes("টাকা ফেরত") || qRaw === "refund_info") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "sup-4");
+    } else if (qClean.includes("অরিজিনাল") || qClean.includes("ইনট্যাক্ট") || qRaw === "original_guarantee") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "prd-5");
+    } else if (qClean.includes("অফার") || qClean.includes("ডিসকাউন্ট") || qRaw === "current_offers") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "off-1");
+    } else if (qClean.includes("কুপন") || qClean.includes("coupon") || qRaw === "coupon_guide") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "off-2");
+    } else if (qClean.includes("কার্ট") || qClean.includes("cart") || qRaw === "view_cart") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "ord-1");
+    } else if (qClean.includes("বাতিল") || qClean.includes("ক্যানসেল") || qRaw === "cancel_order") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "ord-3");
+    } else if (qClean.includes("উপহার") || qClean.includes("গিফট") || qRaw === "gift_finder") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "ord-4");
+    } else if (qClean.includes("একাধিক") || qRaw === "multi_order") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "ord-5");
+    } else if (qClean.includes("তুলনা") || qRaw === "compare_products") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "pop-8");
+    } else if (qClean.includes("ঢাকার ভেতর") || qRaw === "inside_dhaka_delivery") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "del-1");
+    } else if (qClean.includes("ঢাকার বাইরে") || qRaw === "outside_dhaka_delivery") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "del-2");
+    } else if (qClean.includes("ওয়ারেন্টি") || qRaw === "warranty_info") {
+      matchedKb = RECOMMENDED_QUESTIONS.find(k => k.id === "sup-1");
+    }
+  }
 
   if (matchedKb) {
     let prods: SigmaProductCardData[] | undefined;
@@ -142,6 +204,8 @@ export async function askSigmaAIAgent(
       quickActions: matchedKb.quickActions
     };
   }
+
+  const q = qRaw;
 
   // Check common action intents
   if (q === "best_gadgets" || q.includes("সেরা গ্যাজেট") || q.includes("trending")) {
@@ -236,7 +300,7 @@ export async function askSigmaAIAgent(
     return {
       text: kb?.answerText || `**ক্যাশ অন ডেলিভারি (Cash on Delivery) বিস্তারিত:** 💵🤝`,
       quickActions: kb?.quickActions || [
-        { label: "🔄 ৭ দিনের রিটার্ন পলিসি", action: "return_policy" },
+        { label: "🔄 ইনস্ট্যান্ট রিটার্ন পলিসি", action: "return_policy" },
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" }
       ]
     };
@@ -245,7 +309,7 @@ export async function askSigmaAIAgent(
   if (q === "return_policy" || q.includes("রিটার্ন")) {
     const kb = RECOMMENDED_QUESTIONS.find(k => k.id === "pop-5");
     return {
-      text: kb?.answerText || `**৭ দিনের সহজ রিটার্ন ও রিপ্লেসমেন্ট গ্যারান্টি:** 🔄🛡️`,
+      text: kb?.answerText || `**Durtup.shop ইনস্ট্যান্ট চেক ও রিটার্ন পলিসি:** 📦🔍\n\n⚠️ **জরুরি রিটার্ন নিয়মাবলী:**\n১. **ডেলিভারি ম্যানের সামনে চেক করুন:** পণ্য হাতে পাওয়ার সাথে সাথে ডেলিভারি রাইডারের উপস্থিতিতে প্যাকেট খুলে চেক করে নিতে হবে।\n২. **তাৎক্ষণিক রিটার্ন:** প্রোডাক্টে কোনো ত্রুটি বা সমস্যা থাকলে সাথে সাথে ডেলিভারি ম্যানের কাছে পার্সেল ফেরত দিন।\n৩. **পরবর্তীতে গ্রহণযোগ্য নয়:** ডেলিভারি সম্পন্ন হয়ে রাইডার চলে যাওয়ার পর পরবর্তীতে আর কোনো রিটার্ন রিকোয়েস্ট গ্রহণ করা হবে না (অন্যথায় রিটার্ন রিজেক্ট করা হবে)।\n\n💡 পণ্য দেখে শতভাগ নিশ্চিত হয়ে তবেই রাইডারকে মূল্য পরিশোধ করুন!`,
       quickActions: kb?.quickActions || [
         { label: "📞 কাস্টমার কেয়ার হেল্পলাইন", action: "customer_support" },
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" }
@@ -267,9 +331,9 @@ export async function askSigmaAIAgent(
   if (q === "customer_support" || q === "helpline" || q.includes("হেল্পলাইন") || q.includes("কাস্টমার কেয়ার")) {
     const kb = RECOMMENDED_QUESTIONS.find(k => k.id === "sup-2");
     return {
-      text: kb?.answerText || `**Durtup.shop কাস্টমার কেয়ার ও হেল্পলাইন:** 📞💬\n\n☎️ **হটলাইন কল:** +880 1700-000000\n💬 **হোয়াটসঅ্যাপ:** +880 1700-000000\n📧 **ইমেইল:** support@durtup.shop`,
+      text: kb?.answerText || `**Durtup.shop কাস্টমার কেয়ার ও হেল্পলাইন:** 📞💬\n\n☎️ **হটলাইন ও হোয়াটসঅ্যাপ:** +880 1622-530550 (প্রতিদিন সকাল ৯:০০ টা - রাত ১০:০০ টা)\n📧 **ইমেইল:** support@durtup.shop\n🏢 **অফিস:** ধানমন্ডি, ঢাকা - ১২০৯, বাংলাদেশ`,
       quickActions: kb?.quickActions || [
-        { label: "🔄 ৭ দিনের রিটার্ন পলিসি", action: "return_policy" },
+        { label: "🔄 ইনস্ট্যান্ট রিটার্ন পলিসি", action: "return_policy" },
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" }
       ]
     };
@@ -282,6 +346,50 @@ export async function askSigmaAIAgent(
       quickActions: kb?.quickActions || [
         { label: "🔥 সেরা গ্যাজেট দেখুন", action: "best_gadgets" },
         { label: "🛍️ অর্ডার করুন", action: "how_to_order" }
+      ]
+    };
+  }
+
+  if (q === "inside_dhaka_delivery") {
+    const kb = RECOMMENDED_QUESTIONS.find(k => k.id === "del-1");
+    return {
+      text: kb?.answerText || `**ঢাকার ভেতরে হোম ডেলিভারি বিস্তারিত:** 🏙️🚚`,
+      quickActions: kb?.quickActions || [
+        { label: "🏡 ঢাকার বাইরে ডেলিভারি", action: "outside_dhaka_delivery" },
+        { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" }
+      ]
+    };
+  }
+
+  if (q === "outside_dhaka_delivery") {
+    const kb = RECOMMENDED_QUESTIONS.find(k => k.id === "del-2");
+    return {
+      text: kb?.answerText || `**ঢাকার বাইরে (সারাদেশের ৬৪ জেলা) ডেলিভারি:** 🏡📦`,
+      quickActions: kb?.quickActions || [
+        { label: "🏙️ ঢাকার ভেতরে ডেলিভারি", action: "inside_dhaka_delivery" },
+        { label: "📦 অর্ডার ট্র্যাক করুন", action: "track_order" }
+      ]
+    };
+  }
+
+  if (q === "warranty_info" || q.includes("ওয়ারেন্টি")) {
+    const kb = RECOMMENDED_QUESTIONS.find(k => k.id === "sup-1");
+    return {
+      text: kb?.answerText || `**অফিশিয়াল ওয়ারেন্টি ক্লেইম পলিসি:** 🛡️✅`,
+      quickActions: kb?.quickActions || [
+        { label: "📞 কাস্টমার সাপোর্ট হেল্পলাইন", action: "customer_support" },
+        { label: "🔄 ইনস্ট্যান্ট রিটার্ন পলিসি", action: "return_policy" }
+      ]
+    };
+  }
+
+  if (q === "gift_finder" || q.includes("উপহার") || q.includes("গিফট")) {
+    const kb = RECOMMENDED_QUESTIONS.find(k => k.id === "ord-4");
+    return {
+      text: kb?.answerText || `**প্রিয়জনকে উপহার পাঠানোর সহজ পদ্ধতি:** 🎁💝`,
+      quickActions: kb?.quickActions || [
+        { label: "🔥 সেরা গ্যাজেট দেখুন", action: "best_gadgets" },
+        { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" }
       ]
     };
   }
@@ -452,7 +560,7 @@ export async function askSigmaAIAgent(
       quickActions: [
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
         { label: "💵 ক্যাশ অন ডেলিভারি", action: "payment_info" },
-        { label: "🔄 ৭ দিনের রিটার্ন পলিসি", action: "return_policy" }
+        { label: "🔄 ইনস্ট্যান্ট রিটার্ন পলিসি", action: "return_policy" }
       ]
     };
   }
@@ -469,7 +577,7 @@ export async function askSigmaAIAgent(
     q.includes("advance")
   ) {
     return {
-      text: `**আমাদের সহজ ও নিরাপদ পেমেন্ট মেথড:** 💵💳\n\n১. **ক্যাশ অন ডেলিভারি (COD)**: কোনো অগ্রিম পেমেন্ট ছাড়াই পণ্য হাতে পেয়ে টাকা পরিশোধ করার সুবিধা।\n২. **বিকাশ ও নগদ (bKash / Nagad)**: সরাসরি অনলাইন বা মার্চেন্ট পেমেন্ট।\n৩. **কার্ড পেমেন্ট**: ভিসা, মাস্টারকার্ড ও অন্যান্য যেকোনো ব্যাংক কার্ড সাপোর্ট করে।`,
+      text: `**Durtup.shop পেমেন্ট পদ্ধতি ও নিয়মাবলী:** 💵💳\n\n১. **ক্যাশ অন ডেলিভারি (COD)**: কোনো প্রকার অগ্রিম পেমেন্ট ছাড়া পণ্য হাতে পেয়ে চেক করে সম্পূর্ণ ক্যাশে মূল্য পরিশোধ করুন।\n২. **বিকাশ (bKash Send Money)**: আমাদের অফিসিয়াল বিকাশ নাম্বার \`01885985097\`-এ Send Money করে Sender বিকাশ নম্বর ও TrxID দিয়ে নিশ্চিত করুন।\n৩. **মোবাইল ব্যাংকিং**: ডেলিভারি পাওয়ার পরও ডেলিভারি ম্যানের সামনে বিকাশ বা নগদে সরাসরি পরিশোধ করতে পারেন।`,
       quickActions: [
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
         { label: "🚚 ডেলিভারি চার্জ", action: "delivery_info" },
@@ -489,7 +597,7 @@ export async function askSigmaAIAgent(
     q.includes("problem")
   ) {
     return {
-      text: `**৭ দিনের সহজ রিটার্ন ও রিপ্লেসমেন্ট গ্যারান্টি:** 🔄🛡️\n\n✅ প্রোডাক্টে কোনো ক্রটি থাকলে বা অর্ডারের সাথে না মিললে **৭ দিনের মধ্যে সম্পূর্ণ ফ্রি রিটার্ন বা এক্সচেঞ্জ** করতে পারবেন।\n✅ আপনি চাইলে ১০০% ক্যাশ রিফান্ডও গ্রহণ করতে পারেন।\n💡 আনবক্সিং করার সময় একটি ছোট ভিডিও রাখলে দ্রুত সমাধান নিশ্চিত করা যায়।`,
+      text: `**Durtup.shop ইনস্ট্যান্ট চেক ও রিটার্ন পলিসি:** 📦🔍\n\n⚠️ **জরুরি রিটার্ন নিয়মাবলী:**\n১. **ডেলিভারি ম্যানের সামনে চেক করুন:** পার্সেল হাতে পাওয়ার সাথে সাথে ডেলিভারি রাইডারের উপস্থিতিতে প্যাকেট খুলে প্রোডাক্ট ভালোভাবে চেক করে দেখে নিতে হবে।\n২. **তাৎক্ষণিক রিটার্ন:** প্রোডাক্টে কোনো ত্রুটি, ভাঙা বা অমিল পেলে তাৎক্ষণিকভাবে ডেলিভারি রাইডারের কাছে পার্সেল ফেরত দিন।\n৩. **পরবর্তীতে গ্রহণযোগ্য নয়:** ডেলিভারি সম্পন্ন হওয়ার পর বা রাইডার চলে যাওয়ার পর পরবর্তীতে আর কোনো রিটার্ন রিকোয়েস্ট গ্রহণ করা হবে না (অন্যথায় রিটার্ন রিজেক্ট করা হবে)।\n\n💡 পণ্য দেখে শতভাগ নিশ্চিত হয়ে তবেই রাইডারকে ক্যাশ বা বিকাশে মূল্য পরিশোধ করুন!`,
       quickActions: [
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
         { label: "📞 কাস্টমার সাপোর্ট", action: "customer_support" },
@@ -572,7 +680,7 @@ export async function askSigmaAIAgent(
       freeShipping: p.freeShipping ?? true,
       isBestSeller: p.isBestSeller ?? false,
       stockStatus: "in_stock",
-      keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "৭ দিনের রিটার্ন"]
+      keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "ডেলিভারিতে চেকিং"]
     }));
 
     return {
@@ -599,7 +707,7 @@ export async function askSigmaAIAgent(
     q.includes("কার্টে যোগ")
   ) {
     return {
-      text: `দারুণ পছন্দ! 🛍️ আপনার requirement অনুযায়ী এটিই সবচেয়ে suitable option।\n\n📌 **বর্তমান স্টক:** ইন-স্টক (Available)\n🚚 **ডেলিভারি:** Durtup Launching 2026 উপলক্ষে সারাদেশে ডেলিভারি মাত্র ৬০ টাকা!\n🔄 **ওয়ারেন্টি:** ৭ দিনের রিটার্ন ও রিপ্লেসমেন্ট গ্যারান্টি\n\nচাইলে এখনই কার্টে যোগ করে সরাসরি ক্যাশ অন ডেলিভারিতে অর্ডার করতে পারেন:`,
+      text: `দারুণ পছন্দ! 🛍️ আপনার requirement অনুযায়ী এটিই সবচেয়ে suitable option।\n\n📌 **বর্তমান স্টক:** ইন-স্টক (Available)\n🚚 **ডেলিভারি:** Durtup Launching 2026 উপলক্ষে সারাদেশে ডেলিভারি মাত্র ৬০ টাকা!\n🔄 **চেকিং সুবিধা:** রাইডারের সামনে খুলে চেক করে নেওয়ার সুবিধা\n\nচাইলে এখনই কার্টে যোগ করে সরাসরি ক্যাশ অন ডেলিভারিতে অর্ডার করতে পারেন:`,
       quickActions: [
         { label: "🛒 কার্ট দেখুন", action: "view_cart" },
         { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
@@ -699,7 +807,7 @@ export async function askSigmaAIAgent(
         isBestSeller: p.isBestSeller ?? false,
         stockStatus: "in_stock",
         whyRecommended: `${badge}: ${why}`,
-        keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "৭ দিনের রিটার্ন"]
+        keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "ডেলিভারিতে চেকিং"]
       };
     });
 
@@ -758,7 +866,7 @@ export async function askSigmaAIAgent(
       freeShipping: p.freeShipping ?? true,
       isBestSeller: p.isBestSeller ?? false,
       stockStatus: "in_stock",
-      keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "৭ দিনের রিটার্ন"]
+      keySpecs: ["১০০% জেনুইন", "ক্যাশ অন ডেলিভারি", "ডেলিভারিতে চেকিং"]
     }));
 
     return {
