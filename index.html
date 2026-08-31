@@ -94,26 +94,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      (function() {
-        var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.');
-        if (isLocal) {
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-              for (var registration of registrations) {
-                registration.unregister();
-              }
-            }).catch(function() {});
-          }
-          if ('caches' in window) {
-            caches.keys().then(function(names) {
-              for (var name of names) {
-                caches.delete(name);
-              }
-            }).catch(function() {});
-          }
-        }
-      })();
-    </script>
   </body>
 </html>
