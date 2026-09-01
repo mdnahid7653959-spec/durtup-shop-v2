@@ -1,7 +1,6 @@
 import { memo, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Star, ShoppingCart, Flame } from "lucide-react";
-import { useCart } from "@/contexts/CartContext";
+import { ChevronLeft, ChevronRight, Star, Flame } from "lucide-react";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 import { type Product } from "@/components/products/ProductCard";
 
@@ -11,7 +10,6 @@ interface DealOfTheDayProps {
 
 function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { addToCart } = useCart();
 
   // Combine and pick diverse, unique trending products for the 2-row unified grid
   const displayProducts = useMemo(() => {
@@ -52,12 +50,6 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
         behavior: "smooth",
       });
     }
-  };
-
-  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
-    e.preventDefault();
-    e.stopPropagation();
-    addToCart(product.id, 1);
   };
 
   if (displayProducts.length === 0) return null;
@@ -132,71 +124,60 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
                   <Link
                     to={`/product/${product.slug || product.id}`}
                     state={{ preloadedProduct: product }}
-                    className="block"
+                    className="block h-full flex flex-col justify-between"
                   >
-                    {/* Discount Badge */}
-                    <div className="absolute top-1.5 left-1.5 z-10">
-                      <span className="bg-[#ff3b30] text-white text-[8px] sm:text-[10px] font-black px-1.5 py-0.5 rounded shadow-xs">
-                        -{discount}%
-                      </span>
-                    </div>
-
-                    {/* Product Image Container */}
-                    <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-white dark:bg-slate-950 mb-1 flex items-center justify-center p-1">
-                      <img
-                        src={displayImage}
-                        alt={product.name}
-                        className="w-full h-full object-contain filter drop-shadow-xs group-hover/card:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                        decoding="async"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = getSmartProductImage(product.name, "", "");
-                        }}
-                      />
-                    </div>
-
-                    {/* Product Title */}
-                    <h3 className="font-bold text-[10px] sm:text-xs md:text-sm text-slate-900 dark:text-slate-100 line-clamp-1 mb-0.5 group-hover/card:text-orange-600 transition-colors">
-                      {product.name}
-                    </h3>
-
-                    {/* 5-Star Rating & Reviews */}
-                    <div className="flex items-center gap-0.5 sm:gap-1 mb-1">
-                      <div className="flex items-center text-amber-400">
-                        <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
-                        <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
-                        <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
-                        <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
-                        <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
+                    <div>
+                      {/* Discount Badge */}
+                      <div className="absolute top-1.5 left-1.5 z-10">
+                        <span className="bg-[#ff3b30] text-white text-[8px] sm:text-[10px] font-black px-1.5 py-0.5 rounded shadow-xs">
+                          -{discount}%
+                        </span>
                       </div>
-                      <span className="text-[8px] sm:text-[10px] text-slate-500 font-medium">
-                        ({reviewCount})
-                      </span>
-                    </div>
-                  </Link>
 
-                  {/* Price & Square Orange Cart Button */}
-                  <div className="flex items-end justify-between mt-auto pt-1 gap-1">
-                    <div className="flex flex-col min-w-0">
+                      {/* Product Image Container */}
+                      <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-white dark:bg-slate-950 mb-1 flex items-center justify-center p-1">
+                        <img
+                          src={displayImage}
+                          alt={product.name}
+                          className="w-full h-full object-contain filter drop-shadow-xs group-hover/card:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = getSmartProductImage(product.name, "", "");
+                          }}
+                        />
+                      </div>
+
+                      {/* Product Title */}
+                      <h3 className="font-bold text-[10px] sm:text-xs md:text-sm text-slate-900 dark:text-slate-100 line-clamp-1 mb-0.5 group-hover/card:text-orange-600 transition-colors">
+                        {product.name}
+                      </h3>
+
+                      {/* 5-Star Rating & Reviews */}
+                      <div className="flex items-center gap-0.5 sm:gap-1 mb-1">
+                        <div className="flex items-center text-amber-400">
+                          <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
+                          <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
+                          <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
+                          <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
+                          <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
+                        </div>
+                        <span className="text-[8px] sm:text-[10px] text-slate-500 font-medium">
+                          ({reviewCount})
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Price Section */}
+                    <div className="flex items-baseline gap-1.5 mt-auto pt-1">
                       <span className="text-xs sm:text-sm font-black text-orange-600 leading-none">
                         ৳{product.price.toLocaleString("en-BD")}
                       </span>
-                      <span className="text-[9px] sm:text-[10px] text-slate-400 line-through leading-none mt-0.5">
+                      <span className="text-[9px] sm:text-[10px] text-slate-400 line-through leading-none">
                         ৳{regularPrice.toLocaleString("en-BD")}
                       </span>
                     </div>
-
-                    {/* Square Orange Add to Cart Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => handleAddToCart(e, product)}
-                      aria-label="Add to cart"
-                      title="Add to Cart"
-                      className="!w-7 !h-7 !min-w-[28px] !min-h-[28px] !max-w-[28px] !max-h-[28px] sm:!w-8 sm:!h-8 sm:!min-w-[32px] sm:!min-h-[32px] sm:!max-w-[32px] sm:!max-h-[32px] rounded-lg bg-orange-600 hover:bg-orange-500 active:scale-90 text-white flex items-center justify-center p-0 shadow-xs transition-all cursor-pointer shrink-0"
-                    >
-                      <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
-                    </button>
-                  </div>
+                  </Link>
                 </div>
               );
             })}
