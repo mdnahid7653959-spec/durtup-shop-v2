@@ -1,23 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>https://durtup.shop/sitemap-pages.xml</loc>
+    <loc>https://durtup.shop/sitemap-flash-sale.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-categories.xml</loc>
+    <loc>https://durtup.shop/sitemap-combo-offers.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-products.xml</loc>
+    <loc>https://durtup.shop/sitemap-smart-watches.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-gadgets.xml</loc>
+    <loc>https://durtup.shop/sitemap-tws-earbuds.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-electronics.xml</loc>
+    <loc>https://durtup.shop/sitemap-budget-gadgets.xml</loc>
+    <lastmod>2026-09-01</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://durtup.shop/sitemap-mobile-accessories.xml</loc>
+    <lastmod>2026-09-01</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://durtup.shop/sitemap-bluetooth-speakers.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
@@ -29,23 +37,23 @@
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-watches.xml</loc>
+    <loc>https://durtup.shop/sitemap-home-kitchen.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-earbuds.xml</loc>
+    <loc>https://durtup.shop/sitemap-beauty-grooming.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-home.xml</loc>
+    <loc>https://durtup.shop/sitemap-kids-toys.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-deals.xml</loc>
+    <loc>https://durtup.shop/sitemap-viral-products.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-flash-sale.xml</loc>
+    <loc>https://durtup.shop/sitemap-cash-on-delivery.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
@@ -53,31 +61,55 @@
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-new-arrivals.xml</loc>
+    <loc>https://durtup.shop/sitemap-under-500.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-kids.xml</loc>
+    <loc>https://durtup.shop/sitemap-under-1000.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-sellers.xml</loc>
+    <loc>https://durtup.shop/sitemap-under-2000.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-press.xml</loc>
+    <loc>https://durtup.shop/sitemap-luxury-collection.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-help.xml</loc>
+    <loc>https://durtup.shop/sitemap-gift-items.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-locations.xml</loc>
+    <loc>https://durtup.shop/sitemap-winter-collection.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://durtup.shop/sitemap-images.xml</loc>
+    <loc>https://durtup.shop/sitemap-organic-foods.xml</loc>
+    <lastmod>2026-09-01</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://durtup.shop/sitemap-car-bike-accessories.xml</loc>
+    <lastmod>2026-09-01</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://durtup.shop/sitemap-wholesale-reseller.xml</loc>
+    <lastmod>2026-09-01</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://durtup.shop/sitemap-best-sellers.xml</loc>
+    <lastmod>2026-09-01</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://durtup.shop/sitemap-products.xml</loc>
+    <lastmod>2026-09-01</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://durtup.shop/sitemap-pages.xml</loc>
+    <lastmod>2026-09-01</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://durtup.shop/sitemap-categories.xml</loc>
     <lastmod>2026-09-01</lastmod>
   </sitemap>
 </sitemapindex>
