@@ -80,16 +80,16 @@ export default function HelpCenter() {
         <div className="bg-muted py-12">
           <div className="container text-center">
             <h2 className="text-2xl font-bold mb-4">Still need help?</h2>
-            <p className="text-muted-foreground mb-6">Our support team is here 24/7</p>
+            <p className="text-muted-foreground mb-6">Our Bangladesh customer support team is available every day</p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button asChild size="lg">
-                <Link to="/contact"><MessageCircle className="mr-2 h-5 w-5" /> Live Chat</Link>
+                <Link to="/contact"><MessageCircle className="mr-2 h-5 w-5" /> Live Support</Link>
               </Button>
-              <Button variant="outline" size="lg">
-                <Phone className="mr-2 h-5 w-5" /> +1 (800) 123-4567
+              <Button variant="outline" size="lg" asChild>
+                <a href="tel:+8801622530550"><Phone className="mr-2 h-5 w-5" /> +880 1622-530550</a>
               </Button>
-              <Button variant="outline" size="lg">
-                <Mail className="mr-2 h-5 w-5" /> support@megamart.com
+              <Button variant="outline" size="lg" asChild>
+                <a href="mailto:support@durtup.shop"><Mail className="mr-2 h-5 w-5" /> support@durtup.shop</a>
               </Button>
             </div>
           </div>

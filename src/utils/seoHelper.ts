@@ -247,26 +247,75 @@ export function buildFAQJsonLd(faqs: FAQItem[]): object {
 
 /**
  * Builds Schema.org Organization & WebSite JSON-LD
+ * Fully establishes Durtup.shop brand entity and all recognized query variations
  */
 export function buildOrganizationJsonLd(): object {
   return {
     "@context": "https://schema.org",
-    "@type": "Organization",
+    "@type": "OnlineBusiness",
+    "@id": `${BASE_URL}/#organization`,
     name: SITE_NAME,
+    alternateName: [
+      "Durtup",
+      "durtup",
+      "DURTUP",
+      "Durtup Shop",
+      "Durtup.shop",
+      "Durtup Shop BD",
+      "Durtup BD",
+      "Durtup Bangladesh",
+      "Durtup Ecommerce",
+      "Durtup Online Shopping",
+      "durt",
+      "durtu",
+      "durtup.com",
+      "দুর্তুপ",
+      "দোরতূপ",
+      "অনলাইন শপিং বাংলাদেশ",
+    ],
+    legalName: "Durtup Shop Bangladesh",
     url: BASE_URL,
-    logo: `${BASE_URL}/icon-512.png`,
-    description: "Bangladesh's leading e-commerce platform offering top quality electronics, fashion, lifestyle products with cash on delivery.",
-    contactPoint: {
-      "@type": "ContactPoint",
-      telephone: "+8801622530550",
-      contactType: "customer service",
-      areaServed: "BD",
-      availableLanguage: ["Bangla", "English"],
+    logo: {
+      "@type": "ImageObject",
+      url: `${BASE_URL}/icon-512.png`,
+      caption: "Durtup.shop Logo",
     },
+    image: `${BASE_URL}/icon-512.png`,
+    description: "পছন্দের পণ্য খুঁজে নিন Durtup.shop-এ। গ্যাজেট, ইলেকট্রনিক্স, ফ্যাশন, হোম ও আরও অনেক পণ্য সাশ্রয়ী দামে—সহজ অর্ডার ও নিরাপদ শপিং।",
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: "Dhanmondi",
+      addressLocality: "Dhaka",
+      postalCode: "1209",
+      addressCountry: "BD",
+    },
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: "23.7461",
+      longitude: "90.3742",
+    },
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        telephone: "+8801622530550",
+        contactType: "customer service",
+        areaServed: "BD",
+        availableLanguage: ["Bangla", "English"],
+      },
+    ],
     sameAs: [
       "https://www.facebook.com/profile.php?id=61582125938251",
       "https://www.instagram.com/durtup.shop/",
       "https://www.tiktok.com/@durtup.shop?is_from_webapp=1&sender_device=pc",
+    ],
+    knowsAbout: [
+      "E-commerce in Bangladesh",
+      "Online Shopping BD",
+      "Consumer Electronics",
+      "Smart Watches",
+      "Earbuds & Audio",
+      "Men's & Women's Fashion",
+      "Cash on Delivery Bangladesh",
     ],
   };
 }
@@ -275,8 +324,11 @@ export function buildWebSiteJsonLd(): object {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": `${BASE_URL}/#website`,
     name: SITE_NAME,
+    alternateName: ["Durtup", "Durtup Shop", "Durtup BD", "Durtup Bangladesh"],
     url: BASE_URL,
+    inLanguage: ["bn-BD", "en-US"],
     potentialAction: {
       "@type": "SearchAction",
       target: {

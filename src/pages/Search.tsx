@@ -11,6 +11,7 @@ import {
   clearRecentSearches,
 } from "@/hooks/useSearchSuggestions";
 import { ImageSearchModal } from "@/components/search/ImageSearchModal";
+import { SEOHead } from "@/components/SEOHead";
 import { cn } from "@/lib/utils";
 
 function currency(n: number) {
@@ -118,6 +119,7 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead title="Search Products" noindex={true} />
       {/* Sticky search header with clean professional white background */}
       <div className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 shadow-xs w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-2xl mx-auto flex items-center gap-2.5 px-3 py-2 sm:px-4">

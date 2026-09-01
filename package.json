@@ -8,7 +8,9 @@
     "build": "tsc --noEmit && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sitemap": "node scripts/generate_sitemaps.cjs",
+    "test:seo": "node scripts/validate_seo.cjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.1",

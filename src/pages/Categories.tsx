@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { getCachedMohasagorProducts, filterProductsByCategory } from "@/utils/mohasagorCache";
 import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
+import { SEOHead } from "@/components/SEOHead";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
 import { supabase } from "@/lib/firebaseAdapter";
 import { 
@@ -127,6 +129,20 @@ const Categories = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="All Product Categories - Durtup.shop Bangladesh"
+        description="Browse all shopping categories on Durtup.shop: gadgets, electronics, smart watches, men's & women's fashion, earbuds, and lifestyle products with Cash on Delivery across Bangladesh."
+        url="https://durtup.shop/categories"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "All Categories", url: "/categories" },
+        ]}
+        itemList={categories.map(c => ({
+          name: c.name,
+          url: `/category/${c.slug}`,
+          image: c.image,
+        }))}
+      />
       <Header />
       
       <main className="flex-1 pb-20 md:pb-0">
@@ -331,8 +347,8 @@ const Categories = () => {
             })}
           </div>
         </div>
-
       </main>
+      <Footer />
     </div>
   );
 };

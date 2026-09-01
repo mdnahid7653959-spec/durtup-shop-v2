@@ -34,7 +34,7 @@ export default function Returns() {
           <div className="container text-center">
             <RotateCcw className="h-16 w-16 mx-auto mb-4" />
             <h1 className="text-4xl font-bold mb-4">Returns & Refunds</h1>
-            <p className="text-lg opacity-90">Easy, hassle-free returns within 30 days</p>
+            <p className="text-lg opacity-90">Easy, hassle-free returns & doorstep verification</p>
           </div>
         </div>
 

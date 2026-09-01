@@ -2,17 +2,27 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Copyright, AlertTriangle, FileWarning, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function IntellectualProperty() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="Intellectual Property Rights Policy - Durtup.shop"
+        description="Learn about Durtup.shop intellectual property policies, copyright protection, trademark guidelines, and infringement reporting."
+        url="https://durtup.shop/ip"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Intellectual Property", url: "/ip" },
+        ]}
+      />
       <Header />
       <main className="flex-1">
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16">
           <div className="container text-center">
             <Copyright className="h-16 w-16 mx-auto mb-4" />
-            <h1 className="text-4xl font-bold mb-4">Intellectual Property</h1>
-            <p className="opacity-90">Protecting rights and reporting infringement</p>
+            <h1 className="text-4xl font-bold mb-4">Intellectual Property Policy</h1>
+            <p className="opacity-90">Protecting creator rights and reporting infringement on Durtup.shop</p>
           </div>
         </div>
 
@@ -20,7 +30,7 @@ export default function IntellectualProperty() {
           <div className="bg-card border rounded-xl p-6 mb-8">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /> Our Commitment</h2>
             <p className="text-muted-foreground">
-              MegaMart respects intellectual property rights and expects all users to do the same. 
+              Durtup.shop respects intellectual property rights and expects all sellers, users, and brand partners to do the same. 
               We are committed to removing infringing content and taking action against repeat offenders.
             </p>
           </div>

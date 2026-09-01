@@ -3,32 +3,43 @@ import { Footer } from "@/components/layout/Footer";
 import { Briefcase, MapPin, Clock, ChevronRight, Users, Zap, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { SEOHead } from "@/components/SEOHead";
 
 const jobs = [
-  { id: 1, title: "Senior Frontend Developer", dept: "Engineering", location: "Remote", type: "Full-time" },
-  { id: 2, title: "Product Manager", dept: "Product", location: "New York, NY", type: "Full-time" },
-  { id: 3, title: "UX Designer", dept: "Design", location: "Remote", type: "Full-time" },
-  { id: 4, title: "Customer Success Manager", dept: "Support", location: "London, UK", type: "Full-time" },
-  { id: 5, title: "Data Analyst", dept: "Analytics", location: "Singapore", type: "Full-time" },
-  { id: 6, title: "Marketing Specialist", dept: "Marketing", location: "Remote", type: "Full-time" },
+  { id: 1, title: "Full Stack Engineer (React/Node)", dept: "Engineering", location: "Dhaka / Remote", type: "Full-time" },
+  { id: 2, title: "E-Commerce Category Growth Manager", dept: "Operations", location: "Dhaka, Bangladesh", type: "Full-time" },
+  { id: 3, title: "Digital Marketing & Performance Specialist", dept: "Marketing", location: "Dhaka, Bangladesh", type: "Full-time" },
+  { id: 4, title: "Customer Success & Merchant Support Lead", dept: "Support", location: "Dhaka, Bangladesh", type: "Full-time" },
+  { id: 5, title: "Logistics & Delivery Operations Coordinator", dept: "Fulfillment", location: "Dhaka, Bangladesh", type: "Full-time" },
 ];
 
 const perks = [
-  { icon: Users, title: "Great Team", desc: "Work with talented people from around the world" },
-  { icon: Zap, title: "Fast Growth", desc: "Career development and learning opportunities" },
-  { icon: Heart, title: "Work-Life Balance", desc: "Flexible hours and remote work options" },
+  { icon: Users, title: "Impactful Work", desc: "Build cutting-edge e-commerce infrastructure for Bangladesh" },
+  { icon: Zap, title: "Rapid Growth", desc: "Fast-track career advancement and competitive compensation" },
+  { icon: Heart, title: "Collaborative Culture", desc: "Supportive team environment with flexible hybrid options" },
 ];
 
 export default function Careers() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="Careers & Job Openings - Durtup.shop"
+        description="Explore exciting career opportunities at Durtup.shop. Join our technology, e-commerce, and logistics teams in Dhaka, Bangladesh."
+        url="https://durtup.shop/careers"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Careers", url: "/careers" },
+        ]}
+      />
       <Header />
       <main className="flex-1">
-        <div className="bg-gradient-to-r from-violet-500 to-purple-600 text-white py-20">
+        <div className="bg-gradient-to-r from-primary to-orange-500 text-white py-16 sm:py-20">
           <div className="container text-center">
-            <Briefcase className="h-16 w-16 mx-auto mb-4" />
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Join Our Team</h1>
-            <p className="text-xl opacity-90">Help us shape the future of global commerce</p>
+            <Briefcase className="h-14 w-14 sm:h-16 sm:w-16 mx-auto mb-4" />
+            <h1 className="text-3xl md:text-5xl font-extrabold mb-3">Careers at Durtup.shop</h1>
+            <p className="text-base sm:text-lg opacity-90 max-w-2xl mx-auto">
+              Help us shape the future of modern e-commerce and fast delivery across Bangladesh
+            </p>
           </div>
         </div>
 

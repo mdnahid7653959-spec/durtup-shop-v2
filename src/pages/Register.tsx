@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SEOHead } from "@/components/SEOHead";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/integrations/firebase/client";
 
@@ -92,6 +93,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead title="Create Account - Durtup.shop" noindex={true} />
       <Header />
       <main className="flex-1 flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-md">

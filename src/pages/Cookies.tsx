@@ -2,17 +2,27 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Cookie, Settings, Shield, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function Cookies() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="Cookie Policy - Durtup.shop"
+        description="Learn how Durtup.shop uses cookies and session identifiers to improve your shopping experience, cart storage, and security in Bangladesh."
+        url="https://durtup.shop/cookies"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Cookie Policy", url: "/cookies" },
+        ]}
+      />
       <Header />
       <main className="flex-1">
         <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white py-16">
           <div className="container text-center">
             <Cookie className="h-16 w-16 mx-auto mb-4" />
             <h1 className="text-4xl font-bold mb-4">Cookie Policy</h1>
-            <p className="opacity-90">How we use cookies to improve your experience</p>
+            <p className="opacity-90">How we use cookies to improve your shopping experience on Durtup.shop</p>
           </div>
         </div>
 

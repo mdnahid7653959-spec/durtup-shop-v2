@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SEOHead } from "@/components/SEOHead";
 import { confirmPasswordReset, updatePassword } from "firebase/auth";
 import { auth } from "@/integrations/firebase/client";
 
@@ -44,31 +45,19 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const oobCode = urlParams.get('oobCode');
-
-      if (oobCode) {
-        await confirmPasswordReset(auth, oobCode, password);
-      } else if (auth.currentUser) {
+      if (auth.currentUser) {
         await updatePassword(auth.currentUser, password);
-      } else {
-        throw new Error("Invalid or expired password reset link.");
       }
-
       setSuccess(true);
       toast({
-        title: "Password updated!",
-        description: "Your password has been successfully reset."
+        title: "Password reset successful",
+        description: "You can now log in with your new password."
       });
-
-      // Redirect to login after 3 seconds
-      setTimeout(() => {
-        navigate("/login");
-      }, 3000);
+      setTimeout(() => navigate("/login"), 3000);
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "Error resetting password",
         description: error.message
       });
     } finally {
@@ -78,6 +67,7 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead title="Reset Password - Durtup.shop" noindex={true} />
       <Header />
       <main className="flex-1 flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-md">

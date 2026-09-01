@@ -75,7 +75,7 @@ export default function Privacy() {
             <div className="bg-card border rounded-xl p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Mail className="h-5 w-5 text-primary" /> Contact Us</h2>
               <p className="text-muted-foreground">
-                If you have questions about this Privacy Policy, please contact us at: privacy@megamart.com
+                If you have questions about this Privacy Policy, please contact our data compliance team at: <a href="mailto:privacy@durtup.shop" className="text-primary font-medium hover:underline">privacy@durtup.shop</a>
               </p>
             </div>
           </div>

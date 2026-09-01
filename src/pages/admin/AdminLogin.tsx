@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function AdminLogin() {
 
@@ -75,13 +76,14 @@ export default function AdminLogin() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
+      <SEOHead title="Admin Login - Durtup.shop" noindex={true} />
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 gradient-primary rounded-2xl mb-4 shadow-lg shadow-primary/20">
             <Shield className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">MegaMart Admin</h1>
+          <h1 className="text-2xl font-bold text-foreground">Durtup.shop Admin</h1>
           <p className="text-muted-foreground mt-1">Secure Administration Portal</p>
         </div>
 

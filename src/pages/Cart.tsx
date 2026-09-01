@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SEOHead } from "@/components/SEOHead";
 import { useCart } from "@/contexts/CartContext";
 import { useCJCart } from "@/hooks/useCJCart";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +44,7 @@ export default function Cart() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
+        <SEOHead title="Shopping Cart" noindex={true} />
         <Header />
         <main className="flex-1 container py-6 sm:py-16 pb-24 md:pb-8">
           <div className="animate-pulse space-y-4">
@@ -94,6 +96,7 @@ export default function Cart() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead title="Shopping Cart" noindex={true} />
       <Header />
       <main className="flex-1 pb-44 md:pb-8">
         <div className="container py-4 sm:py-8">

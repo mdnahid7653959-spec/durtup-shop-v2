@@ -27,6 +27,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { ProductZoomViewer } from "@/components/products/ProductZoomViewer";
 import { SEOHead } from "@/components/SEOHead";
 import { generateProductSEOTitle, generateProductSEODescription, DEFAULT_BANGLADESH_PRODUCT_FAQS } from "@/utils/seoHelper";
+import { trackViewContent, trackAddToCart } from "@/components/FacebookPixel";
 
 interface ProductImage {
   id: string;
@@ -779,6 +780,16 @@ export default function ProductDetail() {
 
     fetchProduct();
   }, [slug, trackView]);
+
+  useEffect(() => {
+    if (product) {
+      const pPrice = product.discount_price || product.regular_price || 0;
+      try {
+        trackViewContent(product.id, product.name, pPrice, "BDT");
+      } catch {}
+    }
+  }, [product?.id]);
+
   const handleAddToCart = async () => {
     if (!product) return;
     
@@ -801,6 +812,11 @@ export default function ProductDetail() {
     setAddingToCart(true);
     await addToCart(product.id, quantity, selectedVariants);
     setAddingToCart(false);
+
+    try {
+      const pPrice = (product.discount_price || product.regular_price || 0) * quantity;
+      trackAddToCart(product.id, product.name, pPrice, "BDT");
+    } catch {}
   };
   const handleBuyNow = async () => {
     if (!product) return;

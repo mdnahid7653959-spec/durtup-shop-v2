@@ -3,33 +3,46 @@ import { Footer } from "@/components/layout/Footer";
 import { DollarSign, Users, TrendingUp, Gift, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SEOHead } from "@/components/SEOHead";
+import { Link } from "react-router-dom";
 
 const benefits = [
-  { icon: DollarSign, title: "Earn Commissions", desc: "Up to 10% commission on every sale" },
-  { icon: Users, title: "Cookie Duration", desc: "30-day cookie for credited referrals" },
-  { icon: TrendingUp, title: "Real-time Tracking", desc: "Track your earnings in real-time" },
-  { icon: Gift, title: "Bonus Rewards", desc: "Extra bonuses for top performers" },
+  { icon: DollarSign, title: "Earn High Commissions", desc: "Up to 10% commission on every verified sale" },
+  { icon: Users, title: "Long Cookie Window", desc: "30-day tracking window for credited customer referrals" },
+  { icon: TrendingUp, title: "Live Payout Tracking", desc: "Track clicks, orders, and weekly bKash/Nagad/Bank payouts" },
+  { icon: Gift, title: "Top Earner Bonuses", desc: "Extra monthly bonuses for high-performing Bangladesh affiliates" },
 ];
 
 const steps = [
-  "Sign up for free",
-  "Get your unique affiliate link",
-  "Share products with your audience",
-  "Earn commissions on every sale",
+  "Sign up for a free affiliate partner account",
+  "Get your unique Durtup product referral links",
+  "Share gadgets, watches, and fashion with your audience",
+  "Earn automated weekly commission payouts",
 ];
 
 export default function Affiliate() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="Affiliate & Reseller Partner Program - Durtup.shop"
+        description="Join the Durtup.shop Affiliate & Reseller program in Bangladesh. Earn high commissions promoting trending gadgets, smart watches, and fashion."
+        url="https://durtup.shop/affiliate"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Affiliate Program", url: "/affiliate" },
+        ]}
+      />
       <Header />
       <main className="flex-1">
-        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-20">
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white py-16 sm:py-20">
           <div className="container text-center">
-            <DollarSign className="h-16 w-16 mx-auto mb-4" />
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Affiliate Program</h1>
-            <p className="text-xl opacity-90 mb-8">Earn money by promoting products you love</p>
-            <Button size="lg" className="bg-white text-emerald-600 hover:bg-white/90">
-              Join Now - It's Free
+            <DollarSign className="h-14 w-14 sm:h-16 sm:w-16 mx-auto mb-4" />
+            <h1 className="text-3xl md:text-5xl font-extrabold mb-3">Durtup.shop Affiliate Program</h1>
+            <p className="text-base sm:text-lg opacity-90 max-w-2xl mx-auto mb-8">
+              Earn generous commissions promoting trending e-commerce products across Bangladesh
+            </p>
+            <Button size="lg" className="bg-white text-emerald-700 hover:bg-white/90 font-bold" asChild>
+              <Link to="/register">Join Now - It's Free</Link>
             </Button>
           </div>
         </div>

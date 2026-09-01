@@ -61,20 +61,20 @@ const defaultFooterConfig: FooterConfig = {
     ]},
   ],
   trust_badges: [
-    { icon: "truck", title: "Free Shipping", desc: "$35+ orders" },
-    { icon: "shield", title: "Secure Pay", desc: "100% safe" },
-    { icon: "headphones", title: "24/7 Support", desc: "Always here" },
-    { icon: "credit-card", title: "Easy Returns", desc: "30 days" },
+    { icon: "truck", title: "Fast Delivery", desc: "All 64 BD Districts" },
+    { icon: "shield", title: "100% COD", desc: "Cash on Delivery" },
+    { icon: "headphones", title: "Live Support", desc: "+880 1622-530550" },
+    { icon: "credit-card", title: "Rider Inspection", desc: "Check before paying" },
   ],
   social_links: [
     { platform: "facebook", url: "https://www.facebook.com/profile.php?id=61582125938251" },
     { platform: "instagram", url: "https://www.instagram.com/durtup.shop/" },
     { platform: "tiktok", url: "https://www.tiktok.com/@durtup.shop?is_from_webapp=1&sender_device=pc" },
   ],
-  copyright: "© 2026 Durtup.shop. All rights reserved.",
-  brand_description: "Your one-stop destination for millions of products at unbeatable prices. Shop with confidence worldwide.",
+  copyright: "© 2026 Durtup.shop. All rights reserved. Dhaka, Bangladesh.",
+  brand_description: "Durtup.shop is Bangladesh's trusted online marketplace offering gadgets, smart watches, earbuds, fashion, and home essentials with 100% Cash on Delivery across all 64 districts.",
   logo_url: "/durtup-logo.svg",
-  payment_methods: ["Visa", "MC", "bKash", "Nagad"],
+  payment_methods: ["Cash on Delivery", "bKash", "Nagad", "Visa", "Mastercard"],
 };
 
 export function Footer() {

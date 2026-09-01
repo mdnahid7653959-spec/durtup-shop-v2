@@ -9,6 +9,16 @@ const shippingMethods = [
   { icon: ShieldCheck, name: "Cash on Delivery", time: "At Your Doorstep", price: "100% Guaranteed", color: "text-orange-500" },
 ];
 
+const zones = [
+  { region: "Dhaka City (ঢাকা মেট্রো)", standard: "24-48 Hours", express: "Next Day" },
+  { region: "Dhaka Suburbs (গাজীপুর, নারায়ণগঞ্জ, সাভার)", standard: "1-2 Business Days", express: "24-48 Hours" },
+  { region: "Chittagong Division (চট্টগ্রাম বিভাগ)", standard: "2-3 Business Days", express: "48 Hours" },
+  { region: "Sylhet Division (সিলেট বিভাগ)", standard: "2-3 Business Days", express: "48 Hours" },
+  { region: "Rajshahi & Rangpur (রাজশাহী ও রংপুর বিভাগ)", standard: "2-3 Business Days", express: "48 Hours" },
+  { region: "Khulna & Barisal (খুলনা ও বরিশাল বিভাগ)", standard: "2-3 Business Days", express: "48 Hours" },
+  { region: "Mymensingh Division (ময়মনসিংহ বিভাগ)", standard: "2-3 Business Days", express: "48 Hours" },
+];
+
 export default function Shipping() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -46,20 +56,20 @@ export default function Shipping() {
             ))}
           </div>
 
-          <h2 className="text-2xl font-bold mb-6">Delivery Times by Region</h2>
+          <h2 className="text-2xl font-bold mb-6">Delivery Times by Region (৬৪ জেলায় ডেলিভারি সময়)</h2>
           <div className="bg-card border rounded-xl overflow-hidden mb-12">
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
                   <th className="px-6 py-4 text-left font-semibold">Region</th>
-                  <th className="px-6 py-4 text-left font-semibold">Standard</th>
-                  <th className="px-6 py-4 text-left font-semibold">Express</th>
+                  <th className="px-6 py-4 text-left font-semibold">Standard Delivery</th>
+                  <th className="px-6 py-4 text-left font-semibold">Express Delivery</th>
                 </tr>
               </thead>
               <tbody>
                 {zones.map((zone) => (
                   <tr key={zone.region} className="border-t">
-                    <td className="px-6 py-4 flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /> {zone.region}</td>
+                    <td className="px-6 py-4 flex items-center gap-2 font-medium text-foreground"><MapPin className="h-4 w-4 text-primary shrink-0" /> {zone.region}</td>
                     <td className="px-6 py-4 text-muted-foreground">{zone.standard}</td>
                     <td className="px-6 py-4 text-muted-foreground">{zone.express}</td>
                   </tr>
@@ -69,11 +79,11 @@ export default function Shipping() {
           </div>
 
           <div className="bg-muted rounded-xl p-6">
-            <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-              <Package className="h-5 w-5" /> Free Shipping
+            <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" /> Delivery & Inspection Guarantee
             </h3>
-            <p className="text-muted-foreground">
-              Enjoy FREE standard shipping on all orders over $25! No promo code needed - discount applies automatically at checkout.
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Every parcel shipped by Durtup.shop can be verified upon arrival. Check your items with the courier rider before making Cash on Delivery payment for complete peace of mind.
             </p>
           </div>
         </div>

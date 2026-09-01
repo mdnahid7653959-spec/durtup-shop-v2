@@ -29,46 +29,45 @@ export default function Terms() {
           <div className="bg-card border rounded-xl p-6 mb-8">
             <h2 className="text-xl font-bold mb-4">1. Acceptance of Terms</h2>
             <p className="text-muted-foreground">
-              By accessing and using MegaMart, you accept and agree to be bound by these Terms of Service. 
+              By accessing and using Durtup.shop, you accept and agree to be bound by these Terms of Service. 
               If you do not agree to these terms, please do not use our services.
             </p>
           </div>
 
           <div className="bg-card border rounded-xl p-6 mb-8">
             <h2 className="text-xl font-bold mb-4">2. Account Registration</h2>
-            <p className="text-muted-foreground mb-4">To use certain features, you must create an account. You agree to:</p>
+            <p className="text-muted-foreground mb-4">To use certain features, you can create an account. You agree to:</p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2">
-              <li>Provide accurate and complete information</li>
-              <li>Maintain the security of your account credentials</li>
-              <li>Notify us immediately of any unauthorized use</li>
-              <li>Be responsible for all activities under your account</li>
+              <li>Provide accurate name, phone number, and Bangladesh shipping address</li>
+              <li>Maintain the confidentiality of your account credentials</li>
+              <li>Notify us immediately of any unauthorized account activity</li>
+              <li>Accept responsibility for orders placed under your account</li>
             </ul>
           </div>
 
           <div className="bg-card border rounded-xl p-6 mb-8">
-            <h2 className="text-xl font-bold mb-4">3. Purchases and Payments</h2>
-            <p className="text-muted-foreground mb-4">When making a purchase:</p>
+            <h2 className="text-xl font-bold mb-4">3. Purchases & Payment Methods</h2>
+            <p className="text-muted-foreground mb-4">When ordering on Durtup.shop:</p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2">
-              <li>Prices are displayed in your selected currency</li>
-              <li>Payment is due at the time of purchase</li>
-              <li>We accept major credit cards and PayPal</li>
-              <li>All sales are subject to product availability</li>
+              <li>All prices are displayed in Bangladeshi Taka (৳ BDT) including applicable taxes</li>
+              <li>We offer 100% Cash on Delivery (COD) across all 64 districts in Bangladesh</li>
+              <li>Digital payments via bKash, Nagad, and debit/credit cards are also supported where available</li>
+              <li>All orders are subject to stock availability and customer verification</li>
             </ul>
           </div>
 
           <div className="bg-card border rounded-xl p-6 mb-8">
-            <h2 className="text-xl font-bold mb-4">4. Shipping and Delivery</h2>
+            <h2 className="text-xl font-bold mb-4">4. Shipping & Delivery</h2>
             <p className="text-muted-foreground">
-              Delivery times are estimates and may vary. We are not responsible for delays caused by 
-              shipping carriers, customs, or events beyond our control. Risk of loss passes to you upon delivery.
+              Delivery within Dhaka City takes 24-48 hours and outside Dhaka takes 2-3 business days across all 64 districts. 
+              Customers must verify parcel contents in the presence of the courier rider upon delivery.
             </p>
           </div>
 
           <div className="bg-card border rounded-xl p-6 mb-8">
-            <h2 className="text-xl font-bold mb-4">5. Returns and Refunds</h2>
+            <h2 className="text-xl font-bold mb-4">5. Returns and Inspections</h2>
             <p className="text-muted-foreground">
-              Our return policy allows returns within 30 days of delivery for most items. 
-              Please see our Returns page for full details and exclusions.
+              Customers are encouraged to inspect products at the time of delivery. Any damaged or incorrect item can be returned immediately to the delivery rider at no penalty.
             </p>
           </div>
 
@@ -76,19 +75,18 @@ export default function Terms() {
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><AlertCircle className="h-5 w-5 text-warning" /> 6. Prohibited Activities</h2>
             <p className="text-muted-foreground mb-4">You may not:</p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2">
-              <li>Use the service for any illegal purpose</li>
-              <li>Violate intellectual property rights</li>
-              <li>Attempt to gain unauthorized access</li>
-              <li>Engage in fraudulent activities</li>
-              <li>Harass other users or sellers</li>
+              <li>Use the service for fraudulent or fake order placements</li>
+              <li>Violate intellectual property rights or trade laws</li>
+              <li>Attempt to gain unauthorized access to platform servers</li>
+              <li>Harass delivery partners, merchants, or support staff</li>
             </ul>
           </div>
 
           <div className="bg-card border rounded-xl p-6">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Scale className="h-5 w-5 text-primary" /> 7. Governing Law</h2>
             <p className="text-muted-foreground">
-              These terms are governed by the laws of the State of New York. Any disputes shall be 
-              resolved in the courts of New York, NY.
+              These terms are governed by and construed in accordance with the laws of the People's Republic of Bangladesh. 
+              Any disputes shall be resolved in the competent courts of Dhaka, Bangladesh.
             </p>
           </div>
         </div>

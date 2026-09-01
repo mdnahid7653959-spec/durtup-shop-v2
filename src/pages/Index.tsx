@@ -281,8 +281,8 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
-        title="Durtup.shop - Online Shopping in Bangladesh | Best Deals & Fast Delivery"
-        description="Discover millions of electronics, fashion, smart watches, earbuds and lifestyle products at best prices in Bangladesh. Enjoy Cash on Delivery, genuine warranty, and fast home delivery at Durtup.shop."
+        title="Durtup.shop - পছন্দের পণ্য খুঁজে নিন | অনলাইন শপিং বাংলাদেশ"
+        description="পছন্দের পণ্য খুঁজে নিন Durtup.shop-এ। গ্যাজেট, ইলেকট্রনিক্স, ফ্যাশন, হোম ও আরও অনেক পণ্য সাশ্রয়ী দামে—সহজ অর্ডার ও নিরাপদ শপিং।"
         url="https://durtup.shop"
         type="website"
       />

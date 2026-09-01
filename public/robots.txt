@@ -1,13 +1,11 @@
-# Googlebot and standard crawler directives for Durtup.shop
+# Googlebot and standard web search crawlers
 User-agent: *
 Allow: /
 Allow: /product/
 Allow: /products/
 Allow: /category/
 Allow: /categories/
-Allow: /flash-sale
-Allow: /new-arrivals
-Allow: /free-shipping
+Allow: /press
 Allow: /about
 Allow: /contact
 Allow: /help
@@ -15,7 +13,40 @@ Allow: /shipping
 Allow: /returns
 Allow: /privacy
 Allow: /terms
+Allow: /cookies
+Allow: /ip
+Allow: /careers
+Allow: /affiliate
 Allow: /seller
+Allow: /track
+
+# AI & LLM Search Agents (GEO / AEO - ChatGPT Search, Perplexity, Claude, Gemini, Apple Intelligence)
+User-agent: Google-Extended
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
 
 # Allow critical static assets for complete rendering & Core Web Vitals
 Allow: /favicon.ico
@@ -31,7 +62,7 @@ Allow: /*.jpeg$
 Allow: /*.webp$
 Allow: /*.svg$
 
-# Disallow private user, checkout, administrative, and duplicate facet paths
+# Disallow private user, checkout, administrative, and internal search facet paths
 Disallow: /admin/
 Disallow: /admin*
 Disallow: /staff/
@@ -43,13 +74,16 @@ Disallow: /account
 Disallow: /profile
 Disallow: /cart
 Disallow: /checkout
+Disallow: /payment/
 Disallow: /payment/callback
 Disallow: /orders
+Disallow: /orders/
 Disallow: /wishlist
 Disallow: /wallet
 Disallow: /vouchers
 Disallow: /notifications
 Disallow: /messages
+Disallow: /messages/
 Disallow: /search
 Disallow: /search?*
 Disallow: /api/

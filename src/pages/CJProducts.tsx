@@ -159,8 +159,13 @@ export default function CJProducts() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead 
-        title="China Product Source - MegaMart"
-        description="Browse trending products from China with free shipping and great prices."
+        title="Direct Import & Global Sourcing - Durtup.shop"
+        description="Browse verified direct imported products and trending gadgets on Durtup.shop Bangladesh with secure doorstep delivery."
+        url="https://durtup.shop/cj-products"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Direct Import", url: "/cj-products" }
+        ]}
       />
       <Header />
       

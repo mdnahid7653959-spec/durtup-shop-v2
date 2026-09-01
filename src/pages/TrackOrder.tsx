@@ -11,6 +11,8 @@ import { supabase } from "@/lib/firebaseAdapter";
 import { db } from "@/integrations/firebase/client";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 
+import { SEOHead } from "@/components/SEOHead";
+
 interface TrackingOrder {
   id: string;
   order_number: string;
@@ -167,6 +169,15 @@ export default function TrackOrder() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-background">
+      <SEOHead
+        title="Track Your Order - Durtup.shop"
+        description="Track your Durtup.shop delivery status in real-time across Bangladesh. Enter your order ID or mobile number for live courier updates."
+        url="https://durtup.shop/track"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Track Order", url: "/track" },
+        ]}
+      />
       <Header />
       <main className="flex-1 pb-16">
         {/* Banner */}

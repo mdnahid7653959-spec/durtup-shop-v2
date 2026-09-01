@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SEOHead } from "@/components/SEOHead";
 import { useCart } from "@/contexts/CartContext";
 import { useCJCart } from "@/hooks/useCJCart";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +20,7 @@ import { doc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { sendTelegramOrderNotification } from "@/utils/telegramNotifier";
 import { sendOrderSuccessPushNotification, requestNotificationPermission } from "@/services/notificationService";
+import { trackPurchase } from "@/components/FacebookPixel";
 
 
 interface AppliedCoupon {
@@ -765,6 +767,13 @@ export default function Checkout() {
         description: `আপনার অর্ডার #${orderNumber} কনফার্ম করা হয়েছে।`
       });
 
+      // 📊 Fire Meta Pixel Purchase Event
+      try {
+        trackPurchase(orderId, total, allCartItems, "BDT");
+      } catch (pxErr) {
+        console.warn("Meta Pixel purchase event warning:", pxErr);
+      }
+
       // 🚀 Instant redirect to Order Details Page
       navigate(`/orders/${orderId}`, { replace: true, state: { orderPlaced: true, orderNumber: orderNumber } });
     } catch (error: any) {
@@ -900,6 +909,7 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead title="Secure Checkout" noindex={true} />
       <Header />
       <main className="flex-1 pb-32 md:pb-8 w-full overflow-x-hidden">
         <div className="container px-3 sm:px-4 md:px-6 py-4 sm:py-8 max-w-6xl w-full min-w-0">

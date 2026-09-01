@@ -86,13 +86,12 @@ export default function About() {
           </div>
         </div>
 
-        {/* Global */}
+        {/* Nationwide Reach */}
         <div className="container py-16 text-center">
           <Globe className="h-16 w-16 text-primary mx-auto mb-6" />
-          <h2 className="text-3xl font-bold mb-4">Truly Global</h2>
+          <h2 className="text-3xl font-bold mb-4">Nationwide 64-District Reach</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            With operations in over 200 countries and support for 50+ currencies, 
-            MegaMart makes it easy to shop from anywhere in the world.
+            From Dhaka, Chittagong, and Sylhet to remote upazilas, Durtup.shop connects customers with verified merchants and genuine products with 100% Cash on Delivery and reliable doorstep logistics.
           </p>
         </div>
       </main>
