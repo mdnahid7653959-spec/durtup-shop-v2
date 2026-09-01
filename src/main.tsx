@@ -1,4 +1,4 @@
-// MegaMart E-commerce Application - v2.1 - Cache Bust 20260118
+// Durtup.shop High-Speed E-commerce Application
 import * as React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
