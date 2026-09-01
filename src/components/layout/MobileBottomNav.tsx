@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/firebaseAdapter";
 import { cn } from "@/lib/utils";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { prefetchRoute } from "@/components/RoutePrefetcher";
 
 const iconMap: Record<string, LucideIcon> = {
   home: Home,
@@ -270,7 +271,7 @@ export function MobileBottomNav() {
             className={cn(
               "absolute top-1.5 bottom-1.5 pointer-events-none z-0",
               // Ultra-smooth fluid spring glide
-              "transition-transform duration-400 ease-[cubic-bezier(0.34,1.45,0.64,1)]"
+              "transition-transform duration-400 ease-spring"
             )}
             style={{
               width: `calc((100% - 12px) / ${tabs.length})`,
@@ -340,6 +341,8 @@ export function MobileBottomNav() {
                 key={tab.label}
                 to={tab.href}
                 aria-label={tab.label}
+                onMouseEnter={() => prefetchRoute(tab.href)}
+                onTouchStart={() => prefetchRoute(tab.href)}
                 className={cn(
                   "flex flex-col items-center justify-center relative touch-manipulation h-full py-1.5 px-1 rounded-[18px] transition-all duration-200 active:scale-90 select-none group",
                   isActive 

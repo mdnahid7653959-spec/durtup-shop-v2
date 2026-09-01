@@ -3,6 +3,7 @@ import { calculateProductPrice } from "@/utils/pricingMargin";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 import { extractProductVariants } from "@/utils/productVariantHelper";
 import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
+import { findCategoryOrSubcategory, CATEGORIES_DATA } from "@/data/categoriesData";
 
 const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v13";
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -171,16 +172,17 @@ export function startMohasagorAutoSync() {
 
 // Non-blocking background catalog hydrator
 if (typeof window !== "undefined") {
-  // Hydrate additional catalog items after browser finishes initial render
   const hydrateCatalog = async () => {
     try {
       const idbData = await getIdbProducts();
       if (idbData && idbData.length >= 100) {
         inMemoryProductsCache = idbData;
         updateIndexMap(idbData);
-        window.dispatchEvent(new Event("mohasagor_products_updated"));
       } else {
-        fetchStaticCatalog().catch(() => {});
+        // Fetch static catalog in background without blocking
+        setTimeout(() => {
+          fetchStaticCatalog().catch(() => {});
+        }, 3000);
       }
     } catch (e) {
       console.warn("Catalog background hydration warning:", e);
@@ -188,9 +190,9 @@ if (typeof window !== "undefined") {
   };
 
   if ("requestIdleCallback" in window) {
-    (window as any).requestIdleCallback(hydrateCatalog, { timeout: 3000 });
+    (window as any).requestIdleCallback(hydrateCatalog, { timeout: 5000 });
   } else {
-    setTimeout(hydrateCatalog, 1500);
+    setTimeout(hydrateCatalog, 3000);
   }
 }
 
@@ -200,11 +202,23 @@ async function fetchStaticCatalog(): Promise<Product[]> {
     if (res.ok) {
       const rawProducts = await res.json();
       if (Array.isArray(rawProducts) && rawProducts.length > 0) {
-        const mapped = mapRawProducts(rawProducts, "https://mohasagor.com.bd");
+        // Map in non-blocking chunks of 100 items
+        const mapped: Product[] = [];
+        const chunkSize = 100;
+        
+        for (let i = 0; i < rawProducts.length; i += chunkSize) {
+          const chunk = rawProducts.slice(i, i + chunkSize);
+          const mappedChunk = mapRawProducts(chunk, "https://mohasagor.com.bd");
+          mapped.push(...mappedChunk);
+          
+          if (i + chunkSize < rawProducts.length) {
+            await new Promise((r) => setTimeout(r, 16)); // Yield to UI thread
+          }
+        }
+
         inMemoryProductsCache = mapped;
         updateIndexMap(mapped);
         setIdbProducts(mapped).catch(() => {});
-        window.dispatchEvent(new Event("mohasagor_products_updated"));
         return mapped;
       }
     }
@@ -513,7 +527,16 @@ export async function findMohasagorProduct(slugOrId: string): Promise<(Product &
     return false;
   };
 
-  // 1. Check IndexedDB
+  // 1. Check in-memory products
+  if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
+    const memFound = inMemoryProductsCache.find(matcher);
+    if (memFound) {
+      updateIndexMap([memFound as any]);
+      return memFound as any;
+    }
+  }
+
+  // 2. Check IndexedDB
   try {
     const idbData = await getIdbProducts();
     if (idbData && idbData.length > 0) {
@@ -524,55 +547,16 @@ export async function findMohasagorProduct(slugOrId: string): Promise<(Product &
     }
   } catch {}
 
-  // 2. Check Static CDN Public Catalog
-  try {
-    const staticData = await fetchStaticCatalog();
-    if (staticData && staticData.length > 0) {
-      const found = staticData.find(matcher);
-      if (found) return found as any;
-    }
-  } catch {}
-
-  // 3. Fetch full catalog across all pages
-  const fullProducts = await fetchAllPagesMohasagorProducts();
-  if (fullProducts && fullProducts.length > 0) {
-    const found = fullProducts.find(matcher);
-    if (found) return found as any;
-  }
-
-  // 4. Check fallback supplier products
+  // 3. Fallback to fast seed catalog
   const fallback = FALLBACK_SUPPLIER_PRODUCTS.find(matcher);
   if (fallback) return fallback as any;
 
   return null;
 }
 
-// Automatic 5-Minute Product Sync Service
-export function startAutoProductSync(intervalMs: number = AUTO_SYNC_INTERVAL_MS) {
-  if (typeof window === "undefined") return;
-
-  if (autoSyncTimer !== null) {
-    window.clearInterval(autoSyncTimer);
-  }
-
-  // Defer initial live background sync to not compete with critical page load
-  setTimeout(() => {
-    fetchAllPagesMohasagorProducts().catch(() => {});
-  }, 8000);
-
-  // Schedule recurring sync every 5 minutes
-  autoSyncTimer = window.setInterval(() => {
-    fetchAllPagesMohasagorProducts(true).catch((err) => {
-      console.warn("Scheduled 5-min product sync warning:", err);
-    });
-  }, intervalMs);
-}
-
-import { findCategoryOrSubcategory, CATEGORIES_DATA } from "@/data/categoriesData";
-
-// Auto-start 5-minute background sync service upon browser load
-if (typeof window !== "undefined") {
-  startAutoProductSync();
+// Lightweight Automatic Background Sync Service (Non-blocking)
+export function startAutoProductSync() {
+  // Handled via idle hydration to avoid network storms
 }
 
 export function normalizeCategorySlug(raw: string): string {

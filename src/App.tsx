@@ -145,14 +145,16 @@ const PageLoader = () => (
   </div>
 );
 
-// Optimized QueryClient with caching
+// High-performance QueryClient with instant caching & zero refetch lag
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
+      staleTime: 10 * 60 * 1000, // 10 minutes
+      gcTime: 30 * 60 * 1000, // 30 minutes
       retry: 1,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
     },
   },
 });

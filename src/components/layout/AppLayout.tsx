@@ -14,9 +14,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const path = location.pathname.toLowerCase();
   
-  // Always scroll to top on page/route navigation
+  // Scroll to top on page/route navigation only if not already at top
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    if (typeof window !== "undefined" && window.scrollY > 0) {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
   }, [location.pathname, location.search]);
 
   // Specific checks to exclude mobile bottom nav

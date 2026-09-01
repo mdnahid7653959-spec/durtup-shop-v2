@@ -81,7 +81,7 @@ function generateProductsSitemap() {
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
 
   let products = [];
-  
+
   // Try reading mohasagor_catalog.json from public directory
   const catalogPath = path.join(__dirname, '..', 'public', 'mohasagor_catalog.json');
   if (fs.existsSync(catalogPath)) {

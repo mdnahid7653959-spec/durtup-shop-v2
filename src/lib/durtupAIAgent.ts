@@ -111,7 +111,7 @@ export async function askSigmaAIAgent(
     };
   }
 ): Promise<SigmaChatResponse> {
-  const cleanEmoji = (s: string) => s.replace(/[\p{Emoji}\u200d\uFE0F\uFE0E]+/gu, "").trim().toLowerCase();
+  const cleanEmoji = (s: string) => s.replace(/\p{Extended_Pictographic}|\u200d|\uFE0F|\uFE0E/gu, "").trim().toLowerCase();
   const qRaw = query.trim().toLowerCase();
   const qClean = cleanEmoji(query);
   const userName = options?.userName || "";

@@ -303,7 +303,7 @@ export default function CategoryPage() {
                   <div
                     className={cn(
                       "absolute pointer-events-none z-0",
-                      "transition-all duration-350 ease-[cubic-bezier(0.34,1.45,0.64,1)]"
+                      "transition-all duration-350 ease-spring"
                     )}
                     style={{
                       left: `${subDropletStyle.left}px`,

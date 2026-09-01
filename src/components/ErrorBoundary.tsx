@@ -53,7 +53,7 @@ export class ErrorBoundary extends Component<Props, State> {
   handleReload = () => {
     sessionStorage.removeItem("chunk_reload_timestamp");
     sessionStorage.removeItem("chunk_retry_timestamp");
-    window.location.href = window.location.href;
+    window.location.reload();
   };
 
   render() {

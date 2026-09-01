@@ -124,6 +124,9 @@ export default {
       boxShadow: {
         product: "var(--shadow-product)",
       },
+      transitionTimingFunction: {
+        spring: "cubic-bezier(0.34, 1.45, 0.64, 1)",
+      },
     },
   },
   plugins: [

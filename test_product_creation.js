@@ -1,1 +1,0 @@
-// Product creation test complete
