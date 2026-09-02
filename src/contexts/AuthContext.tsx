@@ -38,47 +38,81 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const profileCache = new Map<string, Profile>();
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<FirebaseUser | null>(() => auth.currentUser);
+  const [profile, setProfile] = useState<Profile | null>(() => {
+    if (typeof window === "undefined" || !auth.currentUser?.uid) return null;
+    try {
+      const raw = localStorage.getItem("durtup_profile_" + auth.currentUser.uid);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(false);
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string, currentUserObj?: FirebaseUser | null) => {
+    // 1. Instant in-memory cache check (0ms)
     const cached = profileCache.get(userId);
     if (cached) {
       setProfile(cached);
       return;
     }
 
+    // 2. Instant localStorage cache check (0ms)
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("durtup_profile_" + userId);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Profile;
+          profileCache.set(userId, parsed);
+          setProfile(parsed);
+        }
+      } catch (e) {}
+    }
+
+    // 3. Instant optimistic profile from Firebase User if no cache found
+    const targetUser = currentUserObj || auth.currentUser;
+    const defaultProf: Profile = {
+      id: userId,
+      user_id: userId,
+      email: targetUser?.email || "",
+      full_name: targetUser?.displayName || "User",
+      role: "customer",
+      avatar_url: targetUser?.photoURL || null
+    };
+
+    // Set optimistic profile immediately so UI is responsive with 0ms delay
+    setProfile((prev) => prev || defaultProf);
+
+    // 4. Background non-blocking Firestore sync
     try {
       const docRef = doc(db, "profiles", userId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data() as Profile;
         profileCache.set(userId, data);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("durtup_profile_" + userId, JSON.stringify(data));
+          } catch (e) {}
+        }
         setProfile(data);
       } else {
-        const defaultProf: Profile = {
-          id: userId,
-          user_id: userId,
-          email: auth.currentUser?.email || "",
-          full_name: auth.currentUser?.displayName || null,
-          role: "customer",
-          avatar_url: auth.currentUser?.photoURL || null
-        };
-        setProfile(defaultProf);
+        profileCache.set(userId, defaultProf);
+        // Create the document in background if missing
+        setDoc(docRef, { ...defaultProf, created_at: new Date().toISOString() }, { merge: true }).catch(() => {});
       }
     } catch (error) {
-      console.error("Error fetching profile from Firebase:", error);
-      setProfile(null);
+      console.warn("Background profile fetch notice:", error);
     }
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         const userWithId = Object.assign(firebaseUser, { id: firebaseUser.uid });
         setUser(userWithId as any);
-        fetchProfile(firebaseUser.uid);
+        fetchProfile(firebaseUser.uid, firebaseUser);
       } else {
         setUser(null);
         setProfile(null);
@@ -94,8 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const firebaseUser = userCredential.user;
     
     if (firebaseUser) {
-      await updateProfile(firebaseUser, { displayName: fullName });
-      
       const newProf: Profile = {
         id: firebaseUser.uid,
         user_id: firebaseUser.uid,
@@ -105,25 +137,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         avatar_url: null
       };
 
+      // 1. Instant local state & cache update (0ms)
+      profileCache.set(firebaseUser.uid, newProf);
+      setProfile(newProf);
+      const userWithId = Object.assign(firebaseUser, { id: firebaseUser.uid });
+      setUser(userWithId as any);
+
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("durtup_profile_" + firebaseUser.uid, JSON.stringify(newProf));
+        } catch (e) {}
+      }
+
       const { registerUserLocally } = await import("@/integrations/firebase/client");
       registerUserLocally(newProf);
 
-      try {
-        await setDoc(doc(db, "profiles", firebaseUser.uid), newProf, { merge: true });
-        profileCache.set(firebaseUser.uid, newProf);
-        setProfile(newProf);
-      } catch (err) {
-        console.error("Error creating Firebase profile document:", err);
-      }
+      // 2. Background non-blocking updates (displayName + Firestore)
+      updateProfile(firebaseUser, { displayName: fullName }).catch(() => {});
+      setDoc(doc(db, "profiles", firebaseUser.uid), {
+        ...newProf,
+        created_at: new Date().toISOString()
+      }, { merge: true }).catch((err) => {
+        console.warn("Background profile doc create notice:", err);
+      });
     }
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
-  }, []);
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    if (cred.user) {
+      const userWithId = Object.assign(cred.user, { id: cred.user.uid });
+      setUser(userWithId as any);
+      fetchProfile(cred.user.uid, cred.user);
+    }
+  }, [fetchProfile]);
 
   const signOut = useCallback(async () => {
+    const uid = auth.currentUser?.uid;
+    if (uid && typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("durtup_profile_" + uid);
+      } catch (e) {}
+    }
     await firebaseSignOut(auth);
+    setUser(null);
     setProfile(null);
     profileCache.clear();
   }, []);

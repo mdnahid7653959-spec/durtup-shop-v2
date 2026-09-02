@@ -14,7 +14,8 @@ import {
   Search,
   Grid,
   Sparkles,
-  X
+  X,
+  Send
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,6 +43,7 @@ import {
 import { 
   QUESTION_CATEGORIES, 
   RECOMMENDED_QUESTIONS, 
+  ACTION_TO_QUESTION_ID,
   type RecommendedQuestion 
 } from "@/data/sigmaKnowledgeBase";
 import { SigmaProductCard } from "@/components/ai/SigmaProductCard";
@@ -53,7 +55,8 @@ import { SigmaToolActivityIndicator } from "@/components/ai/SigmaToolActivityInd
 import type { Product } from "@/components/products/ProductCard";
 import { toast } from "sonner";
 import { db } from "@/integrations/firebase/client";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { supabase } from "@/lib/firebaseAdapter";
 import { sendTelegramOrderNotification } from "@/utils/telegramNotifier";
 import { sendOrderSuccessPushNotification } from "@/services/notificationService";
 
@@ -116,6 +119,8 @@ export default function BuyerMessages() {
   const [isAllQuestionsOpen, setIsAllQuestionsOpen] = useState(false);
   const [searchQuestionTerm, setSearchQuestionTerm] = useState("");
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
+  const [inputText, setInputText] = useState("");
+  const [userOrders, setUserOrders] = useState<any[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -132,6 +137,52 @@ export default function BuyerMessages() {
       if (res && res.length > 0) setCatalog(res);
     }).catch(() => {});
   }, []);
+
+  // Preload User Orders for Live Tracking
+  useEffect(() => {
+    async function loadUserOrders() {
+      let list: any[] = [];
+      if (user?.id) {
+        try {
+          const { data } = await supabase
+            .from("orders")
+            .select("*, order_items(*)")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(5);
+
+          if (data && data.length > 0) {
+            list = data;
+          }
+        } catch (e) {}
+
+        if (list.length === 0) {
+          try {
+            const snap = await getDocs(
+              query(collection(db, "orders"), where("user_id", "==", user.id))
+            );
+            if (!snap.empty) {
+              list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+            }
+          } catch (e) {}
+        }
+      }
+
+      try {
+        const local = localStorage.getItem("durtup_recent_orders");
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            list = [...list, ...parsed];
+          }
+        }
+      } catch (e) {}
+
+      setUserOrders(list);
+    }
+
+    loadUserOrders();
+  }, [user]);
 
   // Welcome Initial Message
   const initialGreeting: AIMessage = {
@@ -170,13 +221,24 @@ export default function BuyerMessages() {
 
   // Handle Question Click Execution
   const handleSelectQuestion = async (queryTextOrId: string, customDisplayLabel?: string) => {
-    if (isTyping) return;
+    if (isTyping || !queryTextOrId.trim()) return;
 
-    const matchedKb = RECOMMENDED_QUESTIONS.find(
-      (q) => q.id === queryTextOrId || q.question === queryTextOrId || q.shortLabel === queryTextOrId
-    );
+    const trimmed = queryTextOrId.trim();
+    const targetQuestionId = ACTION_TO_QUESTION_ID[trimmed.toLowerCase()] || ACTION_TO_QUESTION_ID[queryTextOrId.toLowerCase()];
 
-    const questionDisplayText = customDisplayLabel || matchedKb?.question || queryTextOrId;
+    let matchedKb: RecommendedQuestion | undefined;
+    if (targetQuestionId) {
+      matchedKb = RECOMMENDED_QUESTIONS.find((q) => q.id === targetQuestionId);
+    } else {
+      matchedKb = RECOMMENDED_QUESTIONS.find(
+        (q) =>
+          q.id.toLowerCase() === trimmed.toLowerCase() ||
+          q.question.toLowerCase() === trimmed.toLowerCase() ||
+          (q.shortLabel && q.shortLabel.toLowerCase() === trimmed.toLowerCase())
+      );
+    }
+
+    const questionDisplayText = customDisplayLabel || matchedKb?.question || trimmed;
     const userMessageId = `user-${Date.now()}`;
 
     const newMsg: AIMessage = {
@@ -188,8 +250,8 @@ export default function BuyerMessages() {
 
     setMessages((prev) => [...prev, newMsg]);
     setIsTyping(true);
-    setActiveQuestionId(matchedKb?.id || queryTextOrId);
-    setToolStatus("⚡ Sigma তথ্য প্রস্তুত করছে...");
+    setActiveQuestionId(matchedKb?.id || trimmed);
+    setToolStatus("⚡ Sigma সঠিক উত্তর প্রস্তুত করছে...");
 
     try {
       const conversationHistory = messages.map((m) => ({
@@ -197,12 +259,13 @@ export default function BuyerMessages() {
         text: m.text,
       }));
 
-      const res = await askSigmaAIAgent(queryTextOrId || matchedKb?.id || questionDisplayText, {
+      const res = await askSigmaAIAgent(trimmed || matchedKb?.id || questionDisplayText, {
         userName: cleanName,
         userId: user?.id || `guest_${Date.now()}`,
         catalog,
         cartState: cartItems,
         history: conversationHistory,
+        userOrders,
         pageContext: {
           currentPath: "/messages",
         },
@@ -254,6 +317,14 @@ export default function BuyerMessages() {
       setActiveQuestionId(null);
       setToolStatus(null);
     }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim() || isTyping) return;
+    const text = inputText.trim();
+    setInputText("");
+    handleSelectQuestion(text);
   };
 
   // Order Confirmation Callback from OrderConfirmationCard
@@ -660,6 +731,26 @@ export default function BuyerMessages() {
               );
             })}
           </div>
+
+          {/* Quick Chat Input Form */}
+          <form onSubmit={handleFormSubmit} className="flex items-center gap-1.5 pt-1">
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Sigma-কে যেকোনো প্রশ্ন বা পণ্যের নাম লিখুন..."
+              disabled={isTyping}
+              className="flex-1 px-4 py-2 text-xs sm:text-sm rounded-full bg-sky-50/90 dark:bg-slate-800 border border-sky-200/90 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white shadow-inner"
+            />
+            <button
+              type="submit"
+              disabled={!inputText.trim() || isTyping}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
+              title="পাঠান"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
         </div>
       </footer>
 

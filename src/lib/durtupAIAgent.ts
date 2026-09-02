@@ -6,7 +6,11 @@
 import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
 import type { Product } from "@/components/products/ProductCard";
 import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
-import { RECOMMENDED_QUESTIONS, type RecommendedQuestion } from "@/data/sigmaKnowledgeBase";
+import { 
+  RECOMMENDED_QUESTIONS, 
+  ACTION_TO_QUESTION_ID,
+  type RecommendedQuestion 
+} from "@/data/sigmaKnowledgeBase";
 import type {
   SigmaChatResponse,
   SigmaProductCardData,
@@ -50,29 +54,123 @@ export interface AIMessage {
 
 function getFilterProducts(filter: string, catalog: Product[]): SigmaProductCardData[] {
   let list = [...catalog];
-  if (filter === "budget") {
-    list = list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
-  } else if (filter === "smartwatch") {
+
+  if (filter === "smartwatch") {
+    const exclude = ["oil", "food", "cable", "water", "pant", "hoodie", "mustard", "dispenser", "pump"];
     const sw = list.filter(p => {
       const n = (p.name || "").toLowerCase();
       const c = (p.category || "").toLowerCase();
-      return n.includes("watch") || n.includes("ঘড়ি") || c.includes("watch");
+      if (exclude.some(x => n.includes(x) || c.includes(x))) return false;
+      return (
+        n.includes("smart watch") ||
+        n.includes("smartwatch") ||
+        n.includes("watch") ||
+        n.includes("ঘড়ি") ||
+        c.includes("watch")
+      );
     });
     if (sw.length > 0) list = sw;
   } else if (filter === "audio") {
+    const exclude = ["oil", "food", "cable", "water", "pump", "dispenser", "pant", "hoodie", "battery charger", "separator", "mustard"];
     const aud = list.filter(p => {
       const n = (p.name || "").toLowerCase();
       const c = (p.category || "").toLowerCase();
-      return n.includes("earbud") || n.includes("headphone") || n.includes("airpod") || n.includes("sound") || n.includes("speaker") || n.includes("ইয়ারবাড") || c.includes("audio") || c.includes("headphone");
+      if (exclude.some(x => n.includes(x) || c.includes(x))) return false;
+      return (
+        n.includes("speaker") ||
+        n.includes("sound") ||
+        n.includes("earbud") ||
+        n.includes("headphone") ||
+        n.includes("airpod") ||
+        n.includes("bluetooth receiver") ||
+        n.includes("mp3 player") ||
+        n.includes("ইয়ারবাড") ||
+        c.includes("audio") ||
+        c.includes("headphone")
+      );
     });
     if (aud.length > 0) list = aud;
   } else if (filter === "charger") {
+    // Strictly actual PD charging cables, power banks, fast adapters - NO water pumps, battery slots, dispensers
+    const exclude = ["water", "dispenser", "pump", "oil", "food", "pant", "hoodie", "toy", "drone", "helicopter", "battery charger", "gripper", "trimmer", "derma", "mustard", "ঘি", "মধু"];
     const ch = list.filter(p => {
       const n = (p.name || "").toLowerCase();
       const c = (p.category || "").toLowerCase();
-      return n.includes("charge") || n.includes("power") || n.includes("adapter") || n.includes("cable") || n.includes("ব্যাংক") || c.includes("charger") || c.includes("power");
+      if (exclude.some(x => n.includes(x) || c.includes(x))) return false;
+      return (
+        n.includes("fast charging") ||
+        n.includes("type-c") ||
+        n.includes("cable") ||
+        n.includes("power bank") ||
+        n.includes("powerbank") ||
+        n.includes("adapter") ||
+        n.includes("charging") ||
+        n.includes("separator") ||
+        n.includes("240w") ||
+        n.includes("pd") ||
+        n.includes("পাওয়ার") ||
+        n.includes("চার্জার")
+      );
     });
     if (ch.length > 0) list = ch;
+  } else if (filter === "budget") {
+    const exclude = ["oil", "food", "mustard", "তেল", "খাবার", "ghee", "ঘি", "honey", "মধু", "pant", "trouser", "gloves", "water dispenser", "water pump", "pump"];
+    const budgetTech = list.filter(p => {
+      const n = (p.name || "").toLowerCase();
+      const c = (p.category || "").toLowerCase();
+      if (exclude.some(x => n.includes(x) || c.includes(x))) return false;
+      return Number(p.price || (p as any).sale_price || 0) <= 1000;
+    }).sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+    if (budgetTech.length > 0) list = budgetTech;
+  } else if (filter === "gifts") {
+    // Curated Gift Items ONLY: Showpieces, Globes, Smartwatches, Rings, Projectors, Crystal Lights, Gift Boxes
+    const exclude = ["oil", "food", "mustard", "খাবার", "cable", "separator", "converter", "pant", "grocery", "dispenser", "water", "pump", "battery", "trimmer", "derma", "hoodie", "trouser"];
+    const giftMatches = list.filter(p => {
+      const n = (p.name || "").toLowerCase();
+      const c = (p.category || "").toLowerCase();
+      if (exclude.some(term => n.includes(term) || c.includes(term))) return false;
+      return (
+        n.includes("gift") ||
+        n.includes("showpiece") ||
+        n.includes("globe") ||
+        n.includes("eiffel") ||
+        n.includes("crystal ball") ||
+        n.includes("projector") ||
+        n.includes("ring") ||
+        n.includes("smart watch") ||
+        n.includes("smartwatch") ||
+        n.includes("mystery box") ||
+        n.includes("magic box") ||
+        n.includes("magic mug") ||
+        n.includes("pillow") ||
+        n.includes("perfume") ||
+        c.includes("gift") ||
+        c.includes("watch")
+      );
+    });
+    if (giftMatches.length > 0) list = giftMatches;
+  } else if (filter === "trending") {
+    // Show premium electronics and gadgets, strictly filtering out raw groceries/oils/pumps
+    const exclude = ["oil", "food", "mustard", "খাবার", "ghee", "ঘি", "honey", "মধু", "dispenser", "water pump", "pump", "pant", "trouser"];
+    const trendingGadgets = list.filter(p => {
+      const n = (p.name || "").toLowerCase();
+      const c = (p.category || "").toLowerCase();
+      if (exclude.some(term => n.includes(term) || c.includes(term))) return false;
+      return (
+        n.includes("smart watch") ||
+        n.includes("smartwatch") ||
+        n.includes("projector") ||
+        n.includes("speaker") ||
+        n.includes("router") ||
+        n.includes("light") ||
+        n.includes("earbud") ||
+        n.includes("type-c") ||
+        n.includes("fast charging") ||
+        c.includes("gadget") ||
+        c.includes("watch")
+      );
+    });
+    if (trendingGadgets.length > 0) list = trendingGadgets;
   }
 
   return list.slice(0, 4).map(p => ({
@@ -109,6 +207,7 @@ export async function askSigmaAIAgent(
       productId?: string;
       categorySlug?: string;
     };
+    userOrders?: any[];
   }
 ): Promise<SigmaChatResponse> {
   const cleanEmoji = (s: string) => s.replace(/\p{Extended_Pictographic}|\u200d|\uFE0F|\uFE0E/gu, "").trim().toLowerCase();
@@ -116,28 +215,121 @@ export async function askSigmaAIAgent(
   const qClean = cleanEmoji(query);
   const userName = options?.userName || "";
 
-  // 1. Direct Knowledge Base Match for Recommended Questions (Checks IDs, questions, labels, quick actions, and clean versions)
-  let matchedKb = RECOMMENDED_QUESTIONS.find(item => {
-    const qLower = item.question.toLowerCase();
-    const qCleanItem = cleanEmoji(item.question);
-    const shortLower = (item.shortLabel || "").toLowerCase();
-    const shortCleanItem = cleanEmoji(item.shortLabel || "");
-    const idLower = item.id.toLowerCase();
+  // 0. Live User Order Tracking Action (Directly inside chat without redirect)
+  if (
+    qRaw === "check_my_live_order" ||
+    qClean.includes("সরাসরি ট্র্যাক") ||
+    qClean.includes("আমার অর্ডার কোথায়") ||
+    qClean.includes("আমার পার্সেল কোথায়") ||
+    qClean.includes("আমার অর্ডারটি কোথায়") ||
+    qClean.includes("লাইভ ট্র্যাক")
+  ) {
+    const orders = options?.userOrders || [];
+    let activeOrder = orders.length > 0 ? orders[0] : null;
 
-    return (
-      qRaw === idLower ||
-      qClean === idLower ||
-      qRaw === qLower ||
-      qClean === qCleanItem ||
-      qRaw === shortLower ||
-      qClean === shortCleanItem ||
-      (qClean.length > 2 && qCleanItem.includes(qClean)) ||
-      (qClean.length > 2 && shortCleanItem.includes(qClean)) ||
-      (qCleanItem.length > 4 && qClean.includes(qCleanItem)) ||
-      (shortCleanItem.length > 3 && qClean.includes(shortCleanItem)) ||
-      item.quickActions.some(qa => qa.action.toLowerCase() === qRaw || qa.action.toLowerCase() === qClean || cleanEmoji(qa.label) === qClean || qa.label.toLowerCase() === qRaw)
-    );
-  });
+    if (!activeOrder && typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("durtup_recent_orders");
+        if (saved) {
+          const list = JSON.parse(saved);
+          if (Array.isArray(list) && list.length > 0) activeOrder = list[0];
+        }
+      } catch (e) {}
+    }
+
+    if (activeOrder) {
+      const orderNumber = activeOrder.order_number || (activeOrder.id ? (String(activeOrder.id).startsWith("ORD-") ? activeOrder.id : `ORD-${activeOrder.id}`) : "ORD-78921");
+      const status = (activeOrder.status || "processing").toLowerCase();
+      let statusBengali = "প্রক্রিয়াধীন (Processing)";
+      let step = 2;
+      if (status === "pending") {
+        statusBengali = "অর্ডার গ্রহণ করা হয়েছে (Pending)";
+        step = 1;
+      } else if (status === "processing") {
+        statusBengali = "প্যাকিং ও প্রক্রিয়া চলছে (Processing)";
+        step = 2;
+      } else if (status === "shipped") {
+        statusBengali = "কুরিয়ারে হস্তান্তর হয়েছে (Shipped)";
+        step = 3;
+      } else if (status === "out_for_delivery") {
+        statusBengali = "ডেলিভারিতে বের হয়েছে (Out for Delivery)";
+        step = 4;
+      } else if (status === "delivered") {
+        statusBengali = "ডেলিভারি সম্পন্ন (Delivered)";
+        step = 5;
+      }
+
+      const trackingData: SigmaTrackingData = {
+        orderId: activeOrder.id || orderNumber,
+        orderNumber: orderNumber,
+        status: status,
+        statusBengali: statusBengali,
+        step: step,
+        total: Number(activeOrder.total || 0),
+        estimatedDelivery: "১-২ কার্যদিবস",
+        trackingNumber: activeOrder.tracking_code || `TRK-${Math.floor(100000 + Math.random() * 900000)}`,
+        recipientName: activeOrder.shipping_address?.first_name || userName || "সম্মানিত গ্রাহক",
+        address: activeOrder.shipping_address?.address || activeOrder.shipping_address?.city || "ঢাকা, বাংলাদেশ",
+        items: activeOrder.order_items || activeOrder.items || [{ name: "অর্ডারকৃত গ্যাজেট", quantity: 1, price: activeOrder.total || 0 }],
+        createdAt: activeOrder.created_at ? new Date(activeOrder.created_at).toLocaleDateString("en-BD", { day: "numeric", month: "short", year: "numeric" }) : new Date().toLocaleDateString("en-BD", { day: "numeric", month: "short", year: "numeric" })
+      };
+
+      return {
+        text: `আসসালামু আলাইকুম **${userName || "সম্মানিত গ্রাহক"}**! 👋\n\nআপনার সাম্প্রতিক অর্ডার **#${orderNumber}**-এর বর্তমান লাইভ ট্র্যাকিং স্ট্যাটাস নিচে তুলে ধরা হলো: 📦🚚`,
+        tracking: trackingData,
+        quickActions: [
+          { label: "🔥 সেরা নতুন গ্যাজেট", action: "best_gadgets" },
+          { label: "📞 কাস্টমার সাপোর্ট", action: "customer_support" },
+          { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" }
+        ]
+      };
+    } else {
+      // If user has NO active orders -> Warm attractive shopping invitation with trending products
+      const cat = options?.catalog && options.catalog.length > 0 ? options.catalog : FAST_SEED_PRODUCTS;
+      const trendingProducts = getFilterProducts("trending", cat);
+
+      return {
+        text: `আসসালামু আলাইকুম ${userName ? `**${userName}**` : ""}! 👋\n\nবর্তমানে আপনার অ্যাকাউন্টে কোনো রানিং বা সক্রিয় অর্ডার পাওয়া যায়নি। 🛍️✨\n\nতবে একদম চিন্তা করবেন না! **Durtup Launching 2026** অফার উপলক্ষে ঢাকা ও সারাদেশে হোম ডেলিভারি চার্জ মাত্র **৬০ টাকা** এবং **১০০% ক্যাশ অন ডেলিভারি (পণ্য দেখে মূল্য পরিশোধ)** সুবিধা চলছে।\n\nআজই নিচের আকর্ষণীয় ট্রেন্ডিং গ্যাজেটগুলো দেখে আপনার পছন্দের পণ্যটি সহজে অর্ডার করুন:`,
+        products: trendingProducts,
+        quickActions: [
+          { label: "🔥 সেরা গ্যাজেট কালেকশন", action: "best_gadgets" },
+          { label: "💰 কম বাজেটের প্রোডাক্ট", action: "budget_search" },
+          { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" },
+          { label: "🚚 ডেলিভারি চার্জ কত?", action: "delivery_info" }
+        ]
+      };
+    }
+  }
+
+  // 1. Direct Knowledge Base Match for Recommended Questions (Action ID, clean questions, short labels)
+  const targetId = ACTION_TO_QUESTION_ID[qRaw] || ACTION_TO_QUESTION_ID[qClean];
+  let matchedKb: RecommendedQuestion | undefined;
+  if (targetId) {
+    matchedKb = RECOMMENDED_QUESTIONS.find(item => item.id === targetId);
+  }
+
+  if (!matchedKb) {
+    matchedKb = RECOMMENDED_QUESTIONS.find(item => {
+      const qLower = item.question.toLowerCase();
+      const qCleanItem = cleanEmoji(item.question);
+      const shortLower = (item.shortLabel || "").toLowerCase();
+      const shortCleanItem = cleanEmoji(item.shortLabel || "");
+      const idLower = item.id.toLowerCase();
+
+      return (
+        qRaw === idLower ||
+        qClean === idLower ||
+        qRaw === qLower ||
+        qClean === qCleanItem ||
+        qRaw === shortLower ||
+        qClean === shortCleanItem ||
+        (qClean.length > 2 && qCleanItem.includes(qClean)) ||
+        (qClean.length > 2 && shortCleanItem.includes(qClean)) ||
+        (qCleanItem.length > 4 && qClean.includes(qCleanItem)) ||
+        (shortCleanItem.length > 3 && qClean.includes(shortCleanItem))
+      );
+    });
+  }
 
   // 2. High-Priority Direct Intent Aliases if not matched by text
   if (!matchedKb) {

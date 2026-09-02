@@ -25,6 +25,82 @@ export const QUESTION_CATEGORIES: QuestionCategory[] = [
   { id: "offers", label: "🎁 অফার ও ডিসকাউন্ট", icon: "🎁", description: "চলতি অফার ও কুপন কোড" },
 ];
 
+export const ACTION_TO_QUESTION_ID: Record<string, string> = {
+  // Popular
+  "how_to_order": "pop-1",
+  "pop-1": "pop-1",
+  "best_gadgets": "pop-2",
+  "pop-2": "pop-2",
+  "delivery_info": "pop-3",
+  "pop-3": "pop-3",
+  "payment_info": "pop-4",
+  "pop-4": "pop-4",
+  "return_policy": "pop-5",
+  "pop-5": "pop-5",
+  "budget_search": "pop-6",
+  "pop-6": "pop-6",
+  "track_order": "pop-7",
+  "pop-7": "pop-7",
+  "compare_products": "pop-8",
+  "pop-8": "pop-8",
+
+  // Ordering
+  "view_cart": "ord-1",
+  "ord-1": "ord-1",
+  "order_confirmation_process": "ord-2",
+  "ord-2": "ord-2",
+  "cancel_order": "ord-3",
+  "ord-3": "ord-3",
+  "gift_guide": "ord-4",
+  "ord-4": "ord-4",
+  "multi_order": "ord-5",
+  "ord-5": "ord-5",
+
+  // Delivery & Payment
+  "inside_dhaka_delivery": "del-1",
+  "del-1": "del-1",
+  "outside_dhaka_delivery": "del-2",
+  "del-2": "del-2",
+  "open_box_check": "del-3",
+  "del-3": "del-3",
+  "payment_methods_detail": "del-4",
+  "del-4": "del-4",
+
+  // Products
+  "audio_collection": "prd-1",
+  "prd-1": "prd-1",
+  "smartwatch_collection": "prd-2",
+  "prd-2": "prd-2",
+  "charger_collection": "prd-3",
+  "prd-3": "prd-3",
+  "shopping_guidance": "prd-4",
+  "prd-4": "prd-4",
+  "original_guarantee": "prd-5",
+  "prd-5": "prd-5",
+  "gift_finder": "prd-6",
+  "best_gifts": "prd-6",
+  "gift_ideas": "prd-6",
+  "prd-6": "prd-6",
+
+  // Support & Warranty
+  "warranty_info": "sup-1",
+  "sup-1": "sup-1",
+  "customer_support": "sup-2",
+  "sup-2": "sup-2",
+  "open_ticket": "sup-2",
+  "office_location": "sup-3",
+  "sup-3": "sup-3",
+  "refund_info": "sup-4",
+  "sup-4": "sup-4",
+
+  // Offers
+  "current_offers": "off-1",
+  "off-1": "off-1",
+  "coupon_guide": "off-2",
+  "off-2": "off-2",
+  "track_page": "pop-7",
+};
+
 export const RECOMMENDED_QUESTIONS: RecommendedQuestion[] = [
   // --- POPULAR ---
   {
@@ -139,13 +215,13 @@ export const RECOMMENDED_QUESTIONS: RecommendedQuestion[] = [
     shortLabel: "অর্ডার ট্র্যাকিং করার নিয়ম",
     answerText: `**অর্ডার ট্র্যাকিং করার সহজ নিয়ম:** 📦🔎
 
-আপনি যে প্রোডাক্টটি অর্ডার করবেন, ঠিক সেই প্রোডাক্ট পেজেই সরাসরি **অর্ডার ট্র্যাক করার অপশন (Track Order)** রয়েছে।
+আপনি যে প্রোডাক্টটি অর্ডার করবেন, ঠিক সেই প্রোডাক্ট পেজ বা মেসেঞ্জার চ্যাট থেকেই সরাসরি **লাইভ অর্ডার ট্র্যাকিং** দেখতে পারবেন।
 
-সেখান থেকেই আপনি যেকোনো সময় এক ক্লিকে আপনার অর্ডারের বর্তমান অবস্থা (প্রসেসিং, প্যাকিং, কুরিয়ার বা ডেলিভারি স্ট্যাটাস) খুব সহজে লাইভ দেখতে ও ট্র্যাক করতে পারবেন!`,
+আপনার বর্তমান রানিং অর্ডারের লাইভ স্ট্যাটাস জানতে নিচে **'সরাসরি ট্র্যাক করুন'** বাটনে চাপুন!`,
     quickActions: [
-      { label: "🚚 সরাসরি ট্র্যাক করুন", action: "track_page", link: "/track" },
+      { label: "🚚 সরাসরি ট্র্যাক করুন", action: "check_my_live_order" },
       { label: "📞 কাস্টমার সাপোর্ট", action: "customer_support" },
-      { label: "🛍️ নতুন প্রোডাক্ট দেখুন", action: "view_products", link: "/products" }
+      { label: "🔥 সেরা গ্যাজেট দেখুন", action: "best_gadgets" }
     ]
   },
   {
@@ -415,6 +491,21 @@ export const RECOMMENDED_QUESTIONS: RecommendedQuestion[] = [
     quickActions: [
       { label: "🔥 সেরা গ্যাজেট দেখুন", action: "best_gadgets" },
       { label: "🔄 ইনস্ট্যান্ট রিটার্ন পলিসি", action: "return_policy" },
+      { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" }
+    ]
+  },
+  {
+    id: "prd-6",
+    category: "products",
+    icon: "🎁",
+    question: "প্রিয়জনকে উপহার দেওয়ার মতো সেরা প্রোডাক্টগুলো দেখাও",
+    shortLabel: "সেরা উপহারের প্রোডাক্ট",
+    productFilter: "gifts",
+    answerText: `প্রিয়জনকে উপহার দেওয়ার জন্য স্টোরের সবচেয়ে **জনপ্রিয়, আকর্ষণীয় ও প্রিমিয়াম গ্যাজেটসমূহ** নিচে সাজিয়ে দেওয়া হলো: 🎁💝\n\nপ্রতিটি পণ্য আকর্ষণীয় উপহার উপযোগী ইনট্যাক্ট সিলড প্যাকেজিংয়ে সরাসরি প্রাপকের ঠিকানায় পৌঁছে দেওয়া হয়!`,
+    quickActions: [
+      { label: "⌚ স্মার্টওয়াচ উপহার", action: "smartwatch_collection" },
+      { label: "🎧 ইয়ারবাডস উপহার", action: "audio_collection" },
+      { label: "🎁 গিফট পাঠানোর নিয়ম", action: "gift_guide" },
       { label: "🛍️ কীভাবে অর্ডার করবেন?", action: "how_to_order" }
     ]
   },

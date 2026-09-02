@@ -9,8 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { SEOHead } from "@/components/SEOHead";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "@/integrations/firebase/client";
+import { signInWithGoogle } from "@/integrations/firebase/client";
 
 export default function Register() {
   const [fullName, setFullName] = useState("");
@@ -23,6 +22,7 @@ export default function Register() {
   const { signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const params = new URLSearchParams(location.search);
   const rawNext = params.get("next") || params.get("redirect");
   const nextPath = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
@@ -70,7 +70,6 @@ export default function Register() {
   const handleGoogleSignUp = async () => {
     setGoogleLoading(true);
     try {
-      const { signInWithGoogle } = await import("@/integrations/firebase/client");
       await signInWithGoogle();
       toast({
         title: "Signed up with Google!",

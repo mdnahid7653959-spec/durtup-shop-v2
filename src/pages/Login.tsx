@@ -9,8 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { SEOHead } from "@/components/SEOHead";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "@/integrations/firebase/client";
+import { signInWithGoogle } from "@/integrations/firebase/client";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -53,7 +52,6 @@ export default function Login() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const { signInWithGoogle } = await import("@/integrations/firebase/client");
       await signInWithGoogle();
       toast({
         title: "Signed in with Google!",

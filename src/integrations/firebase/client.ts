@@ -63,26 +63,28 @@ export const signInWithGoogle = async () => {
   if (result.user) {
     const userProf = {
       id: result.user.uid,
+      user_id: result.user.uid,
       email: result.user.email || "",
       full_name: result.user.displayName || "Google User",
       avatar_url: result.user.photoURL || null,
       role: "customer"
     };
+    
+    // 1. Instant local cache (0ms)
     registerUserLocally(userProf);
-
     try {
-      const userDoc = doc(db, "profiles", result.user.uid);
-      const userSnap = await getDoc(userDoc);
-      if (!userSnap.exists()) {
-        await setDoc(userDoc, {
-          ...userProf,
-          user_id: result.user.uid,
-          created_at: new Date().toISOString()
-        }, { merge: true });
-      }
-    } catch (profileErr) {
-      console.warn("Firestore profile sync notice (non-fatal):", profileErr);
-    }
+      localStorage.setItem("durtup_profile_" + result.user.uid, JSON.stringify(userProf));
+    } catch (e) {}
+
+    // 2. Non-blocking background Firestore sync
+    const userDoc = doc(db, "profiles", result.user.uid);
+    setDoc(userDoc, {
+      ...userProf,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }, { merge: true }).catch((profileErr) => {
+      console.warn("Background Firestore profile sync notice:", profileErr);
+    });
   }
   return result;
 };
