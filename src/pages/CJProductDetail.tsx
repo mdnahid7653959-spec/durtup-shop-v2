@@ -9,6 +9,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { TopAppInstallBanner } from "@/components/pwa/TopAppInstallBanner";
 import { useCJCart } from "@/hooks/useCJCart";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
@@ -66,6 +67,7 @@ export default function CJProductDetail() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const { addToCart: addToCJCart } = useCJCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const { toast } = useToast();
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
@@ -414,6 +416,26 @@ export default function CJProductDetail() {
                   </>
                 )}
 
+                {/* Wishlist button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (product) {
+                      toggleWishlist(product.id);
+                    }
+                  }}
+                  className={`absolute top-2.5 left-2.5 w-9 h-9 sm:w-10 sm:h-10 rounded-full shadow-md flex items-center justify-center transition-all active:scale-95 z-10 border ${
+                    product && isInWishlist(product.id)
+                      ? "bg-rose-600 text-white border-rose-500 shadow-rose-600/30"
+                      : "bg-background/90 text-foreground hover:text-rose-600 border-border"
+                  }`}
+                  aria-label={product && isInWishlist(product.id) ? "Wishlist থেকে সরান" : "Wishlist-এ যোগ করুন"}
+                  title={product && isInWishlist(product.id) ? "Wishlist থেকে সরান" : "Wishlist-এ যোগ করুন"}
+                >
+                  <Heart className={`h-4 w-4 sm:h-5 sm:w-5 ${product && isInWishlist(product.id) ? "fill-current text-white" : ""}`} />
+                </button>
+
                 {/* Share button */}
                 <button
                   onClick={(e) => { e.stopPropagation(); handleShare(); }}
@@ -423,7 +445,7 @@ export default function CJProductDetail() {
                 </button>
 
                 {/* Badges - Mobile Optimized */}
-                <div className="absolute top-2.5 left-2.5 flex flex-col gap-1">
+                <div className="absolute top-14 left-2.5 flex flex-col gap-1">
                   {discount > 0 && (
                     <Badge variant="destructive" className="bg-sale text-xs px-2 py-0.5">-{discount}%</Badge>
                   )}

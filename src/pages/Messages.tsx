@@ -1,30 +1,32 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { 
-  RotateCcw, 
   ShoppingBag, 
   Truck, 
+  ArrowLeft, 
+  Search, 
+  Sparkles, 
+  X, 
+  RotateCcw, 
+  CheckCircle2, 
+  ExternalLink, 
+  ChevronRight, 
+  Plus, 
   HelpCircle, 
-  ChevronRight,
-  MoreVertical,
-  PackageCheck,
-  ArrowLeft,
-  Search,
-  Grid,
-  Sparkles,
-  X,
-  Send
+  PackageCheck, 
+  ShieldCheck, 
+  Scale, 
+  Phone, 
+  MessageCircle, 
+  Tag, 
+  Lock, 
+  Compass,
+  AlertCircle,
+  Send,
+  MessageSquare
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -32,40 +34,73 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
-import { 
-  askSigmaAIAgent, 
-  confirmSigmaOrder, 
-  type AIMessage,
-  type SigmaProductCardData 
-} from "@/lib/durtupAIAgent";
-import { 
-  QUESTION_CATEGORIES, 
-  RECOMMENDED_QUESTIONS, 
-  ACTION_TO_QUESTION_ID,
-  type RecommendedQuestion 
-} from "@/data/sigmaKnowledgeBase";
-import { SigmaProductCard } from "@/components/ai/SigmaProductCard";
-import { SigmaComparisonCard } from "@/components/ai/SigmaComparisonCard";
-import { SigmaOrderConfirmationCard } from "@/components/ai/SigmaOrderConfirmationCard";
-import { SigmaOrderTrackingCard } from "@/components/ai/SigmaOrderTrackingCard";
-import { SigmaSupportTicketCard } from "@/components/ai/SigmaSupportTicketCard";
-import { SigmaToolActivityIndicator } from "@/components/ai/SigmaToolActivityIndicator";
-import type { Product } from "@/components/products/ProductCard";
 import { toast } from "sonner";
-import { db } from "@/integrations/firebase/client";
-import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { supabase } from "@/lib/firebaseAdapter";
-import { sendTelegramOrderNotification } from "@/utils/telegramNotifier";
-import { sendOrderSuccessPushNotification } from "@/services/notificationService";
+import { getSmartProductImage } from "@/utils/productImageHelper";
+import { 
+  fetchAllFAQs, 
+  FAQ_CATEGORIES, 
+  type FAQItem, 
+  type FAQCategory,
+  trackQuestionClick,
+  submitCustomerReport
+} from "@/services/knowledgeBaseService";
+import {
+  getLiveStoreSettings,
+  getLiveActiveCoupons,
+  getLiveUserOrders,
+  getScoredRecommendedProducts,
+  generateObjectiveComparison,
+  type BotMessage,
+  type ConversationState,
+  INITIAL_CONVERSATION_STATE,
+  type BotProductRecommendation,
+  type BotComparisonData,
+  type BotOrderSummary
+} from "@/services/botEngine";
+import type { Product } from "@/components/products/ProductCard";
+
+function SigmaAILogo({ className = "w-10 h-10" }: { className?: string }) {
+  return (
+    <div className={cn("relative shrink-0 select-none", className)}>
+      <div className="w-full h-full rounded-2xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-purple-600 p-[2px] shadow-[0_0_15px_rgba(6,182,212,0.35)] flex items-center justify-center">
+        <div className="w-full h-full rounded-[14px] bg-slate-950 flex items-center justify-center relative overflow-hidden">
+          {/* Subtle Cyber Grid / Radial Glow */}
+          <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/20 via-transparent to-purple-500/20 pointer-events-none" />
+          
+          {/* Sigma Greek Stylized Symbol with Glowing Gradients */}
+          <svg
+            className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] relative z-10"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M19 4H5l7 8-7 8h14" />
+          </svg>
+
+          {/* AI Sparkle */}
+          <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-cyan-300 rounded-full shadow-[0_0_6px_#67e8f9] animate-pulse" />
+        </div>
+      </div>
+      {/* Active Online Pulse Dot */}
+      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full shadow-xs ring-2 ring-emerald-500/20" />
+    </div>
+  );
+}
 
 function renderFormattedSpan(text: string) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
-        <strong key={i} className="font-extrabold text-slate-900">
+        <strong key={i} className="font-black text-slate-950 dark:text-white">
           {part.slice(2, -2)}
         </strong>
       );
@@ -74,34 +109,24 @@ function renderFormattedSpan(text: string) {
   });
 }
 
-function FormattedMessageText({ text }: { text: string }) {
+function FormattedBotText({ text }: { text: string }) {
   const lines = text.split("\n");
 
   return (
-    <div className="space-y-1.5 text-xs sm:text-sm leading-relaxed text-slate-800">
-      {lines.map((line, lineIdx) => {
+    <div className="space-y-1">
+      {lines.map((line, idx) => {
         if (!line.trim()) {
-          return <div key={lineIdx} className="h-1" />;
+          return <div key={idx} className="h-1" />;
         }
-
-        if (line.startsWith("### ")) {
+        if (line.startsWith("• ") || line.startsWith("- ")) {
           return (
-            <h4 key={lineIdx} className="font-extrabold text-sm sm:text-base text-orange-600 mt-2 mb-1 flex items-center gap-1.5">
-              {renderFormattedSpan(line.replace("### ", ""))}
-            </h4>
-          );
-        }
-
-        if (line.startsWith("- ") || line.startsWith("• ")) {
-          return (
-            <div key={lineIdx} className="flex items-start gap-2 pl-1 my-0.5">
-              <span className="text-orange-500 font-bold">•</span>
+            <div key={idx} className="flex items-start gap-1.5 pl-0.5 my-0.5">
+              <span className="text-orange-500 font-bold shrink-0">•</span>
               <div className="flex-1">{renderFormattedSpan(line.replace(/^[-•]\s*/, ""))}</div>
             </div>
           );
         }
-
-        return <p key={lineIdx}>{renderFormattedSpan(line)}</p>;
+        return <p key={idx} className="leading-relaxed">{renderFormattedSpan(line)}</p>;
       })}
     </div>
   );
@@ -109,685 +134,1037 @@ function FormattedMessageText({ text }: { text: string }) {
 
 export default function BuyerMessages() {
   const { user, profile } = useAuth();
-  const { items: cartItems, addToCart, removeItem, clearCart } = useCart();
+  const { addToCart } = useCart();
   const navigate = useNavigate();
 
-  const [isTyping, setIsTyping] = useState(false);
-  const [toolStatus, setToolStatus] = useState<string | null>(null);
-  const [catalog, setCatalog] = useState<Product[]>([]);
+  const [faqs, setFaqs] = useState<FAQItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("popular");
-  const [isAllQuestionsOpen, setIsAllQuestionsOpen] = useState(false);
-  const [searchQuestionTerm, setSearchQuestionTerm] = useState("");
-  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
-  const [inputText, setInputText] = useState("");
-  const [userOrders, setUserOrders] = useState<any[]>([]);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [conversationState, setConversationState] = useState<ConversationState>(INITIAL_CONVERSATION_STATE);
+
+  // Customer Report Submission State
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportPhone, setReportPhone] = useState("");
+  const [reportName, setReportName] = useState("");
+  const [reportCategory, setReportCategory] = useState("পণ্য সংক্রান্ত সমস্যা");
+  const [reportOrderNo, setReportOrderNo] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  // Extract clean personal first name
+  // Clean first name
   const rawName = profile?.full_name || user?.user_metadata?.full_name || profile?.name || "";
   const cleanName = rawName
     ? rawName.replace(/^(md\.?|mohammad|mohammed|mrs\.?|mr\.?|mst\.?)\s+/i, "").split(" ")[0] || rawName.split(" ")[0]
     : "";
 
-  // Preload catalog
+  // Prefill phone and name if user profile exists
   useEffect(() => {
-    getCachedMohasagorProducts().then((res) => {
-      if (res && res.length > 0) setCatalog(res);
-    }).catch(() => {});
-  }, []);
-
-  // Preload User Orders for Live Tracking
-  useEffect(() => {
-    async function loadUserOrders() {
-      let list: any[] = [];
-      if (user?.id) {
-        try {
-          const { data } = await supabase
-            .from("orders")
-            .select("*, order_items(*)")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false })
-            .limit(5);
-
-          if (data && data.length > 0) {
-            list = data;
-          }
-        } catch (e) {}
-
-        if (list.length === 0) {
-          try {
-            const snap = await getDocs(
-              query(collection(db, "orders"), where("user_id", "==", user.id))
-            );
-            if (!snap.empty) {
-              list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-            }
-          } catch (e) {}
-        }
-      }
-
-      try {
-        const local = localStorage.getItem("durtup_recent_orders");
-        if (local) {
-          const parsed = JSON.parse(local);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            list = [...list, ...parsed];
-          }
-        }
-      } catch (e) {}
-
-      setUserOrders(list);
+    if (profile?.full_name || user?.user_metadata?.full_name) {
+      setReportName(profile?.full_name || user?.user_metadata?.full_name || "");
     }
-
-    loadUserOrders();
-  }, [user]);
-
-  // Welcome Initial Message
-  const initialGreeting: AIMessage = {
-    id: "welcome-1",
-    sender: "ai",
-    text: cleanName 
-      ? `আসসালামু আলাইকুম **${cleanName}**! 👋 আমি **Sigma** — Durtup.shop-এর অফিসিয়াল Personal Shopping Manager।\n\nপ্রোডাক্ট নির্বাচন, অর্ডার নিয়ম, ডেলিভারি চার্জ বা রিটার্ন পলিসি সম্পর্কে জানতে নিচের **যেকোনো অপশনে ক্লিক করুন** — আমি সাথে সাথে সঠিক উত্তর ও প্রোডাক্টের তথ্য প্রদর্শন করব!`
-      : `স্বাগতম! আমি **Sigma** — Durtup.shop-এর অফিসিয়াল Personal Shopping Manager (Powered by Durtup.shop)।\n\nপণ্য খোঁজা, স্পেসিফিকেশন ও দাম জানা, কার্টে যোগ বা অর্ডারে সহায়তা পেতে নিচের **রেকমেন্ডেড প্রশ্নসমূহে ক্লিক করুন**:`,
-    timestamp: "Just now",
-    quickActions: [
-      { label: "🛍️ কীভাবে সহজে অর্ডার করবেন?", action: "pop-1" },
-      { label: "🔥 সেরা ট্রেন্ডিং গ্যাজেট দেখাও", action: "pop-2" },
-      { label: "🚚 ডেলিভারি চার্জ ও সময় কত?", action: "pop-3" },
-      { label: "💵 ক্যাশ অন ডেলিভারি নিয়ম", action: "pop-4" },
-      { label: "🔄 ইনস্ট্যান্ট রিটার্ন পলিসি", action: "pop-5" },
-      { label: "💰 কম বাজেটের সেরা প্রোডাক্ট", action: "pop-6" },
-      { label: "📦 অর্ডার ট্র্যাকিং করার নিয়ম", action: "pop-7" },
-    ],
-  };
-
-  const [messages, setMessages] = useState<AIMessage[]>([initialGreeting]);
-
-  // Update greeting when user profile loads
-  useEffect(() => {
-    if (messages.length === 1 && messages[0].id === "welcome-1") {
-      setMessages([initialGreeting]);
+    if (profile?.phone || (user as any)?.phone) {
+      setReportPhone(profile?.phone || (user as any)?.phone || "");
     }
+  }, [user, profile]);
+
+  // Initial Greeting Bot Message
+  const getGreetingMessage = useCallback((): BotMessage => {
+    return {
+      id: "welcome-root",
+      sender: "bot",
+      text: cleanName
+        ? `আসসালামু আলাইকুম **${cleanName}**! 👋\nআমি **Sigma AI** — Durtup.shop-এর অফিসিয়াল পার্সোনাল শপিং ও কাস্টমার কেয়ার গাইড।\n\nপ্রোডাক্ট কেনাকাটা, বাজেট অনুযায়ী সেরা পছন্দ, লাইভ অর্ডার ট্র্যাক, ডেলিভারি চার্জ বা রিটার্ন পলিসি জানতে নিচের অপশনে ক্লিক করুন:`
+        : `আসসালামু আলাইকুম! 👋\nআমি **Sigma AI** — Durtup.shop-এর অফিসিয়াল পার্সোনাল শপিং ও কাস্টমার কেয়ার গাইড।\n\nপণ্য পছন্দ, বাজেট রিকমেন্ডেশন, লাইভ ডেলিভারি চার্জ বা অর্ডারে সহায়তা পেতে নিচের যেকোনো বিষয়ে ক্লিক করুন:`,
+      timestamp: "এইমাত্র",
+      followUpQuestions: [
+        { label: "🛍️ পণ্য কিনতে চাই (বাজেট ও ক্যাটাগরি)", intentOrQuery: "flow_product_finder" },
+        { label: "🚚 ডেলিভারি চার্জ ও সময় কত?", intentOrQuery: "del_charge_time" },
+        { label: "📞 কাস্টমার কেয়ার ও WhatsApp (01885985097)", intentOrQuery: "tech_support_contact" },
+        { label: "🚨 সমস্যা / অভিযোগ রিপোর্ট করুন", intentOrQuery: "flow_submit_report" },
+        { label: "💵 ক্যাশ অন ডেলিভারি নিয়ম", intentOrQuery: "pay_cod_available" },
+        { label: "📦 আমার অর্ডার কোথায়? (লাইভ ট্র্যাক)", intentOrQuery: "acc_my_latest_order" },
+        { label: "🔄 ৭ দিন রিটার্ন ও চেক পলিসি", intentOrQuery: "ret_policy_check" },
+        { label: "🎁 চলতি ডিসকাউন্ট কুপন", intentOrQuery: "off_active_coupons" },
+        { label: "💼 রিসেলার প্রোগ্রাম ও আয়", intentOrQuery: "reseller_join_guide" },
+        { label: "⚖️ দুটি প্রোডাক্টের তুলনা করুন", intentOrQuery: "flow_product_compare" },
+      ],
+    };
   }, [cleanName]);
 
-  // Auto scroll to bottom of messages container
+  const [messages, setMessages] = useState<BotMessage[]>([getGreetingMessage()]);
+
+  // Handle Report Form Submit
+  const handleReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanedPhone = reportPhone.trim().replace(/[\s-]/g, "");
+    if (!cleanedPhone || cleanedPhone.length < 11) {
+      toast.error("অনুগ্রহ করে একটি সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 018XXXXXXXX)");
+      return;
+    }
+    if (!reportDetails.trim()) {
+      toast.error("অনুগ্রহ করে আপনার অভিযোগ বা সমস্যার বিবরণ লিখুন");
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    const res = await submitCustomerReport({
+      name: reportName.trim() || cleanName || "কাস্টমার",
+      phone: cleanedPhone,
+      category: reportCategory,
+      orderNumber: reportOrderNo.trim() || undefined,
+      details: reportDetails.trim(),
+      userId: user?.id,
+    });
+
+    setIsSubmittingReport(false);
+
+    if (res.success) {
+      setIsReportModalOpen(false);
+      setReportDetails("");
+      setReportOrderNo("");
+      toast.success("আপনার রিপোর্টটি সফলভাবে গ্রহণ করা হয়েছে!");
+
+      const botMsgId = `bot-${Date.now()}`;
+      const nowTime = new Date().toLocaleTimeString("bn-BD", { hour: "numeric", minute: "2-digit", hour12: true });
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: botMsgId,
+          sender: "bot",
+          text: `✅ **আপনার অভিযোগটি সফলভাবে জমা হয়েছে!**\n\n• **রেফারেন্স নম্বর:** #${res.reportId}\n• **যোগাযোগ নম্বর:** ${cleanedPhone}\n• **সমস্যার ধরন:** ${reportCategory}\n\nআমাদের সাপোর্ট টিম আপনার অভিযোগটি গুরুত্বের সাথে যাচাই করে দ্রুত এই নম্বরে যোগাযোগ করবে। প্রয়োজনে সরাসরি আমাদের হোয়াটসঅ্যাপে মেসেজ দিতে পারেন: **01885985097**।`,
+          timestamp: nowTime,
+          actions: [
+            { label: "💬 WhatsApp হেল্পলাইন (01885985097)", type: "link", payload: "https://wa.me/8801885985097", variant: "default" },
+            { label: "🛍️ শপিং চালিয়ে যান", type: "link", payload: "/products", variant: "outline" },
+          ],
+          followUpQuestions: [
+            { label: "🚚 ডেলিভারি চার্জ কত?", intentOrQuery: "del_charge_time" },
+            { label: "📦 আমার অর্ডার কোথায়?", intentOrQuery: "acc_my_latest_order" },
+          ],
+        },
+      ]);
+    } else {
+      toast.error("রিপোর্ট জমা দিতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।");
+    }
+  };
+
+  // Load FAQs from Central Service
+  useEffect(() => {
+    fetchAllFAQs().then((list) => {
+      if (list && list.length > 0) setFaqs(list);
+    });
+  }, []);
+
+  // Auto scroll to bottom
   useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
-  }, [messages, isTyping, toolStatus]);
+  }, [messages, isProcessing]);
 
-  // Handle Question Click Execution
-  const handleSelectQuestion = async (queryTextOrId: string, customDisplayLabel?: string) => {
-    if (isTyping || !queryTextOrId.trim()) return;
-
-    const trimmed = queryTextOrId.trim();
-    const targetQuestionId = ACTION_TO_QUESTION_ID[trimmed.toLowerCase()] || ACTION_TO_QUESTION_ID[queryTextOrId.toLowerCase()];
-
-    let matchedKb: RecommendedQuestion | undefined;
-    if (targetQuestionId) {
-      matchedKb = RECOMMENDED_QUESTIONS.find((q) => q.id === targetQuestionId);
-    } else {
-      matchedKb = RECOMMENDED_QUESTIONS.find(
-        (q) =>
-          q.id.toLowerCase() === trimmed.toLowerCase() ||
-          q.question.toLowerCase() === trimmed.toLowerCase() ||
-          (q.shortLabel && q.shortLabel.toLowerCase() === trimmed.toLowerCase())
-      );
-    }
-
-    const questionDisplayText = customDisplayLabel || matchedKb?.question || trimmed;
-    const userMessageId = `user-${Date.now()}`;
-
-    const newMsg: AIMessage = {
-      id: userMessageId,
-      sender: "user",
-      text: questionDisplayText,
-      timestamp: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
-    };
-
-    setMessages((prev) => [...prev, newMsg]);
-    setIsTyping(true);
-    setActiveQuestionId(matchedKb?.id || trimmed);
-    setToolStatus("⚡ Sigma সঠিক উত্তর প্রস্তুত করছে...");
-
-    try {
-      const conversationHistory = messages.map((m) => ({
-        sender: m.sender,
-        text: m.text,
-      }));
-
-      const res = await askSigmaAIAgent(trimmed || matchedKb?.id || questionDisplayText, {
-        userName: cleanName,
-        userId: user?.id || `guest_${Date.now()}`,
-        catalog,
-        cartState: cartItems,
-        history: conversationHistory,
-        userOrders,
-        pageContext: {
-          currentPath: "/messages",
-        },
-      });
-
-      // Handle Real-Time Actions if any
-      if (res.actions && res.actions.length > 0) {
-        for (const action of res.actions) {
-          if (action.type === "ADD_TO_CART" && action.data?.productId) {
-            await addToCart(String(action.data.productId), action.data.quantity || 1);
-            toast.success(`🛒 "${action.data.name || "Product"}" কার্টে যোগ করা হয়েছে!`);
-          } else if (action.type === "REMOVE_FROM_CART" && action.data?.productId) {
-            await removeItem(String(action.data.productId));
-            toast.info("কার্ট থেকে পণ্য রিমুভ করা হয়েছে।");
-          } else if (action.type === "CLEAR_CART") {
-            await clearCart();
-            toast.info("কার্ট খালি করা হয়েছে।");
-          }
-        }
-      }
-
-      const aiMsg: AIMessage = {
-        id: `ai-${Date.now()}`,
-        sender: "ai",
-        text: res.text,
-        timestamp: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
-        products: res.products,
-        comparison: res.comparison,
-        orderDraft: res.orderDraft,
-        tracking: res.tracking,
-        ticket: res.ticket,
-        quickActions: res.quickActions,
-      };
-
-      setMessages((prev) => [...prev, aiMsg]);
-    } catch (err) {
-      console.error("[Sigma Messages Question Error]:", err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `ai-err-${Date.now()}`,
-          sender: "ai",
-          text: "দুঃখিত, এই মুহূর্তে তথ্যটি আনতে সমস্যা হচ্ছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
-          timestamp: "Just now",
-        },
-      ]);
-    } finally {
-      setIsTyping(false);
-      setActiveQuestionId(null);
-      setToolStatus(null);
-    }
+  // Handle Start Over (Reset conversation)
+  const handleStartOver = () => {
+    setConversationState(INITIAL_CONVERSATION_STATE);
+    setMessages([getGreetingMessage()]);
+    toast.info("কথোপকথন রিস্টার্ট করা হয়েছে");
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim() || isTyping) return;
-    const text = inputText.trim();
-    setInputText("");
-    handleSelectQuestion(text);
-  };
+  // Dispatch and handle Intent / Question Click
+  const handleUserSelect = async (queryOrIntent: string, displayLabel?: string) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
 
-  // Order Confirmation Callback from OrderConfirmationCard
-  const handleConfirmOrder = async (draftId: string, token: string, paymentMethod: string) => {
-    const res = await confirmSigmaOrder(draftId, token, paymentMethod);
-    if (res.success) {
-      await clearCart().catch(() => {});
+    const userText = displayLabel || queryOrIntent;
+    const userMsgId = `user-${Date.now()}`;
+    const botMsgId = `bot-${Date.now()}`;
+    const nowTime = new Date().toLocaleTimeString("bn-BD", { hour: "numeric", minute: "2-digit", hour12: true });
 
-      const orderNumber = res.orderNumber || `ORD-${Date.now().toString().slice(-6)}`;
-      const orderId = res.orderId || `ord_${Date.now()}`;
-
-      try {
-        const firestoreDoc = {
-          id: orderId,
-          order_id: orderId,
-          order_number: orderNumber,
-          orderNumber,
-          user_id: user?.id || `guest_${Date.now()}`,
-          total: 760,
-          status: "pending",
-          payment_method: paymentMethod,
-          payment_status: "pending",
-          source: "sigma_ai_agent",
-          created_at: new Date().toISOString()
-        };
-        await setDoc(doc(db, "orders", orderId), firestoreDoc, { merge: true }).catch(() => {});
-
-        sendOrderSuccessPushNotification({
-          orderNumber,
-          customerName: cleanName || "সম্মানিত গ্রাহক",
-          productName: "Sigma Verified Order",
-          totalAmount: 760,
-          paymentMethod,
-          orderId
-        }).catch(() => {});
-
-        sendTelegramOrderNotification({
-          orderNumber,
-          customerName: cleanName || "Sigma Customer",
-          phone: "017XXXXXXXX",
-          address: "Dhaka, Bangladesh",
-          city: "Dhaka",
-          paymentMethod,
-          total: 760,
-          items: [{ name: "Sigma Assisted Order Item", quantity: 1, price: 760 }]
-        }).catch(() => {});
-      } catch (err) {
-        console.warn("Sync order error:", err);
-      }
-
-      toast.success(`🎉 অর্ডার সফল! Order ID: #${orderNumber}`);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `ai-ord-succ-${Date.now()}`,
-          sender: "ai",
-          text: `🎉 আলহামদুলিল্লাহ! আপনার অর্ডারটি নিশ্চিত করা হয়েছে।\n\n📦 **অর্ডার আইডি:** \`#${orderNumber}\`\n\nআমাদের প্রতিনিধি খুব শীঘ্রই অর্ডারটি প্রসেস করে আপনার ঠিকানায় পাঠিয়ে দেবেন। যেকোনো প্রয়োজনে আমাকে ট্র্যাকিং সম্পর্কে জিজ্ঞাসা করতে পারেন!`,
-          timestamp: "Just now"
-        }
-      ]);
-    } else {
-      toast.error(res.message || "অর্ডার কনফার্ম করতে সমস্যা হয়েছে");
-    }
-  };
-
-  // Add to cart from Product Card
-  const handleProductCardAddToCart = async (p: SigmaProductCardData) => {
-    await addToCart(String(p.id), 1);
-    toast.success(`🛒 "${p.name}" কার্টে যোগ করা হয়েছে!`);
+    // 1. Add User Message Bubble
     setMessages((prev) => [
       ...prev,
       {
-        id: `ai-cart-note-${Date.now()}`,
-        sender: "ai",
-        text: `**${p.name}** সফলভাবে আপনার কার্টে যোগ করা হয়েছে! 🛍️✨\n\nআপনি চাইলে এখনই চেকআউট করতে পারেন অথবা আরও প্রোডাক্ট দেখতে পারেন।`,
-        timestamp: "Just now",
-        quickActions: [
-          { label: "🛒 কার্ট দেখুন ও চেকআউট করুন", action: "view_cart", link: "/cart" },
-          { label: "🚚 ডেলিভারি চার্জ কত?", action: "pop-3" },
-          { label: "🔥 আরও সেরা গ্যাজেট দেখাও", action: "pop-2" }
-        ]
-      }
+        id: userMsgId,
+        sender: "user",
+        text: userText,
+        timestamp: nowTime,
+      },
     ]);
+
+    // Track Question Click for Admin Analytics
+    trackQuestionClick(queryOrIntent);
+
+    // 2. Resolve Multi-Step or Knowledge Base Intent
+    try {
+      // -------------------------------------------------------------
+      // MULTI-STEP FLOW A: PRODUCT FINDER (Category -> Budget -> Scored Match)
+      // -------------------------------------------------------------
+      if (queryOrIntent === "flow_product_finder" || queryOrIntent === "prod_recommend_guided") {
+        setConversationState((prev) => ({ ...prev, currentIntent: "PRODUCT_FINDER", currentStep: "CATEGORY" }));
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: "অবশ্যই! আপনার জন্য পারফেক্ট পণ্যটি খুঁজে বের করতে সাহায্য করছি।\n\nআপনি কোন ধরনের পণ্য খুঁজছেন? নিচে থেকে ক্যাটাগরি নির্বাচন করুন:",
+            timestamp: nowTime,
+            followUpQuestions: [
+              { label: "⌚ স্মার্টওয়াচ (Smartwatch)", intentOrQuery: "cat_select_smartwatch", icon: "⌚" },
+              { label: "🎧 ইয়ারবাডস ও অডিও (Audio)", intentOrQuery: "cat_select_audio", icon: "🎧" },
+              { label: "📱 গ্যাজেটস ও এক্সেসরিজ", intentOrQuery: "cat_select_gadgets", icon: "📱" },
+              { label: "👕 ফ্যাশন ও পোশাক", intentOrQuery: "cat_select_fashion", icon: "👕" },
+              { label: "🏠 হোম ও লাইফস্টাইল", intentOrQuery: "cat_select_home", icon: "🏠" },
+              { label: "🌐 সকল পণ্য কালেকশন", intentOrQuery: "cat_select_all", icon: "🌐" },
+            ],
+          },
+        ]);
+        setIsProcessing(false);
+        return;
+      }
+
+      // Product Finder: Category Selected -> Ask Budget
+      if (queryOrIntent.startsWith("cat_select_")) {
+        const catKey = queryOrIntent.replace("cat_select_", "");
+        const catLabels: Record<string, string> = {
+          smartwatch: "স্মার্টওয়াচ",
+          audio: "ইয়ারবাডস ও অডিও",
+          gadgets: "গ্যাজেটস ও এক্সেসরিজ",
+          fashion: "ফ্যাশন ও পোশাক",
+          home: "হোম ও লাইফস্টাইল",
+          all: "সকল পণ্য",
+        };
+        const catLabel = catLabels[catKey] || catKey;
+
+        setConversationState((prev) => ({
+          ...prev,
+          selectedCategory: catKey,
+          selectedCategoryLabel: catLabel,
+          currentStep: "BUDGET",
+        }));
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: `চমৎকার! নির্বাচিত ক্যাটাগরি: **${catLabel}**।\n\nএবার আপনার আনুমানিক বাজেট কত তা নির্বাচন করুন:`,
+            timestamp: nowTime,
+            followUpQuestions: [
+              { label: "💰 ৳৫০০-এর নিচে", intentOrQuery: `budget_under_500_${catKey}`, icon: "💰" },
+              { label: "💰 ৳৫০০ – ৳১,০০০", intentOrQuery: `budget_500_1000_${catKey}`, icon: "💰" },
+              { label: "💰 ৳১,০০০ – ৳২,০০০", intentOrQuery: `budget_1000_2000_${catKey}`, icon: "💰" },
+              { label: "💎 ৳২,০০০+", intentOrQuery: `budget_above_2000_${catKey}`, icon: "💎" },
+              { label: "🌟 যেকোনো বাজেট", intentOrQuery: `budget_any_${catKey}`, icon: "🌟" },
+            ],
+          },
+        ]);
+        setIsProcessing(false);
+        return;
+      }
+
+      // Product Finder: Budget Selected -> Live DB Query & Scoring
+      if (queryOrIntent.startsWith("budget_")) {
+        let minB: number | null = null;
+        let maxB: number | null = null;
+        let budgetLabel = "যেকোনো বাজেট";
+        const parts = queryOrIntent.split("_");
+        const catKey = parts[parts.length - 1];
+
+        if (queryOrIntent.includes("under_500")) {
+          maxB = 500;
+          budgetLabel = "৳৫০০-এর নিচে";
+        } else if (queryOrIntent.includes("500_1000")) {
+          minB = 500;
+          maxB = 1000;
+          budgetLabel = "৳৫০০ – ৳১,০০০";
+        } else if (queryOrIntent.includes("1000_2000")) {
+          minB = 1000;
+          maxB = 2000;
+          budgetLabel = "৳১,০০০ – ৳২,০০০";
+        } else if (queryOrIntent.includes("above_2000")) {
+          minB = 2000;
+          budgetLabel = "৳২,০০০+";
+        }
+
+        const scored = await getScoredRecommendedProducts({
+          categorySlug: catKey === "all" ? null : catKey,
+          minBudget: minB,
+          maxBudget: maxB,
+          limit: 4,
+        });
+
+        if (scored.length > 0) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: botMsgId,
+              sender: "bot",
+              text: `আপনার নির্বাচিত বাজেট (${budgetLabel}) অনুযায়ী লাইভ ডাটাবেজ থেকে ম্যাচ করা সেরা পণ্যসমূহ:`,
+              timestamp: nowTime,
+              products: scored,
+              actions: [
+                { label: "🛒 কার্ট দেখুন", type: "link", payload: "/cart", variant: "default" },
+                { label: "🛍️ আরও পণ্য দেখুন", type: "link", payload: "/products", variant: "outline" },
+              ],
+              followUpQuestions: [
+                { label: "⚖️ দুটি প্রোডাক্টের তুলনা করুন", intentOrQuery: "flow_product_compare", icon: "⚖️" },
+                { label: "🚚 ডেলিভারি চার্জ কত?", intentOrQuery: "del_charge_time", icon: "🚚" },
+                { label: "🔄 অন্য ক্যাটাগরি দেখুন", intentOrQuery: "flow_product_finder", icon: "🔄" },
+              ],
+            },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: botMsgId,
+              sender: "bot",
+              text: `আপনার নির্বাচিত বাজেট (${budgetLabel}) অনুযায়ী এই মুহূর্তে সরাসরি কোনো স্টক পাওয়া যায়নি।\nতবে আপনি আমাদের সম্পূর্ণ ক্যাটালগে অন্যান্য প্রোডাক্ট দেখতে পারেন:`,
+              timestamp: nowTime,
+              actions: [
+                { label: "🛍️ সম্পূর্ণ ক্যাটালগ দেখুন", type: "link", payload: "/products", variant: "default" },
+                { label: "📞 কাস্টমার সাপোর্ট", type: "link", payload: "/contact", variant: "outline" },
+              ],
+              followUpQuestions: [
+                { label: "🔄 অন্য বাজেটে খুঁজুন", intentOrQuery: `cat_select_${catKey}`, icon: "🔄" },
+                { label: "🔥 সর্বাধিক বিক্রিত পণ্য", intentOrQuery: "flow_product_finder", icon: "🔥" },
+              ],
+            },
+          ]);
+        }
+
+        setIsProcessing(false);
+        return;
+      }
+
+      // -------------------------------------------------------------
+      // MULTI-STEP FLOW B: PRODUCT COMPARISON (Live 2-Product Comparison)
+      // -------------------------------------------------------------
+      if (queryOrIntent === "flow_product_compare") {
+        const topProds = await getScoredRecommendedProducts({ limit: 6 });
+        if (topProds.length >= 2) {
+          const comp = generateObjectiveComparison(topProds[0].product, topProds[1].product);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: botMsgId,
+              sender: "bot",
+              text: `আমাদের শীর্ষ দুটি ট্রেন্ডিং পণ্যের লাইভ স্পেসিফিকেশন ও মূল্য তুলনা নিচে দেওয়া হলো:\n\n**${comp.productA.name}** বনাম **${comp.productB.name}**\n\n${comp.summary}`,
+              timestamp: nowTime,
+              comparison: comp,
+              actions: [
+                { label: `🛍️ ${comp.productA.name.slice(0, 15)}... দেখুন`, type: "link", payload: `/product/${comp.productA.slug || comp.productA.id}`, variant: "default" },
+                { label: `🛍️ ${comp.productB.name.slice(0, 15)}... দেখুন`, type: "link", payload: `/product/${comp.productB.slug || comp.productB.id}`, variant: "outline" },
+              ],
+              followUpQuestions: [
+                { label: "🚚 ডেলিভারি চার্জ কত?", intentOrQuery: "del_charge_time", icon: "🚚" },
+                { label: "💵 ক্যাশ অন ডেলিভারি আছে?", intentOrQuery: "pay_cod_available", icon: "💵" },
+                { label: "🛍️ নতুন পণ্য খুঁজুন", intentOrQuery: "flow_product_finder", icon: "🛍️" },
+              ],
+            },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: botMsgId,
+              sender: "bot",
+              text: "দুঃখিত, তুলনার জন্য প্রয়োজনীয় লাইভ পণ্য ডেটা এই মুহূর্তে যথেষ্ট নয়। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।",
+              timestamp: nowTime,
+              actions: [{ label: "🛍️ সকল পণ্য দেখুন", type: "link", payload: "/products", variant: "default" }],
+            },
+          ]);
+        }
+        setIsProcessing(false);
+        return;
+      }
+
+      // -------------------------------------------------------------
+      // AUTH FLOW: LIVE USER ORDERS & ORDER STATUS
+      // -------------------------------------------------------------
+      if (queryOrIntent === "acc_my_latest_order" || queryOrIntent === "user_orders") {
+        if (!user) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: botMsgId,
+              sender: "bot",
+              text: "আপনার ব্যক্তিগত অর্ডারের লাইভ তথ্য ও স্ট্যাটাস দেখতে অনুগ্রহ করে প্রথমে আপনার অ্যাকাউন্টে লগইন করুন:",
+              timestamp: nowTime,
+              actions: [
+                { label: "🔑 লগইন করুন", type: "link", payload: "/login?redirect=/messages", variant: "default" },
+                { label: "📦 অর্ডার ট্র্যাকিং পেজ", type: "link", payload: "/track", variant: "outline" },
+              ],
+              followUpQuestions: [
+                { label: "🚚 ডেলিভারি কতদিন লাগে?", intentOrQuery: "del_charge_time", icon: "🚚" },
+                { label: "📞 কাস্টমার সাপোর্ট", intentOrQuery: "tech_support_contact", icon: "📞" },
+              ],
+            },
+          ]);
+          setIsProcessing(false);
+          return;
+        }
+
+        const userOrders = await getLiveUserOrders(user.id);
+
+        if (userOrders.length > 0) {
+          const latest = userOrders[0];
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: botMsgId,
+              sender: "bot",
+              text: `আপনার সর্বশেষ অর্ডারের (**#${latest.orderNumber}**) লাইভ ট্র্যাকিং ও বিস্তারিত স্ট্যাটাস:`,
+              timestamp: nowTime,
+              order: latest,
+              ordersList: userOrders.length > 1 ? userOrders.slice(1) : undefined,
+              actions: [
+                { label: "📦 বিস্তারিত ট্র্যাকিং দেখুন", type: "link", payload: `/orders/${latest.orderId}`, variant: "default" },
+                { label: "📋 সকল অর্ডার তালিকা", type: "link", payload: "/orders", variant: "outline" },
+              ],
+              followUpQuestions: [
+                { label: "🔄 রিটার্ন ও এক্সচেঞ্জ নিয়ম", intentOrQuery: "ret_policy_check", icon: "🔄" },
+                { label: "📞 কাস্টমার সাপোর্ট কেয়ার", intentOrQuery: "tech_support_contact", icon: "📞" },
+              ],
+            },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: botMsgId,
+              sender: "bot",
+              text: "আপনার অ্যাকাউন্টে বর্তমানে কোনো পূর্ববর্তী অর্ডার পাওয়া যায়নি। নতুন পণ্য অর্ডার করতে নিচের বাটনে ক্লিক করুন:",
+              timestamp: nowTime,
+              actions: [
+                { label: "🛍️ পণ্য ব্রাউজ করুন", type: "link", payload: "/products", variant: "default" },
+              ],
+              followUpQuestions: [
+                { label: "🛍️ প্রোডাক্ট রিকমেন্ডেশন", intentOrQuery: "flow_product_finder", icon: "🛍️" },
+                { label: "🎁 চলতি অফারসমূহ", intentOrQuery: "off_active_coupons", icon: "🎁" },
+              ],
+            },
+          ]);
+        }
+        setIsProcessing(false);
+        return;
+      }
+
+      // -------------------------------------------------------------
+      // DYNAMIC DATA INTENTS: SHIPPING CONFIG, STORE CONTACT, COUPONS
+      // -------------------------------------------------------------
+      if (queryOrIntent === "del_charge_time" || queryOrIntent === "shipping_config") {
+        const settings = await getLiveStoreSettings();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: `🚚 **Durtup.shop অফিসিয়াল ডেলিভারি তথ্য:**\n\n• **সারাদেশে ডেলিভারি চার্জ:** মাত্র **৳${settings.insideDhakaFee}** (সারা বাংলাদেশ মাত্র ৬০ টাকা)\n• **ঢাকার ভিতরে ডেলিভারি সময়:** ${settings.insideDhakaTime}\n• **ঢাকার বাইরে ডেলিভারি সময়:** ${settings.outsideDhakaTime}\n\n📦 প্রতিটি পার্সেল ক্লোজ মনিটরিং ও লাইভ এসএমএস ট্র্যাকিং সহ পাঠানো হয়।`,
+            timestamp: nowTime,
+            actions: [
+              { label: "📦 অর্ডার ট্র্যাক করুন", type: "link", payload: "/track", variant: "default" },
+              { label: "🛍️ শপিং শুরু করুন", type: "link", payload: "/products", variant: "outline" },
+            ],
+            followUpQuestions: [
+              { label: "💵 ক্যাশ অন ডেলিভারি নিয়ম", intentOrQuery: "pay_cod_available" },
+              { label: "🔄 ৭ দিন রিটার্ন ও চেক পলিসি", intentOrQuery: "ret_policy_check" },
+              { label: "📦 আমার অর্ডার কোথায়?", intentOrQuery: "acc_my_latest_order" },
+            ],
+          },
+        ]);
+        setIsProcessing(false);
+        return;
+      }
+
+      if (queryOrIntent === "off_active_coupons" || queryOrIntent === "active_coupons") {
+        const coupons = await getLiveActiveCoupons();
+        const couponListText = coupons.map((c) => `• কোড: **${c.code}** — ${c.discountText} (${c.description})`).join("\n");
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: `🎁 **বর্তমানে সক্রিয় স্পেশাল ডিসকাউন্ট কুপনসমূহ:**\n\n${couponListText}\n\nচেকআউট পেজে কুপন কোডটি প্রবেশ করিয়ে সরাসরি ডিসকাউন্ট উপভোগ করুন!`,
+            timestamp: nowTime,
+            actions: [
+              { label: "🛍️ অফার প্রোডাক্ট দেখুন", type: "link", payload: "/products?filter=deals", variant: "default" },
+              { label: "🛒 কার্টে যান", type: "link", payload: "/cart", variant: "outline" },
+            ],
+            followUpQuestions: [
+              { label: "🛍️ প্রোডাক্ট রিকমেন্ডেশন", intentOrQuery: "flow_product_finder", icon: "🛍️" },
+              { label: "🚚 ডেলিভারি চার্জ কত?", intentOrQuery: "del_charge_time", icon: "🚚" },
+            ],
+          },
+        ]);
+        setIsProcessing(false);
+        return;
+      }
+
+      if (queryOrIntent === "flow_submit_report" || queryOrIntent === "open_report") {
+        setIsReportModalOpen(true);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: `🚨 **সমস্যা বা অভিযোগ রিপোর্ট ফরম:**\n\nআপনার যেকোনো অভিযোগ বা সমস্যার দ্রুত সমাধানের জন্য রিপোর্ট ফর্মটি পূরণ করুন। আমাদের কাস্টমার কেয়ার টিম আপনার নম্বরে সরাসরি যোগাযোগ করে বিষয়টি সমাধান করবে।\n\nজরুরি প্রয়োজনে সরাসরি আমাদের বিজনেস হোয়াটসঅ্যাপে যোগাযোগ করতে পারেন: **01885985097**।`,
+            timestamp: nowTime,
+            actions: [
+              { label: "📝 অভিযোগ ফর্ম পূরণ করুন", type: "callback", payload: "open_report_dialog", variant: "default" },
+              { label: "💬 WhatsApp হেল্পলাইন (01885985097)", type: "link", payload: "https://wa.me/8801885985097", variant: "outline" },
+            ],
+            followUpQuestions: [
+              { label: "📞 কাস্টমার কেয়ার হেল্পলাইন", intentOrQuery: "tech_support_contact" },
+              { label: "📦 আমার অর্ডার কোথায়?", intentOrQuery: "acc_my_latest_order" },
+            ],
+          },
+        ]);
+        setIsProcessing(false);
+        return;
+      }
+
+      if (queryOrIntent === "tech_support_contact" || queryOrIntent === "site_contact") {
+        const settings = await getLiveStoreSettings();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: `📞 **Durtup.shop অফিসিয়াল কাস্টমার কেয়ার ও হেল্পলাইন:**\n\n• **হোয়াটসঅ্যাপ বিজনেস নম্বর:** **01885985097**\n• **সরাসরি হেল্পলাইন কল:** **01885985097**\n• **ইমেইল:** ${settings.email}\n• **অফিস ঠিকানা:** ${settings.address}\n• **সার্ভিস সময়:** প্রতিদিন সকাল ৯:০০ টা থেকে রাত ১১:০০ টা পর্যন্ত।\n\nআপনার কোনো অর্ডার বা সার্ভিস নিয়ে অভিযোগ থাকলে সরাসরি রিপোর্ট জমা দিতে পারেন।`,
+            timestamp: nowTime,
+            actions: [
+              { label: "💬 WhatsApp (01885985097)", type: "link", payload: "https://wa.me/8801885985097", variant: "default" },
+              { label: "📞 সরাসরি কল করুন (01885985097)", type: "link", payload: "tel:01885985097", variant: "outline" },
+              { label: "🚨 অভিযোগ রিপোর্ট করুন", type: "callback", payload: "open_report_dialog", variant: "outline" },
+            ],
+            followUpQuestions: [
+              { label: "🚨 সমস্যা বা অভিযোগ রিপোর্ট", intentOrQuery: "flow_submit_report" },
+              { label: "🔄 ৭ দিন রিটার্ন ও চেক পলিসি", intentOrQuery: "ret_policy_check" },
+              { label: "📦 আমার অর্ডার কোথায়?", intentOrQuery: "acc_my_latest_order" },
+            ],
+          },
+        ]);
+        setIsProcessing(false);
+        return;
+      }
+
+      // -------------------------------------------------------------
+      // STANDARD KNOWLEDGE BASE ITEM LOOKUP
+      // -------------------------------------------------------------
+      const matchedFaq = faqs.find(
+        (f) =>
+          f.id.toLowerCase() === queryOrIntent.toLowerCase() ||
+          f.questionBn.toLowerCase() === queryOrIntent.toLowerCase() ||
+          f.questionEn.toLowerCase() === queryOrIntent.toLowerCase()
+      );
+
+      if (matchedFaq) {
+        // Collect related follow-up questions
+        const relatedFollowUps = (matchedFaq.relatedQuestionIds || [])
+          .map((id) => faqs.find((f) => f.id === id))
+          .filter(Boolean)
+          .map((f) => ({
+            label: f!.questionBn,
+            intentOrQuery: f!.id,
+          }));
+
+        // Default follow-ups if empty
+        const finalFollowUps = relatedFollowUps.length > 0 ? relatedFollowUps : [
+          { label: "🛍️ প্রোডাক্ট রিকমেন্ডেশন", intentOrQuery: "flow_product_finder", icon: "🛍️" },
+          { label: "🚚 ডেলিভারি চার্জ ও সময়", intentOrQuery: "del_charge_time", icon: "🚚" },
+          { label: "📞 কাস্টমার সাপোর্ট কেয়ার", intentOrQuery: "tech_support_contact", icon: "📞" },
+        ];
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: matchedFaq.answerBn,
+            timestamp: nowTime,
+            actions: matchedFaq.actionButtons,
+            followUpQuestions: finalFollowUps,
+          },
+        ]);
+      } else {
+        // ZERO-HALLUCINATION SAFE FALLBACK
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: "দুঃখিত, এই তথ্যটি বর্তমানে নিশ্চিতভাবে পাওয়া যাচ্ছে না। সঠিক ও হালনাগাদ তথ্যের জন্য অনুগ্রহ করে আমাদের কাস্টমার সাপোর্ট টিমের সাথে যোগাযোগ করুন।",
+            timestamp: nowTime,
+            actions: [
+              { label: "📞 কাস্টমার সাপোর্ট", type: "link", payload: "/contact", variant: "default" },
+              { label: "🛍️ পণ্য ক্যাটালগ", type: "link", payload: "/products", variant: "outline" },
+            ],
+            followUpQuestions: [
+              { label: "🛍️ প্রোডাক্ট রিকমেন্ডেশন", intentOrQuery: "flow_product_finder", icon: "🛍️" },
+              { label: "🚚 ডেলিভারি চার্জ কত?", intentOrQuery: "del_charge_time", icon: "🚚" },
+              { label: "🔥 মূল মেনু", intentOrQuery: "root_greeting", icon: "🔥" },
+            ],
+          },
+        ]);
+      }
+    } catch (err) {
+      console.error("[BotEngine Error]:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: botMsgId,
+          sender: "bot",
+          text: "দুঃখিত, এই মুহূর্তে তথ্য লোড করতে সমস্যা হচ্ছে। কিছুক্ষণ পরে আবার চেষ্টা করুন অথবা কাস্টমার কেয়ারে যোগাযোগ করুন।",
+          timestamp: nowTime,
+          isError: true,
+          actions: [{ label: "📞 কাস্টমার কেয়ার", type: "link", payload: "/contact", variant: "default" }],
+        },
+      ]);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  // Order now direct draft flow
-  const handleProductCardOrderNow = async (p: SigmaProductCardData) => {
-    await addToCart(String(p.id), 1);
-    navigate(`/checkout?productId=${p.id}`);
+  // Add to Cart handler with feedback
+  const handleAddToCart = (product: Product, e: React.MouseEvent) => {
+    e.stopPropagation();
+    addToCart(product, 1);
+    toast.success(`${product.name} কার্টে যোগ করা হয়েছে!`, {
+      action: {
+        label: "কার্ট দেখুন",
+        onClick: () => navigate("/cart"),
+      },
+    });
   };
 
-  // Active category questions
-  const currentCategoryQuestions = RECOMMENDED_QUESTIONS.filter(
-    (q) => q.category === selectedCategory
-  );
-
-  // Filtered list for "All Questions" search dialog
-  const allFilteredQuestions = RECOMMENDED_QUESTIONS.filter((q) => {
-    if (!searchQuestionTerm.trim()) return true;
-    const term = searchQuestionTerm.toLowerCase();
+  // Filtered FAQs for Question Search Modal
+  const allFilteredFaqs = faqs.filter((f) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
     return (
-      q.question.toLowerCase().includes(term) ||
-      (q.shortLabel && q.shortLabel.toLowerCase().includes(term)) ||
-      q.answerText.toLowerCase().includes(term)
+      f.questionBn.toLowerCase().includes(term) ||
+      f.questionEn.toLowerCase().includes(term) ||
+      f.answerBn.toLowerCase().includes(term)
     );
   });
 
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-gradient-to-br from-sky-100/90 via-cyan-50/80 to-blue-100/90 text-slate-900 overflow-hidden font-sans select-none selection:bg-cyan-500 selection:text-white">
-      {/* Liquid Water Ambient Glows */}
-      <div className="pointer-events-none absolute -top-32 -left-32 w-80 h-80 bg-cyan-300/30 rounded-full blur-3xl" />
-      <div className="pointer-events-none absolute top-1/3 -right-32 w-80 h-80 bg-sky-300/30 rounded-full blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 left-1/4 w-80 h-80 bg-blue-300/25 rounded-full blur-3xl" />
-
-      {/* Top Header */}
-      <header className="shrink-0 z-30 bg-gradient-to-r from-sky-500/95 via-cyan-500/90 to-blue-600/95 backdrop-blur-2xl text-white px-3 sm:px-4 py-2.5 shadow-[0_4px_20px_rgba(2,132,199,0.22)] border-b border-white/40 flex items-center justify-between">
-        {/* Left: Back Button & Title */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 border border-white/40 active:scale-95 text-white transition-all flex items-center justify-center shadow-[inset_0_1px_2px_rgba(255,255,255,0.7)] backdrop-blur-md"
-            title="Go Back"
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 font-sans pb-16 md:pb-0">
+      {/* 1. Header Bar with Brand Avatar, Status & Controls */}
+      <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-3 sm:px-6 py-2.5 flex items-center justify-between shadow-2xs">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/"
+            className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+            title="হোমে ফিরে যান"
           >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 border border-white shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
-              <h1 className="text-base sm:text-lg font-black tracking-wide leading-none text-white drop-shadow-sm">Sigma</h1>
-              <Badge className="bg-white/25 hover:bg-white/30 text-white text-[9px] font-black uppercase px-2 py-0.5 border border-white/40 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] backdrop-blur-md">
-                AI Shopping Manager
-              </Badge>
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+
+          <div className="flex items-center gap-2.5">
+            <SigmaAILogo className="w-9 h-9 sm:w-10 sm:h-10" />
+
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h1 className="font-extrabold text-sm sm:text-base bg-gradient-to-r from-slate-900 via-cyan-800 to-orange-600 dark:from-white dark:via-cyan-300 dark:to-orange-400 bg-clip-text text-transparent leading-none">
+                  Sigma AI
+                </h1>
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 font-black border-cyan-300 dark:border-cyan-700/60 text-cyan-600 dark:text-cyan-400 bg-cyan-50/80 dark:bg-cyan-950/40 uppercase tracking-wide">
+                  Smart AI
+                </Badge>
+              </div>
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                Durtup.shop অফিসিয়াল শপিং ও সাপোর্ট অ্যাসিস্ট্যান্ট
+              </p>
             </div>
-            <p className="text-[10px] text-white/95 font-medium mt-0.5 drop-shadow-xs">
-              Powered by Durtup.shop • স্বয়ংক্রিয় প্রশ্নোত্তর গাইড
-            </p>
           </div>
         </div>
 
-        {/* Right Actions & Menu */}
-        <div className="flex items-center gap-2">
+        {/* Action Controls */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Quick WhatsApp Support */}
+          <a
+            href="https://wa.me/8801885985097"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2.5 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
+            title="WhatsApp কাস্টমার কেয়ার (01885985097)"
+          >
+            <MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span className="hidden sm:inline">WhatsApp</span>
+          </a>
+
+          {/* Quick Report Issue Button */}
           <button
             type="button"
-            onClick={() => setMessages([initialGreeting])}
-            className="px-3.5 py-1.5 rounded-full bg-white/20 hover:bg-white/30 border border-white/40 active:scale-95 text-white transition-all flex items-center gap-1.5 text-xs font-bold shadow-[inset_0_1px_2px_rgba(255,255,255,0.7)] backdrop-blur-md"
-            title="Reset Conversation"
+            onClick={() => setIsReportModalOpen(true)}
+            className="px-2.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-1 transition-colors shadow-2xs"
+            title="সমস্যা বা অভিযোগ রিপোর্ট জমা দিন"
           >
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">নতুন চ্যাট</span>
+            <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+            <span className="hidden sm:inline">রিপোর্ট</span>
           </button>
 
-          {/* 3-Dot Dropdown Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="h-9 w-9 rounded-full bg-white/20 hover:bg-white/30 border border-white/40 active:scale-95 text-white transition-all flex items-center justify-center shadow-[inset_0_1px_2px_rgba(255,255,255,0.7)] backdrop-blur-md"
-                title="Options"
-              >
-                <MoreVertical className="h-5 w-5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-white/95 backdrop-blur-2xl border border-sky-100/90 text-slate-800 shadow-[0_12px_40px_rgba(14,165,233,0.18)] rounded-3xl p-1.5 z-50">
-              <DropdownMenuLabel className="text-xs font-bold text-sky-900/70 px-3 py-1.5">
-                Sigma AI অপশনসমূহ
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-sky-100 my-1" />
+          {/* Predefined Search Filter Button */}
+          <button
+            type="button"
+            onClick={() => setIsSearchModalOpen(true)}
+            className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+            title="অনুমোদিত প্রশ্ন খুঁজুন"
+          >
+            <Search className="w-3.5 h-3.5 text-orange-500" />
+            <span className="hidden xs:inline">প্রশ্ন খুঁজুন</span>
+          </button>
 
-              <DropdownMenuItem
-                onClick={() => setMessages([initialGreeting])}
-                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
-              >
-                <RotateCcw className="h-4 w-4 text-cyan-500" />
-                <span>নতুন চ্যাট শুরু করুন</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={() => setIsAllQuestionsOpen(true)}
-                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
-              >
-                <Grid className="h-4 w-4 text-sky-500" />
-                <span>সকল প্রশ্ন একত্রে দেখুন ({RECOMMENDED_QUESTIONS.length})</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={() => navigate("/products")}
-                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
-              >
-                <ShoppingBag className="h-4 w-4 text-blue-500" />
-                <span>সকল প্রোডাক্ট ক্যাটালগ</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={() => navigate("/track")}
-                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
-              >
-                <Truck className="h-4 w-4 text-emerald-500" />
-                <span>অর্ডার ট্র্যাক করুন</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={() => navigate("/cart")}
-                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
-              >
-                <PackageCheck className="h-4 w-4 text-amber-500" />
-                <span>আমার কার্ট ({cartItems.length})</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={() => navigate("/help")}
-                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-cyan-600 hover:bg-cyan-50/80 rounded-2xl cursor-pointer transition-colors"
-              >
-                <HelpCircle className="h-4 w-4 text-purple-500" />
-                <span>কাস্টমার সাপোর্ট ও হেল্প</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Start Over Button */}
+          <button
+            type="button"
+            onClick={handleStartOver}
+            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold flex items-center gap-1 transition-colors shadow-2xs"
+            title="নতুন করে শুরু করুন"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+            <span className="hidden sm:inline">রিস্টার্ট</span>
+          </button>
         </div>
       </header>
 
-      {/* Messages Scroll Area */}
-      <div 
+      {/* 2. Main Conversation Feed Stream */}
+      <main
         ref={messagesContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3.5 max-w-3xl w-full mx-auto relative z-10 overscroll-contain"
+        className="flex-1 max-w-4xl w-full mx-auto p-3 sm:p-5 space-y-4 overflow-y-auto"
       >
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={cn(
-              "flex flex-col",
-              msg.sender === "user" ? "items-end" : "items-start"
-            )}
-          >
-            {/* Sender identity for AI */}
-            {msg.sender === "ai" && (
-              <div className="flex items-center gap-1.5 mb-1 px-2 text-[11px] font-extrabold text-cyan-700">
-                <span className="text-sm">💧</span>
-                <span>Sigma</span>
-                <span className="text-[10px] text-sky-900/50 font-normal">• Powered by Durtup.shop</span>
-              </div>
-            )}
+        {messages.map((msg, index) => {
+          const isBot = msg.sender === "bot";
 
-            {/* Message Bubble */}
+          return (
             <div
+              key={msg.id || index}
               className={cn(
-                "max-w-[94%] sm:max-w-[85%] p-4 sm:p-5 transition-all",
-                msg.sender === "user"
-                  ? "bg-gradient-to-tr from-cyan-600 via-sky-600 to-blue-600 text-white rounded-3xl rounded-tr-md font-medium shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_0_8px_25px_rgba(2,132,199,0.3)] border border-sky-300/40"
-                  : "bg-white/85 backdrop-blur-2xl border border-white/90 text-slate-800 rounded-3xl rounded-tl-md shadow-[inset_0_2px_4px_rgba(255,255,255,1),_0_10px_30px_rgba(14,165,233,0.12),_0_2px_8px_rgba(0,0,0,0.03)]"
+                "flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300",
+                isBot ? "items-start" : "items-end"
               )}
             >
-              {msg.sender === "user" ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-base">👤</span>
-                  <p className="text-xs sm:text-sm font-semibold leading-relaxed">{msg.text}</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <FormattedMessageText text={msg.text} />
+              {/* Message Bubble Container */}
+              <div
+                className={cn(
+                  "max-w-[92%] sm:max-w-[85%] rounded-2xl p-3.5 sm:p-4 shadow-2xs text-xs sm:text-sm leading-relaxed",
+                  isBot
+                    ? "bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-xs"
+                    : "bg-gradient-to-r from-orange-600 to-amber-600 text-white font-medium rounded-tr-xs shadow-md"
+                )}
+              >
+                {/* Formatted Text Content */}
+                {isBot ? (
+                  <FormattedBotText text={msg.text} />
+                ) : (
+                  <div className="whitespace-pre-line">{msg.text}</div>
+                )}
 
-                  {/* Contextual Follow-up Chips inside AI Message */}
-                  {msg.quickActions && msg.quickActions.length > 0 && (
-                    <div className="pt-2.5 border-t border-sky-100/80 mt-2 space-y-1.5">
-                      <p className="text-[11px] font-bold text-sky-900/60 flex items-center gap-1">
-                        <Sparkles className="h-3 w-3 text-amber-500" />
-                        <span>প্রাসঙ্গিক অপশন ও পরবর্তী পদক্ষেপ:</span>
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {msg.quickActions.map((qa, qIdx) => (
-                          <button
-                            key={qIdx}
-                            type="button"
-                            disabled={isTyping}
-                            onClick={() => {
-                              if (qa.link) {
-                                navigate(qa.link);
-                              } else {
-                                handleSelectQuestion(qa.action || qa.label, qa.label);
-                              }
-                            }}
-                            className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-sky-50/95 hover:bg-sky-100 active:scale-95 border border-sky-200/90 hover:border-cyan-400 text-sky-950 hover:text-cyan-700 transition-all flex items-center gap-1 shadow-xs cursor-pointer backdrop-blur-md"
-                          >
-                            <span>{qa.label}</span>
-                            <ChevronRight className="h-3 w-3 opacity-60 text-cyan-600" />
-                          </button>
-                        ))}
+                {/* Embedded Live Product Recommendations */}
+                {msg.products && msg.products.length > 0 && (
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {msg.products.map(({ product, matchReasons }, pIdx) => {
+                      const img = getSmartProductImage(product.name, product.image);
+                      return (
+                        <div
+                          key={`prod-${product.id}-${pIdx}`}
+                          className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 flex flex-col justify-between hover:shadow-md transition-all"
+                        >
+                          <div className="flex gap-2.5">
+                            <img
+                              src={img}
+                              alt={product.name}
+                              className="w-16 h-16 object-contain bg-white dark:bg-slate-900 rounded-lg p-1 border shrink-0"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-bold text-xs line-clamp-2 text-slate-900 dark:text-slate-100">
+                                {product.name}
+                              </h4>
+                              <div className="flex items-baseline gap-1.5 mt-1">
+                                <span className="font-black text-orange-600 text-sm">
+                                  ৳{Number(product.price).toLocaleString("en-BD")}
+                                </span>
+                                {product.originalPrice && (
+                                  <span className="text-[10px] text-slate-400 line-through">
+                                    ৳{Number(product.originalPrice).toLocaleString("en-BD")}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Match Reasons */}
+                          {matchReasons && matchReasons.length > 0 && (
+                            <div className="mt-2 pt-1.5 border-t border-slate-200 dark:border-slate-800 space-y-0.5">
+                              {matchReasons.map((r, rIdx) => (
+                                <div key={rIdx} className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 shrink-0" />
+                                  <span>{r}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Product Card Actions */}
+                          <div className="flex gap-1.5 mt-2.5 pt-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 h-7 text-[11px] font-semibold"
+                              asChild
+                            >
+                              <Link to={`/product/${product.slug || product.id}`}>
+                                বিস্তারিত দেখুন
+                              </Link>
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="h-7 text-[11px] font-bold bg-orange-600 hover:bg-orange-700 text-white"
+                              onClick={(e) => handleAddToCart(product, e)}
+                            >
+                              <Plus className="w-3.5 h-3.5 mr-1" /> কার্টে নিন
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Embedded Product Comparison Card */}
+                {msg.comparison && (
+                  <div className="mt-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                    <div className="grid grid-cols-3 bg-slate-100 dark:bg-slate-900 p-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 border-b">
+                      <div>বৈশিষ্ট্য</div>
+                      <div className="text-center font-extrabold text-orange-600 truncate">{msg.comparison.productA.name.slice(0, 14)}..</div>
+                      <div className="text-center font-extrabold text-blue-600 truncate">{msg.comparison.productB.name.slice(0, 14)}..</div>
+                    </div>
+                    <div className="divide-y divide-slate-200 dark:divide-slate-800 text-[10px] sm:text-xs">
+                      {msg.comparison.features.map((feat, fIdx) => (
+                        <div key={fIdx} className="grid grid-cols-3 p-2 items-center">
+                          <div className="font-medium text-slate-500">{feat.name}</div>
+                          <div className={cn("text-center font-bold", feat.highlight === "A" && "text-emerald-600 font-extrabold")}>{feat.valueA}</div>
+                          <div className={cn("text-center font-bold", feat.highlight === "B" && "text-emerald-600 font-extrabold")}>{feat.valueB}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Embedded Live Order Tracking Card */}
+                {msg.order && (
+                  <div className="mt-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <div>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase">অর্ডার নম্বর</span>
+                        <h4 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">#{msg.order.orderNumber}</h4>
+                      </div>
+                      <span className={cn("px-2.5 py-1 rounded-full text-[10px] font-black border", msg.order.statusColor)}>
+                        {msg.order.statusTextBn}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-slate-400">অর্ডারের তারিখ:</span>
+                        <div className="font-semibold text-slate-700 dark:text-slate-300">{msg.order.createdAt}</div>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">মোট মূল্য:</span>
+                        <div className="font-bold text-orange-600">৳{Number(msg.order.totalAmount).toLocaleString("en-BD")}</div>
                       </div>
                     </div>
-                  )}
+
+                    {msg.order.items && msg.order.items.length > 0 && (
+                      <div className="pt-1.5 border-t text-[11px] text-slate-600 dark:text-slate-400">
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">আইটেম: </span>
+                        {msg.order.items.map((it) => `${it.name} (x${it.quantity})`).join(", ")}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Action Buttons Attached to Answer */}
+                {msg.actions && msg.actions.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    {msg.actions.map((act, aIdx) => {
+                      if (act.type === "callback") {
+                        return (
+                          <Button
+                            key={aIdx}
+                            size="sm"
+                            variant={act.variant || "default"}
+                            className={cn(
+                              "h-8 text-xs font-bold rounded-xl",
+                              act.variant === "default" && "bg-orange-600 hover:bg-orange-700 text-white"
+                            )}
+                            onClick={() => {
+                              if (act.payload === "open_report_dialog") {
+                                setIsReportModalOpen(true);
+                              }
+                            }}
+                          >
+                            {act.label}
+                          </Button>
+                        );
+                      }
+
+                      return (
+                        <Button
+                          key={aIdx}
+                          size="sm"
+                          variant={act.variant || "default"}
+                          className={cn(
+                            "h-8 text-xs font-bold rounded-xl",
+                            act.variant === "default" && "bg-orange-600 hover:bg-orange-700 text-white"
+                          )}
+                          asChild
+                        >
+                          {act.payload.startsWith("http") ? (
+                            <a href={act.payload} target="_blank" rel="noopener noreferrer">
+                              {act.label} <ExternalLink className="w-3 h-3 ml-1" />
+                            </a>
+                          ) : (
+                            <Link to={act.payload}>
+                              {act.label}
+                            </Link>
+                          )}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Timestamp */}
+              <span className="text-[10px] text-slate-400 mt-1 px-1">
+                {msg.timestamp}
+              </span>
+
+              {/* Context-Aware Follow-Up Question Chips Underneath Bot Answer */}
+              {isBot && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
+                <div className="mt-2.5 max-w-[95%] sm:max-w-[90%] space-y-1.5 pl-1">
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    <span>সম্পর্কিত বিষয় বা প্রশ্ন:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                    {msg.followUpQuestions.map((q, qIdx) => (
+                      <button
+                        key={`fu-${qIdx}`}
+                        type="button"
+                        onClick={() => handleUserSelect(q.intentOrQuery, q.label)}
+                        className="px-3 py-1.5 rounded-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 hover:border-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 text-slate-700 dark:text-slate-200 transition-all shadow-2xs hover:shadow-xs active:scale-95 flex items-center gap-1.5 text-left"
+                      >
+                        <span>{q.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
+          );
+        })}
 
-            {/* Rich Product Cards */}
-            {msg.products && msg.products.length > 0 && (
-              <div className="w-full mt-3 flex gap-3 overflow-x-auto pb-2 pt-1 scrollbar-none">
-                {msg.products.map((p) => (
-                  <SigmaProductCard
-                    key={p.id}
-                    product={p}
-                    onAddToCart={handleProductCardAddToCart}
-                    onOrderNow={handleProductCardOrderNow}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Comparison Card */}
-            {msg.comparison && (
-              <SigmaComparisonCard
-                data={msg.comparison}
-                onAddToCart={(id) => addToCart(String(id), 1)}
-              />
-            )}
-
-            {/* Order Draft Card */}
-            {msg.orderDraft && (
-              <SigmaOrderConfirmationCard
-                draft={msg.orderDraft}
-                onConfirmOrder={handleConfirmOrder}
-              />
-            )}
-
-            {/* Order Tracking Card */}
-            {msg.tracking && (
-              <SigmaOrderTrackingCard data={msg.tracking} />
-            )}
-
-            {/* Support Ticket Card */}
-            {msg.ticket && (
-              <SigmaSupportTicketCard ticket={msg.ticket} />
-            )}
-
-            <span className="text-[10px] text-sky-900/50 mt-1 px-2">{msg.timestamp}</span>
-          </div>
-        ))}
-
-        {/* Live Tool Execution Status */}
-        {toolStatus && (
-          <div className="flex items-center">
-            <SigmaToolActivityIndicator activityText={toolStatus} />
+        {/* Processing / Loading indicator */}
+        {isProcessing && (
+          <div className="flex items-center gap-2 p-3 bg-white dark:bg-slate-900 border rounded-2xl w-max shadow-2xs text-xs text-slate-500">
+            <div className="w-2 h-2 rounded-full bg-orange-500 animate-bounce" />
+            <div className="w-2 h-2 rounded-full bg-orange-500 animate-bounce [animation-delay:0.2s]" />
+            <div className="w-2 h-2 rounded-full bg-orange-500 animate-bounce [animation-delay:0.4s]" />
+            <span className="font-semibold text-[11px] text-slate-600 dark:text-slate-300">তথ্য যাচাই করা হচ্ছে...</span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
-      </div>
+      </main>
 
-      {/* Bottom Horizontal Recommended Question Pills Hub */}
-      <footer className="shrink-0 z-30 bg-white/90 backdrop-blur-2xl border-t border-sky-200/80 shadow-[0_-6px_25px_rgba(2,132,199,0.12)] px-3 pt-2 pb-20 sm:px-4 sm:py-2.5">
-        <div className="max-w-3xl mx-auto space-y-2">
-          {/* Category Filter Pills Row */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-            {QUESTION_CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setSelectedCategory(cat.id)}
-                className={cn(
-                  "whitespace-nowrap shrink-0 px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95",
-                  selectedCategory === cat.id
-                    ? "bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white shadow-[0_2px_8px_rgba(6,182,212,0.35)]"
-                    : "bg-sky-50/90 hover:bg-sky-100 text-sky-950 border border-sky-200/70"
-                )}
-              >
-                <span>{cat.icon}</span>
-                <span>{cat.label.replace(/^.+?\s/, "")}</span>
-              </button>
-            ))}
-
-            <button
-              type="button"
-              onClick={() => setIsAllQuestionsOpen(true)}
-              className="whitespace-nowrap shrink-0 px-2.5 py-1 rounded-full text-xs font-bold bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 flex items-center gap-1 transition-all active:scale-95"
-              title="সব প্রশ্ন একসাথে দেখুন"
-            >
-              <Grid className="h-3 w-3 text-cyan-600" />
-              <span>সব ({RECOMMENDED_QUESTIONS.length})</span>
-            </button>
-          </div>
-
-          {/* Horizontally Scrollable Question Pills Deck (Matching exactly the pill chip style) */}
-          <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none">
-            {currentCategoryQuestions.map((q) => {
-              const isCurrentActive = activeQuestionId === q.id && isTyping;
-
+      {/* 3. Bottom Guided Category Navigation Bar (Zero Text Input) */}
+      <footer className="sticky bottom-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 p-2.5 sm:p-3.5 shadow-lg">
+        <div className="max-w-4xl mx-auto space-y-2">
+          {/* Category Chips Scroll Area */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            {FAQ_CATEGORIES.map((cat) => {
+              const isSelected = selectedCategory === cat.id;
               return (
                 <button
-                  key={q.id}
+                  key={cat.id}
                   type="button"
-                  disabled={isTyping}
-                  onClick={() => handleSelectQuestion(q.id, q.question)}
+                  onClick={() => setSelectedCategory(cat.id)}
                   className={cn(
-                    "whitespace-nowrap shrink-0 text-xs font-bold px-3.5 py-2 rounded-full border transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs",
-                    isCurrentActive
-                      ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_4px_12px_rgba(6,182,212,0.3)]"
-                      : "bg-white/95 hover:bg-white text-slate-800 hover:text-cyan-700 border-sky-200 hover:border-cyan-400 hover:shadow-sm"
+                    "px-3 py-1 rounded-full text-xs font-bold shrink-0 transition-all flex items-center gap-1 shadow-2xs",
+                    isSelected
+                      ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-xs"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
                   )}
                 >
-                  <span className="text-sm">{q.icon}</span>
-                  <span>{q.shortLabel || q.question}</span>
-                  <ChevronRight className="h-3 w-3 opacity-60 text-cyan-600" />
+                  <span>{cat.icon}</span>
+                  <span>{cat.nameBn.replace(/^[^\s]+\s*/, "")}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* Quick Chat Input Form */}
-          <form onSubmit={handleFormSubmit} className="flex items-center gap-1.5 pt-1">
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Sigma-কে যেকোনো প্রশ্ন বা পণ্যের নাম লিখুন..."
-              disabled={isTyping}
-              className="flex-1 px-4 py-2 text-xs sm:text-sm rounded-full bg-sky-50/90 dark:bg-slate-800 border border-sky-200/90 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white shadow-inner"
-            />
-            <button
-              type="submit"
-              disabled={!inputText.trim() || isTyping}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
-              title="পাঠান"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </form>
+          {/* Quick Clickable Questions in Active Category */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            {faqs
+              .filter((f) => (selectedCategory === "popular" ? f.category === "popular" : f.category === selectedCategory))
+              .slice(0, 6)
+              .map((faq) => (
+                <button
+                  key={faq.id}
+                  type="button"
+                  onClick={() => handleUserSelect(faq.id, faq.questionBn)}
+                  className="px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 hover:bg-orange-100 text-orange-900 dark:text-orange-200 text-xs font-bold shrink-0 transition-all flex items-center gap-1.5 shadow-2xs active:scale-95"
+                >
+                  <Sparkles className="w-3 h-3 text-orange-500 shrink-0" />
+                  <span className="truncate max-w-[200px]">{faq.questionBn}</span>
+                </button>
+              ))}
+          </div>
         </div>
       </footer>
 
-      {/* "All Questions" Knowledge Base Modal */}
-      <Dialog open={isAllQuestionsOpen} onOpenChange={setIsAllQuestionsOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-4 sm:p-6 bg-white rounded-3xl shadow-2xl border border-sky-100 overflow-hidden">
-          <DialogHeader className="pb-3 border-b border-sky-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-cyan-500 text-white flex items-center justify-center shadow-sm">
-                  <Grid className="h-4 w-4" />
-                </div>
-                <div>
-                  <DialogTitle className="text-base sm:text-lg font-black text-slate-900">
-                    রেকমেন্ডেড সকল প্রশ্ন ও বিষয়সমূহ
-                  </DialogTitle>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    যেকোনো প্রশ্নে ক্লিক করে সরাসরি উত্তর ও প্রোডাক্ট দেখুন
-                  </p>
-                </div>
+      {/* 4. Predefined Approved Questions Search Modal */}
+      <Dialog open={isSearchModalOpen} onOpenChange={setIsSearchModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-4 sm:p-6 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-xs">
+                <Search className="h-4 w-4" />
+              </div>
+              <div>
+                <DialogTitle className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                  অনুমোদিত সকল প্রশ্ন ও বিষয়
+                </DialogTitle>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  যেকোনো বিষয়ে ক্লিক করে তাৎক্ষণিক সঠিক উত্তর ও লাইভ ডেটা দেখুন
+                </p>
               </div>
             </div>
 
-            {/* Search Input for Questions */}
+            {/* Live Search Input */}
             <div className="relative mt-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-600" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-orange-500" />
               <input
                 type="text"
-                placeholder="প্রশ্ন বা বিষয় খুঁজুন (যেমন: ডেলিভারি, ক্যাশ অন ডেলিভারি, ঘড়ি)..."
-                value={searchQuestionTerm}
-                onChange={(e) => setSearchQuestionTerm(e.target.value)}
-                className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-2xl bg-sky-50 border border-sky-200 focus:outline-none focus:border-cyan-500 text-slate-800 placeholder:text-slate-400"
+                placeholder="প্রশ্ন বা বিষয় খুঁজুন (যেমন: ডেলিভারি, ক্যাশ অন ডেলিভারি, রিটার্ন)..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-orange-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
               />
-              {searchQuestionTerm && (
+              {searchTerm && (
                 <button
                   type="button"
-                  onClick={() => setSearchQuestionTerm("")}
+                  onClick={() => setSearchTerm("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -796,36 +1173,35 @@ export default function BuyerMessages() {
             </div>
           </DialogHeader>
 
-          {/* List of Questions in Modal */}
+          {/* List of Categorized Questions in Modal */}
           <div className="flex-1 overflow-y-auto py-2 space-y-4 pr-1">
-            {QUESTION_CATEGORIES.map((cat) => {
-              const catQuestions = allFilteredQuestions.filter((q) => q.category === cat.id);
-              if (catQuestions.length === 0) return null;
+            {FAQ_CATEGORIES.map((cat) => {
+              const catFaqs = allFilteredFaqs.filter((f) => f.category === cat.id);
+              if (catFaqs.length === 0) return null;
 
               return (
                 <div key={cat.id} className="space-y-2">
                   <div className="flex items-center gap-1.5 px-1 py-1">
                     <span className="text-sm">{cat.icon}</span>
-                    <h3 className="text-xs font-extrabold text-sky-950">{cat.label}</h3>
-                    <span className="text-[10px] text-slate-400 font-medium">({catQuestions.length})</span>
+                    <h3 className="text-xs font-black text-slate-900 dark:text-slate-100">{cat.nameBn}</h3>
+                    <span className="text-[10px] text-slate-400 font-medium">({catFaqs.length})</span>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {catQuestions.map((q) => (
+                  <div className="flex flex-wrap gap-1.5">
+                    {catFaqs.map((q) => (
                       <button
                         key={q.id}
                         type="button"
                         onClick={() => {
-                          setIsAllQuestionsOpen(false);
-                          handleSelectQuestion(q.id, q.question);
+                          setIsSearchModalOpen(false);
+                          handleUserSelect(q.id, q.questionBn);
                         }}
-                        className="text-left px-3.5 py-2 rounded-full bg-sky-50/80 hover:bg-cyan-50 border border-sky-200/80 hover:border-cyan-300 transition-all flex items-center gap-2 group cursor-pointer active:scale-95 shadow-2xs"
+                        className="text-left px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 hover:bg-orange-50 dark:hover:bg-orange-950/40 border border-slate-200 dark:border-slate-800 hover:border-orange-300 transition-all flex items-center justify-between gap-2 group cursor-pointer active:scale-95 shadow-2xs"
                       >
-                        <span className="text-sm shrink-0">{q.icon}</span>
-                        <span className="text-xs font-bold text-slate-800 group-hover:text-cyan-800">
-                          {q.shortLabel || q.question}
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-orange-600">
+                          {q.questionBn}
                         </span>
-                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400 group-hover:text-cyan-600" />
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400 group-hover:text-orange-600" />
                       </button>
                     ))}
                   </div>
@@ -833,12 +1209,120 @@ export default function BuyerMessages() {
               );
             })}
 
-            {allFilteredQuestions.length === 0 && (
+            {allFilteredFaqs.length === 0 && (
               <div className="text-center py-8 text-slate-400 text-xs">
                 কোনো প্রশ্ন পাওয়া যায়নি। অন্য শব্দ দিয়ে সার্চ করুন।
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 4. Customer Issue & Report Submission Modal */}
+      <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
+        <DialogContent className="max-w-md bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+              সমস্যা বা অভিযোগ রিপোর্ট জমা দিন
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleReportSubmit} className="space-y-3.5 mt-2">
+            <div className="space-y-1">
+              <Label htmlFor="report-phone" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                মোবাইল নম্বর <span className="text-rose-500">*</span>
+              </Label>
+              <Input
+                id="report-phone"
+                placeholder="01XXXXXXXXX"
+                value={reportPhone}
+                onChange={(e) => setReportPhone(e.target.value)}
+                className="h-10 text-xs rounded-xl"
+                required
+              />
+              <p className="text-[10px] text-slate-500">আপনার সাথে যোগাযোগের জন্য একটি সক্রিয় ১১ ডিজিটের নম্বর দিন।</p>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="report-name" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                আপনার নাম (ঐচ্ছিক)
+              </Label>
+              <Input
+                id="report-name"
+                placeholder="আপনার পূর্ণ নাম"
+                value={reportName}
+                onChange={(e) => setReportName(e.target.value)}
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  সমস্যার ধরন <span className="text-rose-500">*</span>
+                </Label>
+                <select
+                  value={reportCategory}
+                  onChange={(e) => setReportCategory(e.target.value)}
+                  className="w-full h-10 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-2.5 text-slate-800 dark:text-slate-200"
+                >
+                  <option value="পণ্য সংক্রান্ত সমস্যা">📦 পণ্য সংক্রান্ত সমস্যা</option>
+                  <option value="ডেলিভারি বিলম্ব">🚚 ডেলিভারি বিলম্ব / ট্র্যাক</option>
+                  <option value="পেমেন্ট বা রিফান্ড">💳 পেমেন্ট বা রিফান্ড</option>
+                  <option value="অর্ডার বাতিল বা পরিবর্তন">🔄 অর্ডার বাতিল / পরিবর্তন</option>
+                  <option value="অন্যান্য অভিযোগ">📝 অন্যান্য অভিযোগ</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="report-order" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  অর্ডার নং (যদি থাকে)
+                </Label>
+                <Input
+                  id="report-order"
+                  placeholder="#ORD-..."
+                  value={reportOrderNo}
+                  onChange={(e) => setReportOrderNo(e.target.value)}
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="report-details" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                সমস্যা বা অভিযোগের বিবরণ <span className="text-rose-500">*</span>
+              </Label>
+              <Textarea
+                id="report-details"
+                placeholder="আপনার সমস্যাটির বিস্তারিত বিবরণ লিখুন..."
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+                className="min-h-[85px] text-xs rounded-xl resize-none"
+                required
+              />
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsReportModalOpen(false)}
+                className="h-9 text-xs rounded-xl"
+              >
+                বাতিল
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmittingReport}
+                className="h-9 text-xs rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold"
+              >
+                {isSubmittingReport ? "জমা হচ্ছে..." : "রিপোর্ট জমা দিন"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

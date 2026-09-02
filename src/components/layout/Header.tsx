@@ -376,21 +376,8 @@ export function Header() {
           {/* Right Action Icons (Wishlist, Messages, Cart, Account) */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
 
-            {/* Wishlist */}
-            <Link to="/wishlist" className="flex flex-col items-center justify-center p-1 sm:px-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-orange-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all relative group">
-              <div className="relative">
-                <Heart className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                {wishlistCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 rounded-full bg-orange-600 text-white text-[9px] font-bold flex items-center justify-center px-1 shadow-xs">
-                    {wishlistCount > 99 ? "99+" : wishlistCount}
-                  </span>
-                )}
-              </div>
-              <span className="text-[10px] font-medium leading-none mt-1">Wishlist</span>
-            </Link>
-
-            {/* Messages */}
-            <Link to="/messages" className="flex flex-col items-center justify-center p-1 sm:px-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-orange-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all relative group">
+            {/* Messages / Sigma AI Assistant */}
+            <Link to="/messages" className="flex flex-col items-center justify-center p-1 sm:px-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-orange-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all relative group" title="Sigma AI Assistant">
               <div className="relative">
                 <MessageCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
                 {hasUnreadMessages && (
@@ -400,6 +387,19 @@ export function Header() {
                 )}
               </div>
               <span className="text-[10px] font-medium leading-none mt-1">Messages</span>
+            </Link>
+
+            {/* Wishlist (Desktop) */}
+            <Link to="/wishlist" className="hidden md:flex flex-col items-center justify-center p-1 sm:px-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-orange-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all relative group" title="Wishlist">
+              <div className="relative">
+                <Heart className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 rounded-full bg-orange-600 text-white text-[9px] font-bold flex items-center justify-center px-1 shadow-xs">
+                    {wishlistCount > 99 ? "99+" : wishlistCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-medium leading-none mt-1">Wishlist</span>
             </Link>
 
             {/* Account / User Menu (Desktop) */}

@@ -1,6 +1,6 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Star, Pause, Play } from "lucide-react";
+import { Star } from "lucide-react";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 import { type Product } from "@/components/products/ProductCard";
 
@@ -8,7 +8,15 @@ interface DealOfTheDayProps {
   products?: Product[];
 }
 
-function ProductDealCard({ product, idx }: { product: Product; idx: number }) {
+function ProductDealCard({
+  product,
+  idx,
+  isDraggingRef,
+}: {
+  product: Product;
+  idx: number;
+  isDraggingRef: React.MutableRefObject<boolean>;
+}) {
   const displayImage = getSmartProductImage(product.name, product.image);
   const discountPercentages = [24, 19, 15, 21, 18, 20, 25, 30, 22, 17];
   const discount = product.originalPrice
@@ -24,27 +32,37 @@ function ProductDealCard({ product, idx }: { product: Product; idx: number }) {
         ? product.reviews
         : reviewCounts[idx % reviewCounts.length];
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (isDraggingRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
   return (
-    <div className="w-[125px] xs:w-[140px] sm:w-[165px] md:w-[195px] shrink-0 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 hover:border-orange-300 dark:hover:border-orange-500/40 transition-all duration-300 flex flex-col justify-between p-1.5 sm:p-2.5 relative group/card shadow-2xs cursor-pointer select-none">
+    <div className="w-[130px] xs:w-[145px] sm:w-[170px] md:w-[200px] shrink-0 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-0.5 hover:border-orange-300 dark:hover:border-orange-500/40 transition-all duration-200 flex flex-col justify-between p-1.5 sm:p-2.5 relative group/card shadow-2xs select-none">
       <Link
         to={`/product/${product.slug || product.id}`}
         state={{ preloadedProduct: product }}
+        onClick={handleClick}
+        draggable={false}
         className="block h-full flex flex-col justify-between"
       >
         <div>
           {/* Discount Badge */}
-          <div className="absolute top-1.5 left-1.5 z-10">
+          <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
             <span className="bg-[#ff3b30] text-white text-[8px] sm:text-[10px] font-black px-1.5 py-0.5 rounded shadow-xs">
               -{discount}%
             </span>
           </div>
 
           {/* Product Image Container */}
-          <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-950 mb-1 flex items-center justify-center p-1">
+          <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-950 mb-1 flex items-center justify-center p-1 pointer-events-none">
             <img
               src={displayImage}
               alt={product.name}
-              className="w-full h-full object-contain filter drop-shadow-xs group-hover/card:scale-108 transition-transform duration-300"
+              draggable={false}
+              className="w-full h-full object-contain filter drop-shadow-xs group-hover/card:scale-108 transition-transform duration-300 pointer-events-none select-none"
               loading="lazy"
               decoding="async"
               onError={(e) => {
@@ -54,12 +72,12 @@ function ProductDealCard({ product, idx }: { product: Product; idx: number }) {
           </div>
 
           {/* Product Title */}
-          <h3 className="font-bold text-[10px] sm:text-xs md:text-sm text-slate-900 dark:text-slate-100 line-clamp-1 mb-0.5 group-hover/card:text-orange-600 transition-colors">
+          <h3 className="font-bold text-[10px] sm:text-xs md:text-sm text-slate-900 dark:text-slate-100 line-clamp-1 mb-0.5 group-hover/card:text-orange-600 transition-colors pointer-events-none">
             {product.name}
           </h3>
 
           {/* 5-Star Rating & Reviews */}
-          <div className="flex items-center gap-0.5 sm:gap-1 mb-1">
+          <div className="flex items-center gap-0.5 sm:gap-1 mb-1 pointer-events-none">
             <div className="flex items-center text-amber-400">
               <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
               <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
@@ -74,7 +92,7 @@ function ProductDealCard({ product, idx }: { product: Product; idx: number }) {
         </div>
 
         {/* Price Section */}
-        <div className="flex items-baseline gap-1.5 mt-auto pt-1">
+        <div className="flex items-baseline gap-1.5 mt-auto pt-1 pointer-events-none">
           <span className="text-xs sm:text-sm font-black text-orange-600 leading-none">
             ৳{product.price.toLocaleString("en-BD")}
           </span>
@@ -87,10 +105,244 @@ function ProductDealCard({ product, idx }: { product: Product; idx: number }) {
   );
 }
 
-function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
-  const [isPaused, setIsPaused] = useState(false);
+interface DealRowProps {
+  items: Product[];
+  direction: "left" | "right";
+  speed?: number; // pixels per second
+  onInteract: (active: boolean) => void;
+  isPaused: boolean;
+  rowId: string;
+}
 
-  // Split and format all incoming API products into 2 distinct continuous rows
+function DealRow({
+  items,
+  direction,
+  speed = 40,
+  onInteract,
+  isPaused,
+  rowId,
+}: DealRowProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const isDraggingRef = useRef<boolean>(false);
+  const isMouseDownRef = useRef<boolean>(false);
+  const startXRef = useRef<number>(0);
+  const startScrollLeftRef = useRef<number>(0);
+  const dragDistRef = useRef<number>(0);
+  const rafRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number>(performance.now());
+  const scrollPosRef = useRef<number>(0);
+
+  // Set initial scroll position for right-moving track so it can scroll backwards seamlessly
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const setInitialPos = () => {
+      const singleSetWidth = el.scrollWidth / 3;
+      if (singleSetWidth > 10) {
+        if (direction === "right" && el.scrollLeft < 5) {
+          el.scrollLeft = singleSetWidth;
+          scrollPosRef.current = singleSetWidth;
+        } else if (direction === "left" && el.scrollLeft === 0) {
+          scrollPosRef.current = el.scrollLeft;
+        }
+      }
+    };
+
+    setInitialPos();
+    const timer = setTimeout(setInitialPos, 150);
+    return () => clearTimeout(timer);
+  }, [direction, items]);
+
+  // RequestAnimationFrame Infinite Auto-Scroll Loop
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    lastTimeRef.current = performance.now();
+    scrollPosRef.current = el.scrollLeft;
+
+    const step = (time: number) => {
+      const dt = Math.min((time - lastTimeRef.current) / 1000, 0.1);
+      lastTimeRef.current = time;
+
+      if (!isPaused && el) {
+        const singleSetWidth = el.scrollWidth / 3;
+        if (singleSetWidth > 20) {
+          const delta = speed * dt;
+
+          if (direction === "left") {
+            scrollPosRef.current += delta;
+            if (scrollPosRef.current >= singleSetWidth * 2) {
+              scrollPosRef.current -= singleSetWidth;
+            }
+          } else {
+            scrollPosRef.current -= delta;
+            if (scrollPosRef.current <= singleSetWidth * 0.1) {
+              scrollPosRef.current += singleSetWidth;
+            }
+          }
+
+          el.scrollLeft = scrollPosRef.current;
+        }
+      }
+
+      rafRef.current = requestAnimationFrame(step);
+    };
+
+    rafRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, [direction, speed, isPaused]);
+
+  // Infinite Wrap handling for manual scroll / touch swipe
+  const handleScroll = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const singleSetWidth = el.scrollWidth / 3;
+    if (singleSetWidth <= 20) return;
+
+    if (el.scrollLeft >= singleSetWidth * 2) {
+      el.scrollLeft -= singleSetWidth;
+      scrollPosRef.current = el.scrollLeft;
+      if (isMouseDownRef.current) {
+        startScrollLeftRef.current -= singleSetWidth;
+      }
+    } else if (el.scrollLeft <= singleSetWidth * 0.1) {
+      el.scrollLeft += singleSetWidth;
+      scrollPosRef.current = el.scrollLeft;
+      if (isMouseDownRef.current) {
+        startScrollLeftRef.current += singleSetWidth;
+      }
+    } else {
+      scrollPosRef.current = el.scrollLeft;
+    }
+  }, []);
+
+  // Mouse Drag Events (Desktop)
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    isMouseDownRef.current = true;
+    startXRef.current = e.clientX;
+    const el = containerRef.current;
+    startScrollLeftRef.current = el ? el.scrollLeft : 0;
+    dragDistRef.current = 0;
+    isDraggingRef.current = false;
+    onInteract(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isMouseDownRef.current || !containerRef.current) return;
+    const dx = e.clientX - startXRef.current;
+    dragDistRef.current = Math.abs(dx);
+    if (dragDistRef.current > 6) {
+      isDraggingRef.current = true;
+    }
+    const targetScroll = startScrollLeftRef.current - dx;
+    containerRef.current.scrollLeft = targetScroll;
+    scrollPosRef.current = targetScroll;
+  };
+
+  const handleMouseUp = () => {
+    if (isMouseDownRef.current) {
+      isMouseDownRef.current = false;
+      setTimeout(() => {
+        isDraggingRef.current = false;
+      }, 50);
+      onInteract(false);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (isMouseDownRef.current) {
+      isMouseDownRef.current = false;
+      setTimeout(() => {
+        isDraggingRef.current = false;
+      }, 50);
+    }
+    onInteract(false);
+  };
+
+  // Touch Events (Mobile)
+  const handleTouchStart = () => {
+    onInteract(true);
+    isDraggingRef.current = false;
+  };
+
+  const handleTouchMove = () => {
+    isDraggingRef.current = true;
+  };
+
+  const handleTouchEnd = () => {
+    setTimeout(() => {
+      isDraggingRef.current = false;
+    }, 50);
+    onInteract(false);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+      onMouseEnter={(e) => {
+        // Only pause on real mouse hover (not on touch simulation)
+        if (e.currentTarget.matches(":hover")) {
+          onInteract(true);
+        }
+      }}
+      className="relative overflow-x-auto overflow-y-hidden w-full cursor-grab active:cursor-grabbing select-none no-scrollbar touch-pan-x"
+      style={{
+        scrollbarWidth: "none",
+        msOverflowStyle: "none",
+        WebkitOverflowScrolling: "touch",
+      }}
+    >
+      <div className="flex w-max gap-1.5 sm:gap-2.5 md:gap-3 py-1">
+        {items.map((product, idx) => (
+          <ProductDealCard
+            key={`${rowId}-${product.id}-${idx}`}
+            product={product}
+            idx={idx}
+            isDraggingRef={isDraggingRef}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
+  const [isInteracting, setIsInteracting] = useState(false);
+  const interactionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleInteract = useCallback((active: boolean) => {
+    if (interactionTimerRef.current) {
+      clearTimeout(interactionTimerRef.current);
+    }
+
+    if (active) {
+      setIsInteracting(true);
+    } else {
+      // Immediately resume auto-scrolling when finger/mouse is lifted
+      interactionTimerRef.current = setTimeout(() => {
+        setIsInteracting(false);
+      }, 30);
+    }
+  }, []);
+
+  // Split and format products into 2 distinct continuous rows with triple-buffer
   const { row1, row2 } = useMemo(() => {
     if (!products || products.length === 0) return { row1: [], row2: [] };
 
@@ -109,7 +361,7 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
 
     const items = unique.length > 0 ? unique : products;
 
-    // Split into 2 alternating rows for optimal diversity
+    // Split into 2 alternating rows for diversity
     const r1: Product[] = [];
     const r2: Product[] = [];
 
@@ -121,7 +373,6 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
       }
     });
 
-    // Ensure adequate buffer length for ultra-smooth 60fps infinite marquee loop
     const ensureBuffer = (arr: Product[]) => {
       if (arr.length === 0) return [];
       let result = [...arr];
@@ -131,13 +382,13 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
       return result;
     };
 
-    const finalR1 = ensureBuffer(r1);
-    const finalR2 = ensureBuffer(r2.length > 0 ? r2 : r1);
+    const baseR1 = ensureBuffer(r1);
+    const baseR2 = ensureBuffer(r2.length > 0 ? r2 : r1);
 
-    // Quadruple for continuous seamless wrap
+    // Tripled buffer ensures seamless infinite scroll in both left & right directions
     return {
-      row1: [...finalR1, ...finalR1],
-      row2: [...finalR2, ...finalR2],
+      row1: [...baseR1, ...baseR1, ...baseR1],
+      row2: [...baseR2, ...baseR2, ...baseR2],
     };
   }, [products]);
 
@@ -146,35 +397,17 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
   return (
     <section className="w-full px-2 sm:px-4 py-2 sm:py-3 overflow-hidden">
       <style>{`
-        @keyframes dealMarqueeLeft {
-          0% { transform: translate3d(0, 0, 0); }
-          100% { transform: translate3d(-50%, 0, 0); }
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
         }
-        @keyframes dealMarqueeRight {
-          0% { transform: translate3d(-50%, 0, 0); }
-          100% { transform: translate3d(0, 0, 0); }
-        }
-        .deal-track-1 {
-          display: flex;
-          width: max-content;
-          animation: dealMarqueeLeft 40s linear infinite;
-          will-change: transform;
-        }
-        .deal-track-2 {
-          display: flex;
-          width: max-content;
-          animation: dealMarqueeRight 40s linear infinite;
-          will-change: transform;
-        }
-        .deal-marquee-wrapper:hover .deal-track-1,
-        .deal-marquee-wrapper:hover .deal-track-2,
-        .deal-track-paused {
-          animation-play-state: paused !important;
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
       `}</style>
 
       <div className="max-w-7xl mx-auto">
-        {/* Header with Title, Pause/Play Toggle & View All */}
+        {/* Header with Title and View All (Play/Pause button removed) */}
         <div className="flex items-center justify-between mb-2 sm:mb-3 px-1">
           <div>
             <div className="flex items-center gap-2">
@@ -188,18 +421,7 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Quick Pause / Resume Button */}
-            <button
-              type="button"
-              onClick={() => setIsPaused((prev) => !prev)}
-              className="px-2 py-1 text-[10px] sm:text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1 hover:bg-slate-100 transition-colors shadow-2xs"
-              title={isPaused ? "Resume Auto Scroll" : "Pause Auto Scroll"}
-            >
-              {isPaused ? <Play className="w-3 h-3 text-emerald-600 fill-current" /> : <Pause className="w-3 h-3 text-amber-600" />}
-              <span className="hidden xs:inline">{isPaused ? "Play" : "Pause"}</span>
-            </button>
-
+          <div>
             {/* View All Link */}
             <Link
               to="/products?filter=deals"
@@ -210,27 +432,27 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
           </div>
         </div>
 
-        {/* 2 Continuous Dual-Direction Auto-Running Rows Container */}
+        {/* 2 Continuous Dual-Direction Auto-Running & Interactive Rows Container */}
         <div className="deal-marquee-wrapper relative overflow-hidden py-1 space-y-2 sm:space-y-3 rounded-2xl bg-gradient-to-b from-slate-50/50 to-transparent dark:from-slate-900/40 p-1 sm:p-2 border border-slate-100 dark:border-slate-800/80">
-          
-          {/* Row 1: Smooth Auto-Scroll to the Left ← */}
-          <div className="relative overflow-hidden w-full">
-            <div className={`deal-track-1 gap-1.5 sm:gap-2.5 md:gap-3 ${isPaused ? "deal-track-paused" : ""}`}>
-              {row1.map((product, idx) => (
-                <ProductDealCard key={`row1-${product.id}-${idx}`} product={product} idx={idx} />
-              ))}
-            </div>
-          </div>
+          {/* Row 1: Auto-Scroll to the Left ← & Interactive Swipe */}
+          <DealRow
+            rowId="row1"
+            items={row1}
+            direction="left"
+            speed={40}
+            isPaused={isInteracting}
+            onInteract={handleInteract}
+          />
 
-          {/* Row 2: Smooth Auto-Scroll to the Right → (Opposite Direction) */}
-          <div className="relative overflow-hidden w-full">
-            <div className={`deal-track-2 gap-1.5 sm:gap-2.5 md:gap-3 ${isPaused ? "deal-track-paused" : ""}`}>
-              {row2.map((product, idx) => (
-                <ProductDealCard key={`row2-${product.id}-${idx}`} product={product} idx={idx} />
-              ))}
-            </div>
-          </div>
-
+          {/* Row 2: Auto-Scroll to the Right → & Interactive Swipe */}
+          <DealRow
+            rowId="row2"
+            items={row2}
+            direction="right"
+            speed={40}
+            isPaused={isInteracting}
+            onInteract={handleInteract}
+          />
         </div>
       </div>
     </section>

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { supabase } from "@/lib/firebaseAdapter";
 import { cn } from "@/lib/utils";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
@@ -56,7 +57,7 @@ interface NavTab {
 
 const defaultTabs: NavTab[] = [
   { label: "Home", icon: "home", href: "/" },
-  { label: "Messages", icon: "messages", href: "/messages", badge: "messages" },
+  { label: "Wishlist", icon: "wishlist", href: "/wishlist", badge: "wishlist" },
   { label: "Cart", icon: "cart", href: "/cart", badge: "cart" },
   { label: "Orders", icon: "orders", href: "/orders" },
   { label: "Account", icon: "account", href: "/account" },
@@ -70,6 +71,7 @@ export function MobileBottomNav() {
   const location = useLocation();
   const { user } = useAuth();
   const { itemCount: cartCount } = useCart();
+  const { itemCount: wishlistCount } = useWishlist();
   const [unreadCount, setUnreadCount] = useState(0);
   const { config } = useSiteConfig<MobileNavConfig>("mobile_nav", { tabs: defaultTabs });
 
@@ -117,16 +119,23 @@ export function MobileBottomNav() {
   }, [user]);
 
   const rawTabs = config.tabs?.length ? config.tabs : defaultTabs;
-  // Ensure "Category" tab is replaced with "Messages"
+  // Ensure "Messages" or "Category" tab is replaced with "Wishlist"
   const tabs = rawTabs.map((t) => {
-    if (t.label.toLowerCase().includes("cat") || t.href.includes("/cat")) {
-      return { label: "Messages", icon: "messages", href: "/messages", badge: "messages" };
+    if (
+      t.label.toLowerCase().includes("msg") || 
+      t.label.toLowerCase().includes("message") || 
+      t.href.includes("/message") ||
+      t.label.toLowerCase().includes("cat") || 
+      t.href.includes("/cat")
+    ) {
+      return { label: "Wishlist", icon: "wishlist", href: "/wishlist", badge: "wishlist" };
     }
     return t;
   });
 
   const getBadgeCount = (badge?: string) => {
     if (badge === "cart") return cartCount;
+    if (badge === "wishlist" || badge === "heart") return wishlistCount;
     if (badge === "messages" || badge === "chat") return unreadCount;
     return 0;
   };
@@ -138,6 +147,9 @@ export function MobileBottomNav() {
     
     if (href === "/" || href === "") {
       return p === "/" || p === "";
+    }
+    if (href.includes("wishlist") || href.includes("heart")) {
+      return p.includes("wishlist");
     }
     if (href.includes("message") || href.includes("chat")) {
       return p.includes("message") || p.includes("chat");

@@ -50,6 +50,7 @@ const AdminFreeDelivery = lazy(() => import("./pages/admin/AdminFreeDelivery"));
 const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
 const AdminSecurity = lazy(() => import("./pages/admin/AdminSecurity"));
 const AdminCMS = lazy(() => import("./pages/admin/AdminCMS"));
+const AdminFAQ = lazy(() => import("./pages/admin/AdminFAQ"));
 const AdminConsignments = lazy(() => import("./pages/admin/AdminConsignments"));
 const AdminWarehouses = lazy(() => import("./pages/admin/AdminWarehouses"));
 const AdminHomeBento = lazy(() => import("./pages/admin/AdminHomeBento"));
@@ -297,6 +298,8 @@ const App = () => (
                               <Route path="/admin/security" element={<AdminProtectedRoute><AdminSecurity /></AdminProtectedRoute>} />
                               <Route path="/admin/visual-editor" element={<AdminProtectedRoute><AdminVisualEditor /></AdminProtectedRoute>} />
                               <Route path="/admin/cms" element={<AdminProtectedRoute><AdminCMS /></AdminProtectedRoute>} />
+                              <Route path="/admin/faq" element={<AdminProtectedRoute><AdminFAQ /></AdminProtectedRoute>} />
+                              <Route path="/admin/knowledge-base" element={<Navigate to="/admin/faq" replace />} />
                               <Route path="/admin/home-bento" element={<AdminProtectedRoute><AdminHomeBento /></AdminProtectedRoute>} />
                               <Route path="/admin/home-promos" element={<AdminProtectedRoute><AdminHomePromos /></AdminProtectedRoute>} />
                               <Route path="/admin/reviews" element={<AdminProtectedRoute><AdminReviews /></AdminProtectedRoute>} />

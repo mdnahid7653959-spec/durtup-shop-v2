@@ -1134,9 +1134,35 @@ export default function ProductDetail() {
                       </button>
                     )}
 
+                    {/* Wishlist Button on Product Image */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (product) {
+                          toggleWishlist(product.id);
+                        }
+                      }}
+                      className={cn(
+                        "absolute top-3 left-3 w-9 h-9 sm:w-10 sm:h-10 rounded-full backdrop-blur-md shadow-md flex items-center justify-center transition-all z-10 hover:scale-105 active:scale-95 border cursor-pointer",
+                        product && isInWishlist(product.id)
+                          ? "bg-rose-600 text-white border-rose-500 shadow-rose-600/30"
+                          : "bg-white/90 dark:bg-card/90 text-slate-700 dark:text-slate-200 hover:text-rose-600 border-slate-200/60 dark:border-slate-700/60"
+                      )}
+                      aria-label={product && isInWishlist(product.id) ? "Wishlist থেকে সরান" : "Wishlist-এ যোগ করুন"}
+                      title={product && isInWishlist(product.id) ? "Wishlist থেকে সরান" : "Wishlist-এ যোগ করুন"}
+                    >
+                      <Heart
+                        className={cn(
+                          "h-4 w-4 sm:h-5 sm:w-5 transition-transform",
+                          product && isInWishlist(product.id) ? "fill-current text-white scale-110" : ""
+                        )}
+                      />
+                    </button>
+
                     {/* Featured badge */}
                     {product.is_featured && (
-                      <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-warning to-primary text-white text-xs font-bold shadow-md z-10">
+                      <div className="absolute top-14 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-warning to-primary text-white text-xs font-bold shadow-md z-10">
                         <Sparkles className="h-3 w-3" />
                         FEATURED
                       </div>
@@ -1640,7 +1666,7 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {/* Fast Action Buttons with Sleek Home shortcut */}
+            {/* Fast Action Buttons with Sleek Home and Wishlist shortcuts */}
             <div className="flex items-center gap-2 w-full">
               {/* Professional Home Shortcut Tile */}
               <Link 
@@ -1651,6 +1677,22 @@ export default function ProductDetail() {
               >
                 <Home className="h-5 w-5 group-hover:scale-110 transition-transform text-slate-700 dark:text-slate-200" />
               </Link>
+
+              {/* Wishlist Shortcut Tile */}
+              <button
+                type="button"
+                onClick={() => product && toggleWishlist(product.id)}
+                className={cn(
+                  "flex items-center justify-center h-11 w-11 rounded-2xl active:scale-90 shrink-0 transition-all border shadow-xs group cursor-pointer",
+                  product && isInWishlist(product.id)
+                    ? "bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-600"
+                    : "bg-slate-100 dark:bg-slate-800 border-slate-200/60 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-rose-600 hover:bg-rose-50/50"
+                )}
+                title={product && isInWishlist(product.id) ? "Wishlist থেকে সরান" : "Wishlist-এ যোগ করুন"}
+                aria-label="Wishlist"
+              >
+                <Heart className={cn("h-5 w-5 transition-transform group-hover:scale-110", product && isInWishlist(product.id) && "fill-current text-rose-600")} />
+              </button>
 
               {/* Add to Cart */}
               <Button
