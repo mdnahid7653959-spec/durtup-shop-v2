@@ -13,43 +13,44 @@ interface ChatOffer {
 const TEMPTING_OFFERS: ChatOffer[] = [
   {
     id: "coupon_deal",
-    text: "🎁 আজকের স্পেশাল সিক্রেট ডিসকাউন্ট কুপন কোড পেতে ট্যাপ করুন!",
+    text: "🎁 স্পেশাল সিক্রেট ডিসকাউন্ট কুপন কোড!",
     intent: "off_active_coupons",
     questionLabel: "🎁 আজকের স্পেশাল সিক্রেট ডিসকাউন্ট কুপন কোড কী ও কীভাবে পাবো?",
   },
   {
     id: "budget_picker",
-    text: "🛍️ আপনার বাজেটে সেরা প্রোডাক্ট পছন্দ করতে আমাকে বলুন!",
+    text: "🛍️ বাজেটে সেরা প্রোডাক্ট পছন্দ করুন!",
     intent: "flow_product_finder",
     questionLabel: "🛍️ আমার বাজেটে সেরা প্রোডাক্ট পছন্দ করতে সাহায্য করুন",
   },
   {
     id: "fast_shipping",
-    text: "🚚 সারা বাংলাদেশে মাত্র ৬০ টাকায় ফাস্ট ক্যাশ অন ডেলিভারি!",
+    text: "🚚 সারাদেশে মাত্র ৬০ টাকায় ডেলিভারি!",
     intent: "del_charge_time",
     questionLabel: "🚚 সারা বাংলাদেশে ডেলিভারি চার্জ ও ডেলিভারি সময় কত?",
   },
   {
     id: "order_tracking",
-    text: "📦 আপনার পার্সেল এখন কোথায়? লাইভ ট্র্যাকিং দেখুন!",
+    text: "📦 পার্সেল কোথায়? লাইভ ট্র্যাকিং দেখুন!",
     intent: "acc_my_latest_order",
     questionLabel: "📦 আমার সর্বশেষ অর্ডার কোথায় ও লাইভ ট্র্যাকিং দেখতে চাই",
   },
   {
     id: "support_help",
-    text: "💬 যেকোনো সহায়তায় সরাসরি অফিসিয়াল কাস্টমার কেয়ার ও WhatsApp!",
+    text: "💬 সরাসরি কাস্টমার কেয়ার ও WhatsApp!",
     intent: "tech_support_contact",
     questionLabel: "💬 কাস্টমার কেয়ার ও WhatsApp হেল্পলাইন নম্বর কত?",
   },
   {
     id: "report_complaint",
-    text: "🚨 যেকোনো অভিযোগ বা সমস্যায় দ্রুত সমাধান রিপোর্ট জমা দিন!",
+    text: "🚨 সমস্যা বা অভিযোগ দ্রুত রিপোর্ট করুন!",
     intent: "flow_submit_report",
     questionLabel: "🚨 যেকোনো অভিযোগ বা সমস্যা সংক্রান্ত রিপোর্ট জমা দিতে চাই",
   },
 ];
 
-const BOT_SIZE = 52; // 52px width/height
+const BOT_SIZE_MOBILE = 46;
+const BOT_SIZE_DESKTOP = 52;
 
 export function FloatingOfferChatbot() {
   const navigate = useNavigate();
@@ -77,10 +78,11 @@ export function FloatingOfferChatbot() {
   const clampPos = useCallback((rawX: number, rawY: number) => {
     if (typeof window === "undefined") return { x: rawX, y: rawY };
     const isMobile = window.innerWidth <= 768;
-    const minX = 8;
-    const maxX = Math.max(8, window.innerWidth - BOT_SIZE - 12);
+    const botSize = isMobile ? BOT_SIZE_MOBILE : BOT_SIZE_DESKTOP;
+    const minX = 6;
+    const maxX = Math.max(6, window.innerWidth - botSize - 8);
     const minY = 60;
-    const maxY = Math.max(60, window.innerHeight - BOT_SIZE - (isMobile ? 85 : 30));
+    const maxY = Math.max(60, window.innerHeight - botSize - (isMobile ? 85 : 30));
 
     return {
       x: Math.min(Math.max(minX, rawX), maxX),
@@ -91,8 +93,9 @@ export function FloatingOfferChatbot() {
   // Compute safe initial position
   useEffect(() => {
     const isMobile = window.innerWidth <= 768;
-    const defaultX = window.innerWidth - BOT_SIZE - 14;
-    const defaultY = window.innerHeight - BOT_SIZE - (isMobile ? 95 : 45);
+    const botSize = isMobile ? BOT_SIZE_MOBILE : BOT_SIZE_DESKTOP;
+    const defaultX = window.innerWidth - botSize - 12;
+    const defaultY = window.innerHeight - botSize - (isMobile ? 95 : 45);
 
     try {
       const saved = sessionStorage.getItem("durtup_bot_coord");
@@ -210,8 +213,16 @@ export function FloatingOfferChatbot() {
 
   if (isHidden || !position) return null;
 
-  // Decide if pill should be placed to the left or right of the avatar
-  const isLeftSide = position.x < (typeof window !== "undefined" ? window.innerWidth / 2 : 200);
+  // Screen-aware dynamic placement and width constraints
+  const screenWidth = typeof window !== "undefined" ? window.innerWidth : 380;
+  const isMobile = screenWidth <= 768;
+  const avatarSize = isMobile ? BOT_SIZE_MOBILE : BOT_SIZE_DESKTOP;
+  const isLeftSide = position.x < screenWidth / 2;
+
+  // Maximum allowed width for the pill to strictly prevent horizontal overflow on any phone
+  const maxPillWidth = isLeftSide
+    ? Math.max(120, screenWidth - position.x - avatarSize - 16)
+    : Math.max(120, position.x - 16);
 
   return (
     <div
@@ -224,8 +235,8 @@ export function FloatingOfferChatbot() {
     >
       <div
         className={cn(
-          "relative flex items-center gap-2",
-          isLeftSide ? "flex-row" : "flex-row-reverse -translate-x-[calc(100%-52px)]"
+          "relative flex items-center gap-1.5 sm:gap-2",
+          isLeftSide ? "flex-row" : "flex-row-reverse -translate-x-[calc(100%-46px)] sm:-translate-x-[calc(100%-52px)]"
         )}
       >
         
@@ -248,7 +259,7 @@ export function FloatingOfferChatbot() {
           {/* Avatar Disc */}
           <div
             className={cn(
-              "w-[52px] h-[52px] rounded-full",
+              "w-[46px] h-[46px] sm:w-[52px] sm:h-[52px] rounded-full",
               "bg-slate-950 p-[2px] shadow-[0_6px_25px_rgba(249,115,22,0.45)]",
               "border border-white/30 transition-transform duration-100",
               isDragging ? "scale-110 shadow-2xl" : "hover:scale-105 active:scale-95",
@@ -264,7 +275,7 @@ export function FloatingOfferChatbot() {
 
                 {/* Sigma Logo */}
                 <svg
-                  className="w-5 h-5 text-orange-400 drop-shadow-[0_0_8px_rgba(249,115,22,0.9)] relative z-10 group-hover:rotate-6 transition-transform"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400 drop-shadow-[0_0_8px_rgba(249,115,22,0.9)] relative z-10 group-hover:rotate-6 transition-transform"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -280,13 +291,13 @@ export function FloatingOfferChatbot() {
             </div>
 
             {/* Online Green Indicator Dot */}
-            <span className="absolute top-0 right-0 flex h-3 w-3">
+            <span className="absolute top-0 right-0 flex h-2.5 w-2.5 sm:h-3 sm:w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-white dark:border-slate-900" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-emerald-500 border-2 border-white dark:border-slate-900" />
             </span>
 
             {/* Mini AI Badge */}
-            <span className="absolute -bottom-0.5 inset-x-0 mx-auto w-max px-1.5 py-0.2 rounded-full bg-gradient-to-r from-orange-600 to-red-600 text-white text-[7px] font-black uppercase tracking-wider shadow-sm border border-white/60 flex items-center gap-0.5 leading-none">
+            <span className="absolute -bottom-0.5 inset-x-0 mx-auto w-max px-1 sm:px-1.5 py-0.2 rounded-full bg-gradient-to-r from-orange-600 to-red-600 text-white text-[6.5px] sm:text-[7px] font-black uppercase tracking-wider shadow-sm border border-white/60 flex items-center gap-0.5 leading-none">
               <Move className="w-1.5 h-1.5" /> AI
             </span>
           </div>
@@ -296,20 +307,21 @@ export function FloatingOfferChatbot() {
         <div
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
+          style={{ maxWidth: `${maxPillWidth}px` }}
           className={cn(
-            "pointer-events-auto h-9 sm:h-10 pl-3.5 pr-2 sm:pl-4 sm:pr-2.5 rounded-full",
+            "pointer-events-auto h-8.5 sm:h-10 pl-3 pr-1.5 sm:pl-4 sm:pr-2.5 rounded-full",
             "bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl",
             "border border-orange-400/90 dark:border-orange-500/60",
             "shadow-[0_4px_20px_rgba(249,115,22,0.25)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.7)]",
-            "flex items-center gap-1.5 sm:gap-2 cursor-pointer",
+            "flex items-center gap-1.5 sm:gap-2 cursor-pointer overflow-hidden",
             "hover:scale-[1.02] transition-all duration-200",
             "animate-in fade-in slide-in-from-right-2 duration-200 shrink-0 group"
           )}
         >
-          {/* Full Uninterrupted Single-Line Offer Text */}
+          {/* Full Single-Line Offer Text with Ellipsis */}
           <span 
             onClick={() => handleOpenChat(activeOffer)}
-            className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white whitespace-nowrap leading-none drop-shadow-xs group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors"
+            className="text-[11px] sm:text-[13px] font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis min-w-0 flex-1 leading-none drop-shadow-xs group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors"
           >
             {activeOffer.text}
           </span>
@@ -318,11 +330,11 @@ export function FloatingOfferChatbot() {
           <button
             type="button"
             onClick={handleHideBot}
-            className="w-5 h-5 rounded-full hover:bg-rose-100 dark:hover:bg-rose-950/60 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 flex items-center justify-center transition-colors shrink-0"
+            className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full hover:bg-rose-100 dark:hover:bg-rose-950/60 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 flex items-center justify-center transition-colors shrink-0"
             title="হাইড করুন"
             aria-label="Hide Chatbot"
           >
-            <X className="w-3.5 h-3.5 stroke-[2.5]" />
+            <X className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
           </button>
         </div>
 
