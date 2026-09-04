@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { 
@@ -44,6 +44,7 @@ import { getSmartProductImage } from "@/utils/productImageHelper";
 import { 
   fetchAllFAQs, 
   FAQ_CATEGORIES, 
+  SEED_FAQ_ITEMS,
   type FAQItem, 
   type FAQCategory,
   trackQuestionClick,
@@ -136,13 +137,16 @@ export default function BuyerMessages() {
   const { user, profile } = useAuth();
   const { addToCart } = useCart();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialIntentFiredRef = useRef(false);
 
-  const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [faqs, setFaqs] = useState<FAQItem[]>(SEED_FAQ_ITEMS);
   const [selectedCategory, setSelectedCategory] = useState<string>("popular");
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [conversationState, setConversationState] = useState<ConversationState>(INITIAL_CONVERSATION_STATE);
+  const processedParamRef = useRef<string | null>(null);
 
   // Customer Report Submission State
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -656,6 +660,77 @@ export default function BuyerMessages() {
       }
 
       // -------------------------------------------------------------
+      // DIRECT FAQ INTENT HANDLERS (COD, Return, Reseller, Orders)
+      // -------------------------------------------------------------
+      if (queryOrIntent === "pay_cod_available" || queryOrIntent === "cod_rules") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: `💵 **১০০% ক্যাশ অন ডেলিভারি (Cash on Delivery) সুবিধা:**\n\n• Durtup.shop-এ কোনো ধরনের অগ্রিম পেমেন্ট ছাড়াই নিশ্চিন্তে অর্ডার করতে পারবেন।\n• ডেলিভারিম্যানের কাছ থেকে পণ্যটি হাতে পেয়ে সম্পূর্ণ মূল্য পরিশোধ করবেন।\n• এছাড়া চাইলে বিকাশ, নগদ, রকেট বা ডেবিট/ক্রেডিট কার্ডের মাধ্যমেও পেমেন্ট করতে পারেন।`,
+            timestamp: nowTime,
+            actions: [
+              { label: "🛍️ শপিং শুরু করুন", type: "link", payload: "/products", variant: "default" },
+              { label: "🚚 ডেলিভারি চার্জ কত?", type: "intent", payload: "del_charge_time", variant: "outline" },
+            ],
+            followUpQuestions: [
+              { label: "🚚 ডেলিভারি চার্জ ও সময়", intentOrQuery: "del_charge_time" },
+              { label: "🔄 ৭ দিন রিটার্ন পলিসি", intentOrQuery: "ret_policy_check" },
+              { label: "🎁 চলতি ডিসকাউন্ট কুপন", intentOrQuery: "off_active_coupons" },
+            ],
+          },
+        ]);
+        setIsProcessing(false);
+        return;
+      }
+
+      if (queryOrIntent === "ret_policy_check" || queryOrIntent === "return_policy") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: `🛡️ **৭ দিনের চেক ও রিটার্ন নিশ্চয়তা:**\n\n• ডেলিভারিম্যানের সামনেই পার্সেল খুলে চেক করে দেখে নিতে পারবেন।\n• কোনো ত্রুটি, ভাঙা বা পণ্যে অমিল পেলে ডেলিভারিম্যানের কাছে সাথে সাথে রিটার্ন করতে পারবেন (কোনো চার্জ প্রযোজ্য নয়)।\n• ডেলিভারির পরেও ৭ দিনের মধ্যে আনবক্সিং ভিডিও সহ যোগাযোগ করলে দ্রুত পরিবর্তন বা রিফান্ড দেওয়া হয়।`,
+            timestamp: nowTime,
+            actions: [
+              { label: "📄 রিটার্ন পলিসি পেজ", type: "link", payload: "/returns", variant: "outline" },
+              { label: "💬 WhatsApp সাপোর্ট (01885985097)", type: "link", payload: "https://wa.me/8801885985097", variant: "default" },
+            ],
+            followUpQuestions: [
+              { label: "📞 কাস্টমার কেয়ার হেল্পলাইন", intentOrQuery: "tech_support_contact" },
+              { label: "🚚 ডেলিভারি চার্জ কত?", intentOrQuery: "del_charge_time" },
+              { label: "📦 আমার অর্ডার ট্র্যাক", intentOrQuery: "acc_my_latest_order" },
+            ],
+          },
+        ]);
+        setIsProcessing(false);
+        return;
+      }
+
+      if (queryOrIntent === "reseller_join_guide" || queryOrIntent === "reseller_income") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: `💼 **Durtup.shop রিসেলার প্রোগ্রাম (জিরো ইনভেস্টমেন্ট):**\n\n১. সম্পূর্ণ বিনামূল্যে রিসেলার অ্যাকাউন্ট তৈরি করুন।\n২. আমাদের পাইকারি রেটের যেকোনো প্রোডাক্ট আপনার ফেসবুক পেজ, গ্রুপ বা পরিচিতদের কাছে নিজের প্রফিট মার্জিন যোগ করে শেয়ার করুন।\n৩. কাস্টমারের নাম ও ঠিকানায় অর্ডার প্লেস করুন। আমরা ডেলিভারি সম্পন্ন করে আপনার প্রফিট সরাসরি বিকাশ/নগদ ওয়ালেটে পাঠিয়ে দেবো।`,
+            timestamp: nowTime,
+            actions: [
+              { label: "💼 রিসেলার রেজিস্ট্রেশন", type: "link", payload: "/affiliate", variant: "default" },
+              { label: "💬 রিসেলার হেল্পলাইন", type: "link", payload: "https://wa.me/8801885985097", variant: "outline" },
+            ],
+            followUpQuestions: [
+              { label: "🛍️ পণ্য ক্যাটালগ দেখুন", intentOrQuery: "flow_product_finder" },
+              { label: "🚚 ডেলিভারি সময় কত?", intentOrQuery: "del_charge_time" },
+            ],
+          },
+        ]);
+        setIsProcessing(false);
+        return;
+      }
+
+      // -------------------------------------------------------------
       // STANDARD KNOWLEDGE BASE ITEM LOOKUP
       // -------------------------------------------------------------
       const matchedFaq = faqs.find(
@@ -731,6 +806,19 @@ export default function BuyerMessages() {
       setIsProcessing(false);
     }
   };
+
+  // Auto-respond to incoming URL Intent (e.g. from Floating Offer Chatbot)
+  useEffect(() => {
+    const urlIntent = searchParams.get("intent");
+    const urlLabel = searchParams.get("label");
+    if (urlIntent) {
+      const paramKey = `${urlIntent}___${urlLabel || ""}`;
+      if (processedParamRef.current !== paramKey) {
+        processedParamRef.current = paramKey;
+        handleUserSelect(urlIntent, urlLabel || undefined);
+      }
+    }
+  }, [searchParams]);
 
   // Add to Cart handler with feedback
   const handleAddToCart = (product: Product, e: React.MouseEvent) => {
@@ -1011,6 +1099,23 @@ export default function BuyerMessages() {
                                 setIsReportModalOpen(true);
                               }
                             }}
+                          >
+                            {act.label}
+                          </Button>
+                        );
+                      }
+
+                      if (act.type === "intent") {
+                        return (
+                          <Button
+                            key={aIdx}
+                            size="sm"
+                            variant={act.variant || "default"}
+                            className={cn(
+                              "h-8 text-xs font-bold rounded-xl",
+                              act.variant === "default" && "bg-orange-600 hover:bg-orange-700 text-white"
+                            )}
+                            onClick={() => handleUserSelect(act.payload, act.label)}
                           >
                             {act.label}
                           </Button>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { getCachedMohasagorProducts, filterProductsByCategory } from "@/utils/mohasagorCache";
+import { getCachedMohasagorProducts, getSyncProducts, filterProductsByCategory } from "@/utils/mohasagorCache";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { SEOHead } from "@/components/SEOHead";
@@ -45,77 +45,38 @@ const Categories = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<MainCategoryItem[]>(CATEGORIES_DATA);
   const [selectedCategory, setSelectedCategory] = useState<MainCategoryItem | null>(CATEGORIES_DATA[0]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>("");
   const [productsLoading, setProductsLoading] = useState(false);
 
-  // Fetch products when category or subcategory changes
+  // 1. Instant 0ms product initialization
+  const [products, setProducts] = useState<Product[]>(() => {
+    const syncList = getSyncProducts();
+    const initialCat = CATEGORIES_DATA[0];
+    return filterProductsByCategory(syncList, initialCat.slug, initialCat.name);
+  });
+
+  // Fetch products immediately when category or subcategory changes (0ms delay)
   useEffect(() => {
-    let isMounted = true;
-    const fetchProducts = async () => {
+    if (!selectedCategory) return;
+    const syncList = getSyncProducts();
+    const filterKey = selectedSubcategory || selectedCategory.slug;
+    const instantFiltered = filterProductsByCategory(syncList, filterKey, selectedCategory.name);
+    setProducts(instantFiltered);
+    setProductsLoading(false);
+  }, [selectedCategory, selectedSubcategory]);
+
+  // Background catalog update listener
+  useEffect(() => {
+    const handleUpdate = () => {
       if (!selectedCategory) return;
-      setProductsLoading(true);
-
-      try {
-        const allMohasagor = await getCachedMohasagorProducts();
-        let instantFiltered: Product[] = [];
-        if (allMohasagor && allMohasagor.length > 0) {
-          const filterKey = selectedSubcategory || selectedCategory.slug;
-          instantFiltered = filterProductsByCategory(allMohasagor, filterKey, selectedCategory.name);
-          if (isMounted && instantFiltered.length > 0) {
-            setProducts(instantFiltered);
-            setProductsLoading(false);
-          }
-        }
-
-        // 2. Query DB products if available
-        let mappedDbProducts: Product[] = [];
-        try {
-          const { data: prodData } = await supabase
-            .from("products")
-            .select(`
-              *,
-              product_images(image_url, is_primary)
-            `)
-            .or(`category_id.eq.${selectedCategory.id},category.ilike.%${selectedCategory.slug}%`)
-            .limit(30);
-
-          if (prodData && prodData.length > 0) {
-            mappedDbProducts = prodData.map((p: any) => ({
-              id: p.id,
-              name: p.name,
-              slug: p.slug,
-              image: p.product_images?.find((img: any) => img.is_primary)?.image_url || p.product_images?.[0]?.image_url || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop",
-              price: p.discount_price || p.regular_price || 0,
-              originalPrice: p.discount_price ? p.regular_price : undefined,
-              rating: Number(p.rating_average) || 4.8,
-              reviews: p.rating_count || 18,
-              sold: p.sold_count || 40,
-              freeShipping: p.free_shipping ?? true,
-              isNew: p.is_new_arrival ?? true,
-              isBestSeller: p.is_best_seller ?? false,
-            }));
-          }
-        } catch {}
-
-        const merged = [...mappedDbProducts, ...instantFiltered];
-        const unique = new Map<string, Product>();
-        merged.forEach(p => {
-          if (!unique.has(p.id)) unique.set(p.id, p);
-        });
-
-        if (isMounted) {
-          setProducts(Array.from(unique.values()));
-        }
-      } catch (err) {
-        console.warn("Categories fetchProducts error:", err);
-      } finally {
-        if (isMounted) setProductsLoading(false);
-      }
+      const syncList = getSyncProducts();
+      const filterKey = selectedSubcategory || selectedCategory.slug;
+      const instantFiltered = filterProductsByCategory(syncList, filterKey, selectedCategory.name);
+      setProducts(instantFiltered);
     };
 
-    fetchProducts();
-    return () => { isMounted = false; };
+    window.addEventListener("mohasagor_products_updated", handleUpdate);
+    return () => window.removeEventListener("mohasagor_products_updated", handleUpdate);
   }, [selectedCategory, selectedSubcategory]);
 
   const handleCategoryClick = (category: MainCategoryItem) => {

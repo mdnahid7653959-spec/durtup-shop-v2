@@ -170,7 +170,21 @@ export function startMohasagorAutoSync() {
   }, AUTO_SYNC_INTERVAL_MS);
 }
 
-// Non-blocking background catalog hydrator
+// In-memory memoized filter cache for sub-millisecond category switching
+const categoryFilterCache = new Map<string, Product[]>();
+
+export function clearCategoryFilterCache() {
+  categoryFilterCache.clear();
+}
+
+export function getSyncProducts(): Product[] {
+  if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
+    return inMemoryProductsCache;
+  }
+  return FAST_SEED_PRODUCTS;
+}
+
+// Non-blocking background catalog hydrator - runs immediately
 if (typeof window !== "undefined") {
   const hydrateCatalog = async () => {
     try {
@@ -178,22 +192,23 @@ if (typeof window !== "undefined") {
       if (idbData && idbData.length >= 100) {
         inMemoryProductsCache = idbData;
         updateIndexMap(idbData);
+        clearCategoryFilterCache();
+        window.dispatchEvent(new Event("mohasagor_products_updated"));
       } else {
-        // Fetch static catalog in background without blocking
-        setTimeout(() => {
-          fetchStaticCatalog().catch(() => {});
-        }, 3000);
+        // Fetch static catalog immediately in background without artificial delays
+        fetchStaticCatalog().then((mapped) => {
+          if (mapped && mapped.length > 0) {
+            clearCategoryFilterCache();
+            window.dispatchEvent(new Event("mohasagor_products_updated"));
+          }
+        }).catch(() => {});
       }
     } catch (e) {
       console.warn("Catalog background hydration warning:", e);
     }
   };
 
-  if ("requestIdleCallback" in window) {
-    (window as any).requestIdleCallback(hydrateCatalog, { timeout: 5000 });
-  } else {
-    setTimeout(hydrateCatalog, 3000);
-  }
+  hydrateCatalog();
 }
 
 async function fetchStaticCatalog(): Promise<Product[]> {
@@ -202,22 +217,10 @@ async function fetchStaticCatalog(): Promise<Product[]> {
     if (res.ok) {
       const rawProducts = await res.json();
       if (Array.isArray(rawProducts) && rawProducts.length > 0) {
-        // Map in non-blocking chunks of 100 items
-        const mapped: Product[] = [];
-        const chunkSize = 100;
-        
-        for (let i = 0; i < rawProducts.length; i += chunkSize) {
-          const chunk = rawProducts.slice(i, i + chunkSize);
-          const mappedChunk = mapRawProducts(chunk, "https://mohasagor.com.bd");
-          mapped.push(...mappedChunk);
-          
-          if (i + chunkSize < rawProducts.length) {
-            await new Promise((r) => setTimeout(r, 16)); // Yield to UI thread
-          }
-        }
-
+        const mapped = mapRawProducts(rawProducts, "https://mohasagor.com.bd");
         inMemoryProductsCache = mapped;
         updateIndexMap(mapped);
+        clearCategoryFilterCache();
         setIdbProducts(mapped).catch(() => {});
         return mapped;
       }
@@ -243,6 +246,7 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
       if (idbItems && idbItems.length > 0) {
         inMemoryProductsCache = idbItems;
         updateIndexMap(idbItems);
+        clearCategoryFilterCache();
         return idbItems;
       }
     } catch {}
@@ -618,12 +622,22 @@ export function filterProductsByCategory(
   categorySlug: string,
   categoryName?: string
 ): Product[] {
+  if (!products || products.length === 0) return [];
   const query = categorySlug || categoryName || "";
+  const cacheKey = `${query.toLowerCase()}_${products.length}`;
+
+  if (categoryFilterCache.has(cacheKey)) {
+    return categoryFilterCache.get(cacheKey)!;
+  }
+
   const info = findCategoryOrSubcategory(query);
 
   if (info.type === "all" || !query || query.toLowerCase() === "all") {
-    return products;
+    categoryFilterCache.set(cacheKey, products as Product[]);
+    return products as Product[];
   }
+
+  let result: Product[] = [];
 
   if (info.type === "subcategory" && info.keywords) {
     const kws = info.keywords.map(k => k.toLowerCase());
@@ -634,10 +648,12 @@ export function filterProductsByCategory(
       const matchesCat = info.category ? (pCat === info.category.name.toLowerCase() || pCat.includes(info.category.slug)) : true;
       return matchesKeyword || (matchesCat && matchesKeyword);
     });
-    if (filtered.length > 0) return filtered;
+    if (filtered.length > 0) {
+      result = filtered;
+    }
   }
 
-  if (info.type === "category" && info.category) {
+  if (result.length === 0 && info.type === "category" && info.category) {
     const catName = info.category.name.toLowerCase();
     const catSlug = info.category.slug.toLowerCase();
     const filtered = products.filter(p => {
@@ -646,15 +662,21 @@ export function filterProductsByCategory(
       const inferred = inferCategory(p.name, p.category);
       return inferred === catSlug;
     });
-    if (filtered.length > 0) return filtered;
+    if (filtered.length > 0) {
+      result = filtered;
+    }
   }
 
-  const target = normalizeCategorySlug(query);
-  const fallback = products.filter(p => {
-    const pCat = (p.category || "").toLowerCase();
-    const pName = (p.name || "").toLowerCase();
-    return pCat.includes(target) || pName.includes(target) || inferCategory(p.name, p.category) === target;
-  });
+  if (result.length === 0) {
+    const target = normalizeCategorySlug(query);
+    const fallback = products.filter(p => {
+      const pCat = (p.category || "").toLowerCase();
+      const pName = (p.name || "").toLowerCase();
+      return pCat.includes(target) || pName.includes(target) || inferCategory(p.name, p.category) === target;
+    });
+    result = fallback.length > 0 ? fallback : products.slice(0, 30);
+  }
 
-  return fallback.length > 0 ? fallback : products.slice(0, 20);
+  categoryFilterCache.set(cacheKey, result);
+  return result;
 }

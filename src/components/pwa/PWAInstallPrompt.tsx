@@ -152,7 +152,9 @@ export const PWAInstallPrompt: React.FC = () => {
           >
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2.5">
-                <img src="/durtup-logo-transparent.png" alt="Durtup" className="w-8 h-8 object-contain" />
+                <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-primary/20 shadow-xs">
+                  <img src="/icon-192.png" alt="Durtup" className="w-full h-full object-cover" />
+                </div>
                 <h3 className="font-bold text-base">iPhone এ অ্যাপ ইনস্টল করুন</h3>
               </div>
               <button 
@@ -212,7 +214,9 @@ export const PWAInstallPrompt: React.FC = () => {
           >
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2.5">
-                <img src="/durtup-logo-transparent.png" alt="Durtup" className="w-8 h-8 object-contain" />
+                <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-primary/20 shadow-xs">
+                  <img src="/icon-192.png" alt="Durtup" className="w-full h-full object-cover" />
+                </div>
                 <h3 className="font-bold text-base text-foreground">সরাসরি অ্যাপ ইনস্টল করার নিয়ম</h3>
               </div>
               <button 

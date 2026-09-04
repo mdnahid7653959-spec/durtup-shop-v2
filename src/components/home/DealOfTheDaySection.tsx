@@ -109,25 +109,31 @@ interface DealRowProps {
   items: Product[];
   direction: "left" | "right";
   speed?: number; // pixels per second
-  onInteract: (active: boolean) => void;
-  isPaused: boolean;
   rowId: string;
 }
 
 function DealRow({
   items,
   direction,
-  speed = 40,
-  onInteract,
-  isPaused,
+  speed = 36,
   rowId,
 }: DealRowProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef<boolean>(false);
+  const isManuallyDraggingRef = useRef<boolean>(false);
   const isMouseDownRef = useRef<boolean>(false);
   const startXRef = useRef<number>(0);
   const startScrollLeftRef = useRef<number>(0);
   const dragDistRef = useRef<number>(0);
+  
+  // Touch refs
+  const touchStartXRef = useRef<number>(0);
+  const touchStartYRef = useRef<number>(0);
+  const touchStartScrollLeftRef = useRef<number>(0);
+  const isHorizontalDragRef = useRef<boolean>(false);
+  const isVerticalScrollRef = useRef<boolean>(false);
+  const isTouchingRef = useRef<boolean>(false);
+
   const rafRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
   const scrollPosRef = useRef<number>(0);
@@ -154,7 +160,7 @@ function DealRow({
     return () => clearTimeout(timer);
   }, [direction, items]);
 
-  // RequestAnimationFrame Infinite Auto-Scroll Loop
+  // RequestAnimationFrame Infinite Continuous Auto-Scroll Loop
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -166,7 +172,8 @@ function DealRow({
       const dt = Math.min((time - lastTimeRef.current) / 1000, 0.1);
       lastTimeRef.current = time;
 
-      if (!isPaused && el) {
+      // Only skip auto-scroll while user is actively dragging horizontally
+      if (!isManuallyDraggingRef.current && el) {
         const singleSetWidth = el.scrollWidth / 3;
         if (singleSetWidth > 20) {
           const delta = speed * dt;
@@ -197,10 +204,10 @@ function DealRow({
         cancelAnimationFrame(rafRef.current);
       }
     };
-  }, [direction, speed, isPaused]);
+  }, [direction, speed]);
 
-  // Infinite Wrap handling for manual scroll / touch swipe
-  const handleScroll = useCallback(() => {
+  // Infinite Wrap helper
+  const handleWrapIfNeeded = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
     const singleSetWidth = el.scrollWidth / 3;
@@ -209,17 +216,13 @@ function DealRow({
     if (el.scrollLeft >= singleSetWidth * 2) {
       el.scrollLeft -= singleSetWidth;
       scrollPosRef.current = el.scrollLeft;
-      if (isMouseDownRef.current) {
-        startScrollLeftRef.current -= singleSetWidth;
-      }
+      if (isMouseDownRef.current) startScrollLeftRef.current -= singleSetWidth;
+      if (isTouchingRef.current) touchStartScrollLeftRef.current -= singleSetWidth;
     } else if (el.scrollLeft <= singleSetWidth * 0.1) {
       el.scrollLeft += singleSetWidth;
       scrollPosRef.current = el.scrollLeft;
-      if (isMouseDownRef.current) {
-        startScrollLeftRef.current += singleSetWidth;
-      }
-    } else {
-      scrollPosRef.current = el.scrollLeft;
+      if (isMouseDownRef.current) startScrollLeftRef.current += singleSetWidth;
+      if (isTouchingRef.current) touchStartScrollLeftRef.current += singleSetWidth;
     }
   }, []);
 
@@ -230,64 +233,116 @@ function DealRow({
     startXRef.current = e.clientX;
     const el = containerRef.current;
     startScrollLeftRef.current = el ? el.scrollLeft : 0;
+    scrollPosRef.current = el ? el.scrollLeft : 0;
     dragDistRef.current = 0;
     isDraggingRef.current = false;
-    onInteract(true);
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isMouseDownRef.current || !containerRef.current) return;
     const dx = e.clientX - startXRef.current;
     dragDistRef.current = Math.abs(dx);
-    if (dragDistRef.current > 6) {
+    if (dragDistRef.current > 5) {
       isDraggingRef.current = true;
+      isManuallyDraggingRef.current = true;
     }
-    const targetScroll = startScrollLeftRef.current - dx;
-    containerRef.current.scrollLeft = targetScroll;
-    scrollPosRef.current = targetScroll;
+    if (isManuallyDraggingRef.current) {
+      const el = containerRef.current;
+      const targetScroll = startScrollLeftRef.current - dx;
+      el.scrollLeft = targetScroll;
+      scrollPosRef.current = targetScroll;
+      handleWrapIfNeeded();
+    }
   };
 
   const handleMouseUp = () => {
     if (isMouseDownRef.current) {
       isMouseDownRef.current = false;
+      isManuallyDraggingRef.current = false;
+      if (containerRef.current) {
+        scrollPosRef.current = containerRef.current.scrollLeft;
+      }
       setTimeout(() => {
         isDraggingRef.current = false;
-      }, 50);
-      onInteract(false);
+      }, 80);
     }
   };
 
   const handleMouseLeave = () => {
     if (isMouseDownRef.current) {
       isMouseDownRef.current = false;
+      isManuallyDraggingRef.current = false;
+      if (containerRef.current) {
+        scrollPosRef.current = containerRef.current.scrollLeft;
+      }
       setTimeout(() => {
         isDraggingRef.current = false;
-      }, 50);
+      }, 80);
     }
-    onInteract(false);
   };
 
-  // Touch Events (Mobile)
-  const handleTouchStart = () => {
-    onInteract(true);
+  // Touch Events (Mobile) - seamlessly allows vertical page scrolling while enabling horizontal drag
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+    const el = containerRef.current;
+    touchStartScrollLeftRef.current = el ? el.scrollLeft : 0;
+    scrollPosRef.current = el ? el.scrollLeft : 0;
+    isHorizontalDragRef.current = false;
+    isVerticalScrollRef.current = false;
+    isTouchingRef.current = true;
     isDraggingRef.current = false;
   };
 
-  const handleTouchMove = () => {
-    isDraggingRef.current = true;
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isTouchingRef.current || !containerRef.current || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartXRef.current;
+    const dy = touch.clientY - touchStartYRef.current;
+
+    // Check gesture direction if not locked yet
+    if (!isHorizontalDragRef.current && !isVerticalScrollRef.current) {
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 5) {
+        // Vertical scroll -> let browser handle page scroll naturally without stopping anything
+        isVerticalScrollRef.current = true;
+        return;
+      } else if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 5) {
+        // Horizontal drag -> take control to swipe products
+        isHorizontalDragRef.current = true;
+        isManuallyDraggingRef.current = true;
+        isDraggingRef.current = true;
+      } else {
+        return;
+      }
+    }
+
+    if (isHorizontalDragRef.current) {
+      const el = containerRef.current;
+      const targetScroll = touchStartScrollLeftRef.current - dx;
+      el.scrollLeft = targetScroll;
+      scrollPosRef.current = targetScroll;
+      handleWrapIfNeeded();
+    }
   };
 
   const handleTouchEnd = () => {
+    isTouchingRef.current = false;
+    isHorizontalDragRef.current = false;
+    isVerticalScrollRef.current = false;
+    isManuallyDraggingRef.current = false;
+    if (containerRef.current) {
+      scrollPosRef.current = containerRef.current.scrollLeft;
+    }
     setTimeout(() => {
       isDraggingRef.current = false;
-    }, 50);
-    onInteract(false);
+    }, 80);
   };
 
   return (
     <div
       ref={containerRef}
-      onScroll={handleScroll}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -296,20 +351,15 @@ function DealRow({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
-      onMouseEnter={(e) => {
-        // Only pause on real mouse hover (not on touch simulation)
-        if (e.currentTarget.matches(":hover")) {
-          onInteract(true);
-        }
-      }}
-      className="relative overflow-x-auto overflow-y-hidden w-full cursor-grab active:cursor-grabbing select-none no-scrollbar touch-pan-x"
+      className="relative overflow-x-auto overflow-y-hidden w-full cursor-grab active:cursor-grabbing select-none no-scrollbar touch-pan-y"
       style={{
         scrollbarWidth: "none",
         msOverflowStyle: "none",
+        touchAction: "pan-y",
         WebkitOverflowScrolling: "touch",
       }}
     >
-      <div className="flex w-max gap-1.5 sm:gap-2.5 md:gap-3 py-1">
+      <div className="flex w-max gap-1.5 sm:gap-2.5 md:gap-3 py-1 pointer-events-auto">
         {items.map((product, idx) => (
           <ProductDealCard
             key={`${rowId}-${product.id}-${idx}`}
@@ -324,24 +374,6 @@ function DealRow({
 }
 
 function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
-  const [isInteracting, setIsInteracting] = useState(false);
-  const interactionTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleInteract = useCallback((active: boolean) => {
-    if (interactionTimerRef.current) {
-      clearTimeout(interactionTimerRef.current);
-    }
-
-    if (active) {
-      setIsInteracting(true);
-    } else {
-      // Immediately resume auto-scrolling when finger/mouse is lifted
-      interactionTimerRef.current = setTimeout(() => {
-        setIsInteracting(false);
-      }, 30);
-    }
-  }, []);
-
   // Split and format products into 2 distinct continuous rows with triple-buffer
   const { row1, row2 } = useMemo(() => {
     if (!products || products.length === 0) return { row1: [], row2: [] };
@@ -407,7 +439,7 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
       `}</style>
 
       <div className="max-w-7xl mx-auto">
-        {/* Header with Title and View All (Play/Pause button removed) */}
+        {/* Header with Title and View All */}
         <div className="flex items-center justify-between mb-2 sm:mb-3 px-1">
           <div>
             <div className="flex items-center gap-2">
@@ -434,24 +466,20 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
 
         {/* 2 Continuous Dual-Direction Auto-Running & Interactive Rows Container */}
         <div className="deal-marquee-wrapper relative overflow-hidden py-1 space-y-2 sm:space-y-3 rounded-2xl bg-gradient-to-b from-slate-50/50 to-transparent dark:from-slate-900/40 p-1 sm:p-2 border border-slate-100 dark:border-slate-800/80">
-          {/* Row 1: Auto-Scroll to the Left ← & Interactive Swipe */}
+          {/* Row 1: Auto-Scroll to the Left ← & Interactive Drag */}
           <DealRow
             rowId="row1"
             items={row1}
             direction="left"
-            speed={40}
-            isPaused={isInteracting}
-            onInteract={handleInteract}
+            speed={38}
           />
 
-          {/* Row 2: Auto-Scroll to the Right → & Interactive Swipe */}
+          {/* Row 2: Auto-Scroll to the Right → & Interactive Drag */}
           <DealRow
             rowId="row2"
             items={row2}
             direction="right"
-            speed={40}
-            isPaused={isInteracting}
-            onInteract={handleInteract}
+            speed={38}
           />
         </div>
       </div>
