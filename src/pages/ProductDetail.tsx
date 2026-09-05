@@ -28,6 +28,7 @@ import { ProductZoomViewer } from "@/components/products/ProductZoomViewer";
 import { SEOHead } from "@/components/SEOHead";
 import { generateProductSEOTitle, generateProductSEODescription, DEFAULT_BANGLADESH_PRODUCT_FAQS } from "@/utils/seoHelper";
 import { trackViewContent, trackAddToCart } from "@/components/FacebookPixel";
+import { Breadcrumbs } from "@/components/common/Breadcrumbs";
 
 interface ProductImage {
   id: string;
@@ -1096,7 +1097,12 @@ export default function ProductDetail() {
         }}
         breadcrumbs={[
           { name: "Home", url: "/" },
-          { name: "Products", url: "/products" },
+          ...((product as any).category_name ? [
+            { name: "Categories", url: "/categories" },
+            { name: (product as any).category_name, url: `/category/${((product as any).category_slug || (product as any).category_name.toLowerCase().replace(/\s+/g, '-'))}` },
+          ] : [
+            { name: "Products", url: "/products" }
+          ]),
           { name: product.name, url: `/product/${product.slug || product.id}` }
         ]}
         faqs={DEFAULT_BANGLADESH_PRODUCT_FAQS}
@@ -1112,13 +1118,20 @@ export default function ProductDetail() {
       <main className="flex-1 pb-40 md:pb-8 w-full max-w-full overflow-hidden">
         <div className="container py-4 sm:py-8 w-full max-w-full">
           {/* Breadcrumb - Clean semantic navigation */}
-          <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground mb-6 max-w-full overflow-hidden">
-            <Link to="/" className="hover:text-primary shrink-0">Home</Link>
-            <span>/</span>
-            <Link to="/products" className="hover:text-primary shrink-0">Products</Link>
-            <span>/</span>
-            <span className="text-foreground line-clamp-1 truncate font-medium">{product.name}</span>
-          </nav>
+          <div className="mb-4">
+            <Breadcrumbs
+              items={[
+                { name: "Home", url: "/" },
+                ...((product as any).category_name ? [
+                  { name: "Categories", url: "/categories" },
+                  { name: (product as any).category_name, url: `/category/${((product as any).category_slug || (product as any).category_name.toLowerCase().replace(/\s+/g, '-'))}` },
+                ] : [
+                  { name: "Products", url: "/products" }
+                ]),
+                { name: product.name, url: `/product/${product.slug || product.id}` }
+              ]}
+            />
+          </div>
 
           <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 w-full max-w-full min-w-0">
             {/* Product Images Section */}

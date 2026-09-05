@@ -16,7 +16,7 @@ function report(condition, message) {
 }
 
 console.log('\n========================================');
-console.log('  DURTUP.SHOP SEO DOMINATION TEST SUITE ');
+console.log('  DURTUP.SHOP ENTERPRISE SEO TEST SUITE ');
 console.log('========================================\n');
 
 // 1. Check index.html
@@ -38,12 +38,14 @@ const publicDir = path.join(ROOT_DIR, 'public');
 const sitemapIndex = path.join(publicDir, 'sitemap.xml');
 const sitemapPages = path.join(publicDir, 'sitemap-pages.xml');
 const sitemapCategories = path.join(publicDir, 'sitemap-categories.xml');
+const sitemapGuides = path.join(publicDir, 'sitemap-guides.xml');
 const sitemapProducts = path.join(publicDir, 'sitemap-products.xml');
 const robotsTxt = path.join(publicDir, 'robots.txt');
 
 report(fs.existsSync(sitemapIndex), 'sitemap.xml exists in /public');
 report(fs.existsSync(sitemapPages), 'sitemap-pages.xml exists in /public');
 report(fs.existsSync(sitemapCategories), 'sitemap-categories.xml exists in /public');
+report(fs.existsSync(sitemapGuides), 'sitemap-guides.xml exists in /public');
 report(fs.existsSync(sitemapProducts), 'sitemap-products.xml exists in /public');
 
 if (fs.existsSync(robotsTxt)) {
@@ -51,6 +53,7 @@ if (fs.existsSync(robotsTxt)) {
   report(robotsContent.includes('Sitemap: https://durtup.shop/sitemap.xml'), 'robots.txt references sitemap index');
   report(robotsContent.includes('User-agent: GPTBot') || robotsContent.includes('User-agent: Google-Extended'), 'robots.txt explicitly welcomes AI & search engine crawlers');
   report(robotsContent.includes('Disallow: /admin'), 'robots.txt disallows admin paths');
+  report(robotsContent.includes('Allow: /guides/'), 'robots.txt allows buying guides');
 } else {
   report(false, 'robots.txt exists');
 }
@@ -67,13 +70,11 @@ function scanDir(dir) {
   for (const f of files) {
     const res = path.join(fullPath, f.name);
     if (f.isDirectory()) {
-      if (f.name !== 'admin' && f.name !== 'staff') { // ignore internal admin keys if any
+      if (f.name !== 'admin' && f.name !== 'staff') {
         scanDir(path.join(dir, f.name));
       }
     } else if (f.name.endsWith('.tsx') || f.name.endsWith('.ts')) {
       const content = fs.readFileSync(res, 'utf8');
-      // Case sensitive check for visible UI strings or lowercase domains
-      const lower = content.toLowerCase();
       if (content.includes('megamart.com') || (content.includes('MegaMart') && !res.includes('megamart_admin_session'))) {
         console.error(`     Found legacy reference in: ${res}`);
         leakFound = true;
@@ -92,6 +93,8 @@ const checkPages = [
   { file: 'src/pages/ProductDetail.tsx', label: 'Product Details' },
   { file: 'src/pages/Categories.tsx', label: 'All Categories' },
   { file: 'src/pages/CategoryPage.tsx', label: 'Category Page' },
+  { file: 'src/pages/Guides.tsx', label: 'Buying Guides Hub' },
+  { file: 'src/pages/GuideDetail.tsx', label: 'Guide Detail' },
   { file: 'src/pages/Press.tsx', label: 'Press Center' },
   { file: 'src/pages/About.tsx', label: 'About Us' },
   { file: 'src/pages/Seller.tsx', label: 'Seller Hub' },
@@ -135,6 +138,19 @@ for (const item of noindexPages) {
   } else {
     report(false, `${item.label} file exists`);
   }
+}
+
+// 6. Check SEO Utilities & Canonical Engine
+console.log('\n6. Checking SEO Helper & Canonical Engine...');
+const seoHelperPath = path.join(ROOT_DIR, 'src', 'utils', 'seoHelper.ts');
+if (fs.existsSync(seoHelperPath)) {
+  const seoHelperCode = fs.readFileSync(seoHelperPath, 'utf8');
+  report(seoHelperCode.includes('normalizeCanonicalUrl'), 'normalizeCanonicalUrl function implemented');
+  report(seoHelperCode.includes('buildArticleJsonLd'), 'buildArticleJsonLd Schema.org implementation present');
+  report(seoHelperCode.includes('buildBreadcrumbJsonLd'), 'buildBreadcrumbJsonLd Schema.org implementation present');
+  report(seoHelperCode.includes('Price in Bangladesh | Durtup.shop'), 'Product Title pattern conforms to Bangladesh search intent standard');
+} else {
+  report(false, 'src/utils/seoHelper.ts exists');
 }
 
 console.log('\n----------------------------------------');

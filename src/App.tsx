@@ -98,6 +98,8 @@ const MyVouchers = lazy(() => import("./pages/MyVouchers"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const PaymentCallback = lazy(() => import("./pages/PaymentCallback"));
 const SearchPage = lazy(() => import("./pages/Search"));
+const Guides = lazy(() => import("./pages/Guides"));
+const GuideDetail = lazy(() => import("./pages/GuideDetail"));
 
 // Info Pages - lazy load
 const HelpCenter = lazy(() => import("./pages/HelpCenter"));
@@ -249,6 +251,12 @@ const App = () => (
                               <Route path="/terms" element={<Terms />} />
                               <Route path="/cookies" element={<Cookies />} />
                               <Route path="/ip" element={<IntellectualProperty />} />
+                              
+                              {/* SEO Content & Buying Guides */}
+                              <Route path="/guides" element={<Guides />} />
+                              <Route path="/guides/:slug" element={<GuideDetail />} />
+                              <Route path="/blog" element={<Guides />} />
+                              <Route path="/blog/:slug" element={<GuideDetail />} />
                               
                               {/* Redirect common paths */}
                               <Route path="/deals" element={<Products />} />

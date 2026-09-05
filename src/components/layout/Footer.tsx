@@ -51,9 +51,9 @@ const defaultFooterConfig: FooterConfig = {
       { name: "Contact", href: "/contact" },
     ]},
     { title: "About Us", links: [
-      { name: "About", href: "/about" }, { name: "Careers", href: "/careers" },
-      { name: "Press", href: "/press" }, { name: "Affiliate", href: "/affiliate" },
-      { name: "Seller Center", href: "/seller/register" },
+      { name: "About", href: "/about" }, { name: "Buying Guides", href: "/guides" },
+      { name: "Careers", href: "/careers" }, { name: "Press", href: "/press" },
+      { name: "Affiliate", href: "/affiliate" }, { name: "Seller Center", href: "/seller/register" },
     ]},
     { title: "Policies", links: [
       { name: "Privacy", href: "/privacy" }, { name: "Terms", href: "/terms" },

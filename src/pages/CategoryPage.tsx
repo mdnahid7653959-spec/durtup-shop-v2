@@ -13,7 +13,10 @@ import { useCJSettings, useCJCategoryMappings } from "@/hooks/useCJSettings";
 import { findCategoryOrSubcategory, CATEGORIES_DATA } from "@/data/categoriesData";
 import { cn } from "@/lib/utils";
 
+import { Breadcrumbs } from "@/components/common/Breadcrumbs";
+
 interface Category {
+
   id: string;
   name: string;
   slug: string;
@@ -227,7 +230,19 @@ export default function CategoryPage() {
       <main className="flex-1 pb-20 md:pb-0">
         <div className="px-3 sm:container py-2.5 sm:py-4">
           
-          {/* Subcategory Pills Row with Water Droplet Theme (পানির ফোঁটা থিম ও সুপার ফাস্ট স্লাইড) */}
+          {/* Breadcrumb Navigation */}
+          <div className="mb-2">
+            <Breadcrumbs
+              items={[
+                { name: "Home", url: "/" },
+                { name: "Categories", url: "/categories" },
+                { name: categoryName, url: `/category/${slug || ""}` },
+                ...(subcategoryParam ? [{ name: subcategoryParam.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "), url: `/category/${slug}?subcategory=${subcategoryParam}` }] : []),
+              ]}
+            />
+          </div>
+
+          {/* Subcategory Pills Row with Water Droplet Theme */}
           {mainCat && mainCat.subcategories.length > 0 && (
             <div className="mb-3 sm:mb-4 select-none">
               <div 
@@ -244,7 +259,7 @@ export default function CategoryPage() {
                 {/* Specular gloss top reflection beam */}
                 <div className="absolute inset-x-8 top-0 h-[1px] bg-gradient-to-r from-transparent via-white dark:via-white/30 to-transparent pointer-events-none opacity-90" />
 
-                {/* ── Single Hyper-Realistic 3D Sliding Water Droplet (সাব-ক্যাটাগরির আসল ভাসমান পানির ফোঁটা) ── */}
+                {/* ── Single Hyper-Realistic 3D Sliding Water Droplet ── */}
                 {subDropletStyle.opacity > 0 && (
                   <div
                     className={cn(
@@ -347,6 +362,7 @@ export default function CategoryPage() {
 
         </div>
       </main>
+
       
       <Footer />
     </div>

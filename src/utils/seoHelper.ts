@@ -52,59 +52,119 @@ const SITE_NAME = "Durtup.shop";
 const BASE_URL = "https://durtup.shop";
 const DEFAULT_CURRENCY = "BDT";
 
+export interface ArticleSEOData {
+  title: string;
+  description: string;
+  url: string;
+  image?: string;
+  datePublished: string;
+  dateModified?: string;
+  authorName?: string;
+}
+
+/**
+ * Normalizes any URL into a clean canonical format (strips tracking tags, search facets, query strings, trailing slashes)
+ */
+export function normalizeCanonicalUrl(rawUrl?: string): string {
+  if (!rawUrl) return BASE_URL;
+  try {
+    const urlObj = new URL(rawUrl.startsWith("http") ? rawUrl : `${BASE_URL}${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`);
+    let cleanPath = urlObj.pathname.toLowerCase().replace(/\/+$/, "");
+    if (!cleanPath) cleanPath = "";
+    return `${BASE_URL}${cleanPath}`;
+  } catch {
+    const cleanPath = (rawUrl.split("?")[0].split("#")[0] || "").toLowerCase().replace(/\/+$/, "");
+    return `${BASE_URL}${cleanPath.startsWith("/") ? cleanPath : "/" + cleanPath}`;
+  }
+}
+
 /**
  * Generates an SEO-optimized title for products targeting Bangladesh search intent
- * Format: [Product Name] Price in Bangladesh – [Key Spec/Benefit] | Durtup.shop
+ * Standard: [Product Name] Price in Bangladesh | Durtup.shop
  */
 export function generateProductSEOTitle(product: ProductSEOData): string {
   const name = (product.name || "Product").trim();
-  const brand = product.brand ? `${product.brand} ` : "";
-  const price = product.discount_price || product.regular_price || product.price;
   
-  if (name.toLowerCase().includes("price in bangladesh") || name.toLowerCase().includes("durtup")) {
-    return `${name} | ${SITE_NAME}`;
-  }
-
-  // Add category or price hint if title is short
-  if (name.length < 35 && price) {
-    return `${name} Price in Bangladesh (৳${price.toLocaleString("en-BD")}) | ${SITE_NAME}`;
+  if (name.toLowerCase().includes("price in bangladesh")) {
+    return name.includes(SITE_NAME) ? name : `${name} | ${SITE_NAME}`;
   }
 
   return `${name} Price in Bangladesh | ${SITE_NAME}`;
 }
 
 /**
- * Generates a high-converting, natural meta description for product pages
+ * Generates a natural, search-intent-focused meta description for product pages
  */
 export function generateProductSEODescription(product: ProductSEOData): string {
   const name = (product.name || "Product").trim();
   const price = product.discount_price || product.regular_price || product.price;
-  const priceText = price ? `at just ৳${price.toLocaleString("en-BD")}` : "at the best price";
-  const rawDesc = (product.short_description || product.description || "").replace(/<[^>]*>?/gm, "").trim();
+  const priceText = price ? `at ৳${price.toLocaleString("en-BD")}` : "at best price";
+  const rawDesc = (product.short_description || product.description || "")
+    .replace(/<[^>]*>?/gm, "")
+    .replace(/\\x[0-9A-Fa-f]{2}/g, "")
+    .trim();
   
   let snippet = "";
-  if (rawDesc.length > 20) {
-    snippet = rawDesc.slice(0, 90).trim() + "... ";
+  if (rawDesc.length > 15) {
+    snippet = rawDesc.slice(0, 85).trim() + "... ";
   }
 
-  const stockText = (product.stock_quantity ?? 1) > 0 ? "100% authentic, fast home delivery" : "Check availability";
+  const stockText = (product.stock_quantity ?? 1) > 0 ? "Fast home delivery & Cash on Delivery" : "Check availability";
   const warrantyText = product.warranty_info ? ` with ${product.warranty_info}` : "";
 
-  const desc = `Buy ${name} ${priceText} in Bangladesh. ${snippet}${stockText}${warrantyText} & Cash on Delivery available at ${SITE_NAME}.`;
+  const desc = `Buy ${name} online ${priceText} in Bangladesh. ${snippet}${stockText}${warrantyText} at ${SITE_NAME}. Order today!`;
   return desc.slice(0, 160);
 }
 
 /**
  * Generates SEO metadata for category landing pages
+ * Standard: [Category Name] Price in Bangladesh | Durtup.shop
  */
 export function generateCategorySEOTitle(category: CategorySEOData): string {
-  const name = category.name || "Products";
-  return `Buy ${name} in Bangladesh – Best Prices & Offers | ${SITE_NAME}`;
+  const name = (category.name || "Products").trim();
+  if (name.toLowerCase().includes("price in bangladesh")) {
+    return name.includes(SITE_NAME) ? name : `${name} | ${SITE_NAME}`;
+  }
+  return `${name} Price in Bangladesh | ${SITE_NAME}`;
 }
 
 export function generateCategorySEODescription(category: CategorySEOData): string {
-  const name = category.name || "Products";
-  return `Explore top quality ${name} in Bangladesh at ${SITE_NAME}. Cash on Delivery, genuine warranty, fast shipping across Dhaka & all BD districts. Shop now!`;
+  const name = (category.name || "Products").trim();
+  return `Explore genuine ${name} at best prices in Bangladesh at ${SITE_NAME}. 100% authentic quality, Cash on Delivery, and fast home delivery nationwide.`;
+}
+
+/**
+ * Builds Schema.org Article JSON-LD for guides/blog
+ */
+export function buildArticleJsonLd(article: ArticleSEOData): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: article.title,
+    description: article.description,
+    image: article.image || `${BASE_URL}/icon-512.png`,
+    url: normalizeCanonicalUrl(article.url),
+    datePublished: article.datePublished,
+    dateModified: article.dateModified || article.datePublished,
+    author: {
+      "@type": "Person",
+      name: article.authorName || "Durtup Editorial Team",
+      url: `${BASE_URL}/about`,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: BASE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: `${BASE_URL}/icon-512.png`,
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": normalizeCanonicalUrl(article.url),
+    },
+  };
 }
 
 /**

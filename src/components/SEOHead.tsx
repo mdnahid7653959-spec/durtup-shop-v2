@@ -7,8 +7,11 @@ import {
   buildFAQJsonLd,
   buildOrganizationJsonLd,
   buildWebSiteJsonLd,
+  buildArticleJsonLd,
+  normalizeCanonicalUrl,
   type ProductSEOData,
   type CategorySEOData,
+  type ArticleSEOData,
   type FAQItem,
 } from "@/utils/seoHelper";
 
@@ -21,6 +24,7 @@ interface SEOHeadProps {
   noindex?: boolean;
   product?: ProductSEOData;
   category?: CategorySEOData;
+  article?: ArticleSEOData;
   breadcrumbs?: Array<{ name: string; url: string }>;
   itemList?: Array<{ name: string; url: string; image?: string; price?: number }>;
   faqs?: FAQItem[];
@@ -39,6 +43,7 @@ export function SEOHead({
   noindex = false,
   product,
   category,
+  article,
   breadcrumbs,
   itemList,
   faqs,
@@ -52,12 +57,12 @@ export function SEOHead({
     const finalDescription = description || settings?.metaDescription || "Shop millions of quality products at best prices in Bangladesh. Enjoy Cash on Delivery, fast home delivery, and easy returns at Durtup.shop.";
     const finalImage = image || settings?.ogImage || DEFAULT_OG_IMAGE;
     
-    // Clean canonical URL (preferred domain: https://durtup.shop)
-    let finalCanonical = url;
-    if (!finalCanonical && typeof window !== "undefined") {
-      const cleanPath = window.location.pathname === "/" ? "" : window.location.pathname;
-      finalCanonical = `${DEFAULT_BASE_URL}${cleanPath}`;
+    // Clean normalized canonical URL (preferred domain: https://durtup.shop, stripped of query params, tracking, trailing slashes)
+    let rawTargetUrl = url;
+    if (!rawTargetUrl && typeof window !== "undefined") {
+      rawTargetUrl = window.location.pathname;
     }
+    const finalCanonical = normalizeCanonicalUrl(rawTargetUrl);
 
     // 1. Update Document Title
     document.title = finalTitle;
@@ -126,6 +131,11 @@ export function SEOHead({
     // Product Schema
     if (product) {
       schemasToInject.push(buildProductJsonLd(product, finalCanonical || DEFAULT_BASE_URL));
+    }
+
+    // Article / Guide Schema
+    if (article) {
+      schemasToInject.push(buildArticleJsonLd(article));
     }
 
     // Breadcrumbs Schema

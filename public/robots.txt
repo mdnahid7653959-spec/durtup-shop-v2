@@ -19,6 +19,8 @@ Allow: /careers
 Allow: /affiliate
 Allow: /seller
 Allow: /track
+Allow: /guides/
+Allow: /blog/
 
 # AI & LLM Search Agents (GEO / AEO - ChatGPT Search, Perplexity, Claude, Gemini, Apple Intelligence)
 User-agent: Google-Extended

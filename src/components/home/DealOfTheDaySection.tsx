@@ -41,72 +41,75 @@ function ProductDealCard({
 
   return (
     <div 
-      className="w-[130px] xs:w-[145px] sm:w-[170px] md:w-[200px] shrink-0 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-0.5 hover:border-orange-300 dark:hover:border-orange-500/40 transition-all duration-200 flex flex-col justify-between p-1.5 sm:p-2.5 relative group/card shadow-2xs select-none"
-      style={{ contentVisibility: "auto", containIntrinsicSize: "170px 240px" }}
+      className="w-[125px] xs:w-[138px] sm:w-[160px] md:w-[185px] shrink-0 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-0.5 hover:border-orange-400 dark:hover:border-orange-500/50 transition-all duration-200 p-1.5 sm:p-2.5 relative group/card shadow-2xs select-none flex flex-col"
     >
       <Link
         to={`/product/${product.slug || product.id}`}
         state={{ preloadedProduct: product }}
         onClick={handleClick}
         draggable={false}
-        className="block h-full flex flex-col justify-between"
+        className="block w-full flex flex-col"
       >
-        <div>
-          {/* Discount Badge */}
-          <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
-            <span className="bg-[#ff3b30] text-white text-[8px] sm:text-[10px] font-black px-1.5 py-0.5 rounded shadow-xs">
-              -{discount}%
-            </span>
-          </div>
-
-          {/* Product Image Container */}
-          <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-950 mb-1 flex items-center justify-center p-1 pointer-events-none">
-            <img
-              src={displayImage}
-              alt={product.name}
-              draggable={false}
-              className="w-full h-full object-contain filter drop-shadow-xs group-hover/card:scale-108 transition-transform duration-300 pointer-events-none select-none"
-              loading="lazy"
-              decoding="async"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = getSmartProductImage(product.name, "", "");
-              }}
-            />
-          </div>
-
-          {/* Product Title */}
-          <h3 className="font-bold text-[10px] sm:text-xs md:text-sm text-slate-900 dark:text-slate-100 line-clamp-1 mb-0.5 group-hover/card:text-orange-600 transition-colors pointer-events-none">
-            {product.name}
-          </h3>
-
-          {/* 5-Star Rating & Reviews */}
-          <div className="flex items-center gap-0.5 sm:gap-1 mb-1 pointer-events-none">
-            <div className="flex items-center text-amber-400">
-              <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
-              <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
-              <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
-              <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
-              <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
-            </div>
-            <span className="text-[8px] sm:text-[10px] text-slate-500 font-medium">
-              ({reviewCount})
-            </span>
-          </div>
+        {/* Discount Badge */}
+        <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
+          <span className="bg-[#ff3b30] text-white text-[8px] sm:text-[10px] font-black px-1.5 py-0.5 rounded shadow-xs">
+            -{discount}%
+          </span>
         </div>
 
-        {/* Price Section */}
-        <div className="flex items-baseline gap-1.5 mt-auto pt-1 pointer-events-none">
-          <span className="text-xs sm:text-sm font-black text-orange-600 leading-none">
-            ৳{product.price.toLocaleString("en-BD")}
+        {/* Product Image Container */}
+        <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-950 mb-1.5 flex items-center justify-center p-1 pointer-events-none">
+          <img
+            src={displayImage}
+            alt={product.name}
+            draggable={false}
+            className="w-full h-full object-contain filter drop-shadow-xs group-hover/card:scale-108 transition-transform duration-300 pointer-events-none select-none"
+            loading="lazy"
+            decoding="async"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = getSmartProductImage(product.name, "", "");
+            }}
+          />
+        </div>
+
+        {/* Product Title */}
+        <h3 className="font-bold text-[10px] sm:text-xs md:text-sm text-slate-900 dark:text-slate-100 line-clamp-1 mb-1 group-hover/card:text-orange-600 transition-colors pointer-events-none leading-snug">
+          {product.name}
+        </h3>
+
+        {/* 5-Star Rating & Reviews */}
+        <div className="flex items-center gap-0.5 sm:gap-1 mb-1.5 pointer-events-none">
+          <div className="flex items-center text-amber-400">
+            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
+            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
+            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
+            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
+            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
+          </div>
+          <span className="text-[8px] sm:text-[10px] text-slate-500 font-medium">
+            ({reviewCount})
           </span>
-          <span className="text-[9px] sm:text-[10px] text-slate-400 line-through leading-none">
-            ৳{regularPrice.toLocaleString("en-BD")}
+        </div>
+
+        {/* Price & Fast Action Bar */}
+        <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/80 pointer-events-none">
+          <div className="flex items-baseline gap-1">
+            <span className="text-xs sm:text-sm font-black text-orange-600 leading-none">
+              ৳{product.price.toLocaleString("en-BD")}
+            </span>
+            <span className="text-[9px] sm:text-[10px] text-slate-400 line-through leading-none">
+              ৳{regularPrice.toLocaleString("en-BD")}
+            </span>
+          </div>
+          <span className="text-[9px] sm:text-[10px] font-bold text-orange-600 bg-orange-50 dark:bg-orange-950/60 dark:text-orange-400 px-1.5 py-0.5 rounded-md">
+            Order
           </span>
         </div>
       </Link>
     </div>
   );
 }
+
 
 interface DealRowProps {
   items: Product[];
