@@ -214,34 +214,60 @@ function buildSections(products: Product[]) {
       newArrivals: [],
       trending: [],
       recommended: [],
+      dealProducts: [],
+      allProducts: [],
     };
   }
 
   // 5-Minute Time Block Rotation Seed (changes automatically every 300,000ms)
   const timeBlock = Math.floor(Date.now() / (5 * 60 * 1000));
-  const shift = (timeBlock * 6) % total;
+  const shift = (timeBlock * 12) % total;
   const rotated = [...products.slice(shift), ...products.slice(0, shift)];
 
   // Deduplicate so that once a product is assigned to a section, it is excluded from others
   const assignedIds = new Set<string>();
+  const assignedSlugs = new Set<string>();
+  const assignedNames = new Set<string>();
+
   const getUniqueSlice = (count: number, modifier?: (p: Product) => Product): Product[] => {
     const slice: Product[] = [];
     for (const p of rotated) {
       if (slice.length >= count) break;
-      if (!assignedIds.has(p.id)) {
-        assignedIds.add(p.id);
-        slice.push(modifier ? modifier(p) : p);
-      }
+      const id = String(p.id || "").toLowerCase();
+      const slug = String(p.slug || "").toLowerCase();
+      const name = String(p.name || "").trim().toLowerCase();
+
+      if (id && assignedIds.has(id)) continue;
+      if (slug && assignedSlugs.has(slug)) continue;
+      if (name && assignedNames.has(name)) continue;
+
+      if (id) assignedIds.add(id);
+      if (slug) assignedSlugs.add(slug);
+      if (name) assignedNames.add(name);
+
+      slice.push(modifier ? modifier(p) : p);
     }
     return slice;
   };
 
-  const flashSale = getUniqueSlice(6, (p) => ({ ...p, is_flash_sale: true }));
-  const trending = getUniqueSlice(12, (p) => ({ ...p, isBestSeller: true }));
-  const featured = getUniqueSlice(12, (p) => ({ ...p, is_featured: true }));
-  const newArrivals = getUniqueSlice(12, (p) => ({ ...p, isNew: true }));
-  const latestProducts = getUniqueSlice(12);
-  const recommended = getUniqueSlice(18);
+  const flashSale = getUniqueSlice(12, (p) => ({ ...p, is_flash_sale: true }));
+  const trending = getUniqueSlice(24, (p) => ({ ...p, isBestSeller: true }));
+  const featured = getUniqueSlice(24, (p) => ({ ...p, is_featured: true }));
+  const newArrivals = getUniqueSlice(24, (p) => ({ ...p, isNew: true }));
+  const latestProducts = getUniqueSlice(24);
+  const recommended = getUniqueSlice(36);
+
+  // Strict deduplication for streaming views
+  const seenAll = new Set<string>();
+  const uniqueAll: Product[] = [];
+  for (const p of rotated) {
+    if (!p) continue;
+    const key = (p.name || p.slug || p.id).trim().toLowerCase();
+    if (!seenAll.has(key)) {
+      seenAll.add(key);
+      uniqueAll.push(p);
+    }
+  }
 
   return {
     latestProducts,
@@ -250,6 +276,8 @@ function buildSections(products: Product[]) {
     newArrivals,
     trending,
     recommended,
+    dealProducts: uniqueAll, // Full streaming deduplicated catalog for Deal of the Day marquee!
+    allProducts: uniqueAll,  // Full streaming deduplicated catalog for feeds & views!
   };
 }
 
@@ -318,34 +346,31 @@ async function fetchAllHomeProducts() {
     }
   } catch {}
 
-  // ── Strategy 1: Fetch directly from live supplier API (Mohasagor API) with fast 3.5s timeout ──
+  // ── Strategy 1: Fetch Both Ecomseller BD & Mohasagor Catalogs with balanced interleaving ──
   try {
-    const apiUrl = "/api/mohasagor/api/reseller/product";
-    const res = await fetchWithTimeout(apiUrl, {
-      headers: {
-        "api-key": "A8niclztH9JtzS4t",
-        "secret-key": "2ff380917a11d3a7c97bcf6dddfb8adf38194c7d6b726ab12c4d0d5fb136fef8"
-      }
-    }, 3500);
+    const { getCachedMohasagorProducts, interleaveCatalogs } = await import("@/utils/mohasagorCache");
+    const { EcomsellerEngine } = await import("@/services/suppliers/ecomsellerEngine");
 
-    if (res.ok) {
-      const responseData = await res.json();
-      const rawProducts = responseData.products || (Array.isArray(responseData) ? responseData : []);
-      if (Array.isArray(rawProducts) && rawProducts.length > 0) {
-        const mapped = rawProducts.map(mapSupplierProduct);
-        const merged = [
-          ...adminCreatedProducts,
-          ...mapped.filter(m => !adminCreatedProducts.some(ap => ap.id === m.id))
-        ];
-        const result = buildSections(merged);
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify(result));
-        } catch (e) {}
-        return result;
-      }
+    const [cachedMohasagor, cachedEcomseller] = await Promise.all([
+      getCachedMohasagorProducts().catch(() => []),
+      EcomsellerEngine.getCachedEcomsellerProducts().catch(() => [])
+    ]);
+
+    const combinedSuppliers = interleaveCatalogs(cachedMohasagor, cachedEcomseller);
+
+    if (combinedSuppliers && combinedSuppliers.length > 0) {
+      const merged = [
+        ...adminCreatedProducts,
+        ...combinedSuppliers.filter(m => !adminCreatedProducts.some(ap => ap.id === m.id))
+      ];
+      const result = buildSections(merged);
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(result));
+      } catch (e) {}
+      return result;
     }
-  } catch (err) {
-    // API slow or offline, gracefully continue to local DB / master cache
+  } catch (cachedErr) {
+    console.warn("[useHomeProducts] Supplier cache fetch warning:", cachedErr);
   }
 
   // ── Strategy 2: Fetch from local DB (synced products + images) ──
@@ -377,26 +402,7 @@ async function fetchAllHomeProducts() {
     console.warn("[useHomeProducts] DB fetch fallback warning:", dbErr);
   }
 
-  // ── Strategy 3: Mohasagor Fast Seed / Master Cache Fallback ──
-  try {
-    const { getCachedMohasagorProducts } = await import("@/utils/mohasagorCache");
-    const cachedMohasagor = await getCachedMohasagorProducts();
-    if (cachedMohasagor && cachedMohasagor.length > 0) {
-      const merged = [
-        ...adminCreatedProducts,
-        ...cachedMohasagor.filter(m => !adminCreatedProducts.some(ap => ap.id === m.id))
-      ];
-      const result = buildSections(merged);
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(result));
-      } catch (e) {}
-      return result;
-    }
-  } catch (cachedErr) {
-    console.warn("[useHomeProducts] Supplier cache fallback warning:", cachedErr);
-  }
-
-  // ── Strategy 4: Instant Fast Seed Fallback ──
+  // ── Strategy 3: Instant Fast Seed Fallback ──
   const mergedFallback = [
     ...adminCreatedProducts,
     ...FAST_SEED_PRODUCTS.filter(m => !adminCreatedProducts.some(ap => ap.id === m.id))

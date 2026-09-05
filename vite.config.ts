@@ -68,6 +68,15 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/mohasagor/, ""),
       },
+      "/api/ecomseller": {
+        target: "https://ecomsellerbd.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/ecomseller/, ""),
+        headers: {
+          "referer": "https://ecomsellerbd.com/catalog",
+          "origin": "https://ecomsellerbd.com",
+        },
+      },
     },
   },
   plugins: [react(), sigmaDevApiPlugin()].filter(Boolean),

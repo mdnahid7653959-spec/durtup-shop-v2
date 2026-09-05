@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
-import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+import { getCachedMohasagorProducts, interleaveCatalogs } from "@/utils/mohasagorCache";
+import { EcomsellerEngine } from "@/services/suppliers/ecomsellerEngine";
 import { prefetchProductImages } from "@/utils/productImageHelper";
 import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
 
@@ -15,11 +16,15 @@ export function InfiniteProductFeed() {
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // Load initial products from cache
+  // Load initial products from both supplier caches
   useEffect(() => {
     async function initCatalog() {
       try {
-        const products = await getCachedMohasagorProducts();
+        const [mohasagor, ecomseller] = await Promise.all([
+          getCachedMohasagorProducts().catch(() => []),
+          EcomsellerEngine.getCachedEcomsellerProducts().catch(() => []),
+        ]);
+        const products = interleaveCatalogs(mohasagor, ecomseller);
         if (products && products.length > 0) {
           setAllCatalog(products);
           setDisplayedProducts((prev) => prev.length > 0 ? prev : products.slice(0, BATCH_SIZE));
@@ -34,7 +39,11 @@ export function InfiniteProductFeed() {
 
     // Auto 5-minute product shuffle & refresh timer
     const autoRotateTimer = setInterval(async () => {
-      const products = await getCachedMohasagorProducts();
+      const [mohasagor, ecomseller] = await Promise.all([
+        getCachedMohasagorProducts().catch(() => []),
+        EcomsellerEngine.getCachedEcomsellerProducts().catch(() => []),
+      ]);
+      const products = interleaveCatalogs(mohasagor, ecomseller);
       if (products && products.length > 0) {
         const timeBlock = Math.floor(Date.now() / (5 * 60 * 1000));
         const shift = (timeBlock * BATCH_SIZE) % products.length;
@@ -48,7 +57,11 @@ export function InfiniteProductFeed() {
 
     // Listen for background API product updates
     const handleUpdate = async () => {
-      const updated = await getCachedMohasagorProducts();
+      const [mohasagor, ecomseller] = await Promise.all([
+        getCachedMohasagorProducts().catch(() => []),
+        EcomsellerEngine.getCachedEcomsellerProducts().catch(() => []),
+      ]);
+      const updated = interleaveCatalogs(mohasagor, ecomseller);
       if (updated && updated.length > 0) {
         setAllCatalog(updated);
         setDisplayedProducts((prev) => {

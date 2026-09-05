@@ -288,8 +288,8 @@ export function extractProductVariants(raw: any): ProductVariant[] {
       }
     }
 
-    // Strategy B: Size Breakdown patterns e.g. "M=Chest", "L=Chest", "M= Length", "XL=Length", "M (38)"
-    const breakdownMatches = fullText.matchAll(/\b(XS|S|M|L|XL|XXL|XXXL|2XL|3XL|4XL|28|30|32|34|36|38|40|42|44|46)\s*[:=\-]/gi);
+    // Strategy B: Size Breakdown patterns e.g. "M=Chest: 38", "L=Chest: 40"
+    const breakdownMatches = fullText.matchAll(/\b(XS|S|M|L|XL|XXL|XXXL|2XL|3XL|4XL|28|30|32|34|36|38|40|42|44|46)\s*[:=]\s*(?:Chest|Length|বুকে|লম্বা)/gi);
     for (const bm of breakdownMatches) {
       extractedSizes.add(bm[1].toUpperCase());
     }
@@ -297,11 +297,11 @@ export function extractProductVariants(raw: any): ProductVariant[] {
     extractedSizes.forEach(sz => addVariant("Size", sz));
   }
 
-  // Extract Colors if not present
+  // Extract Colors if not present - ONLY if explicit color heading exists
   if (!hasColor && fullText.length > 5) {
     const extractedColors = new Set<string>();
 
-    // Strategy A: Explicit Color heading (e.g. "Color: Black, White, Red", "কালার: লাল, নীল")
+    // Explicit Color heading (e.g. "Available Colors: Black, Red" or "কালার: লাল, কালো")
     const colorHeadings = fullText.matchAll(/(?:Available\s+Colors?|Colors?|Colours?|কালার|কালারঃ|কালার:)\s*[:\-–=]\s*([A-Za-z0-9\s,/\+\-–|&()^\u0980-\u09FF]{1,90})/gi);
     for (const ch of colorHeadings) {
       if (ch[1]) {
@@ -310,8 +310,8 @@ export function extractProductVariants(raw: any): ProductVariant[] {
         tokens.forEach(c => {
           const clean = c.replace(/^(available|only|all|best|pure|color|colour|colors)\s+/i, '').trim();
           if (clean.length >= 2 && clean.length <= 25) {
-            const isMatch = KNOWN_COLORS_LIST.some(kc => kc === clean.toLowerCase() || clean.toLowerCase().includes(kc));
-            if (isMatch || clean.length <= 15) {
+            const isMatch = KNOWN_COLORS_LIST.some(kc => kc === clean.toLowerCase());
+            if (isMatch) {
               extractedColors.add(clean.charAt(0).toUpperCase() + clean.slice(1));
             }
           }
@@ -319,38 +319,7 @@ export function extractProductVariants(raw: any): ProductVariant[] {
       }
     }
 
-    // Strategy B: Scan Title for direct color mention in parentheses e.g. "Men's Gabardine Pant (Black Color)"
-    if (extractedColors.size === 0) {
-      const title = String(raw.name || raw.title || '');
-      KNOWN_COLORS_LIST.forEach(kc => {
-        const regex = new RegExp(`\\b${kc}\\b`, 'i');
-        if (regex.test(title)) {
-          extractedColors.add(kc.charAt(0).toUpperCase() + kc.slice(1));
-        }
-      });
-    }
-
     extractedColors.forEach(col => addVariant("Color", col));
-  }
-
-  // 6. Category Smart Defaults for fashion items if still no size
-  const stillHasSize = variants.some(v => v.attribute.toLowerCase() === "size");
-  if (!stillHasSize) {
-    const combined = `${raw.name || ''} ${raw.category || ''} ${raw.category_id || ''}`.toLowerCase();
-    const isPants = /pant|jeans|trouser|gabardine|chino|cargo|boxer|shorts|pajama/i.test(combined);
-    const isShoes = /shoe|sneaker|loafer|sandal|boot|slipper|footwear/i.test(combined);
-    const isPanjabi = /panjabi|punjabi|kabli/i.test(combined);
-    const isTops = /shirt|t-shirt|polo|hoodie|jersey|jacket|sweater|tshirt|kurti|dress|blazer|clothing|fashion|winter/i.test(combined);
-
-    if (isPants) {
-      ['28', '30', '32', '34', '36', '38'].forEach(s => addVariant("Size", s));
-    } else if (isShoes) {
-      ['39', '40', '41', '42', '43', '44'].forEach(s => addVariant("Size", s));
-    } else if (isPanjabi) {
-      ['40', '42', '44', '46'].forEach(s => addVariant("Size", s));
-    } else if (isTops) {
-      ['M', 'L', 'XL', 'XXL'].forEach(s => addVariant("Size", s));
-    }
   }
 
   return variants;

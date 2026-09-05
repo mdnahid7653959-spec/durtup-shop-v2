@@ -75,15 +75,20 @@ async function fetchSuggestions(q: string): Promise<SuggestResult> {
     image: p.image || null,
   }));
 
-  // If search service returned 0 products, do an instant fallback scan on local catalog
+  // If search service returned 0 products, do an instant fallback scan on local catalogs (Mohasagor + Ecomseller)
   if (products.length === 0 && term) {
     try {
-      const cached = await getCachedMohasagorProducts();
-      if (cached && cached.length > 0) {
+      const [mohasagorList, ecomList] = await Promise.all([
+        getCachedMohasagorProducts().catch(() => []),
+        import("@/services/suppliers/ecomsellerEngine").then(m => m.EcomsellerEngine.getCachedEcomsellerProducts()).catch(() => [])
+      ]);
+      const combined = [...mohasagorList, ...ecomList];
+
+      if (combined && combined.length > 0) {
         const norm = normalizeText(term);
         const normWords = norm.split(" ").filter(w => w.length > 0);
 
-        const matched = cached.filter((p: any) => {
+        const matched = combined.filter((p: any) => {
           const pNorm = normalizeText(p.name || "");
           const pWords = pNorm.split(" ");
           
@@ -97,11 +102,11 @@ async function fetchSuggestions(q: string): Promise<SuggestResult> {
           id: p.id,
           name: p.name,
           slug: p.slug || `product-${p.id}`,
-          regular_price: p.price,
-          discount_price: p.originalPrice ? p.price : null,
-          stock_quantity: 10,
-          rating_average: p.rating || 4.8,
-          rating_count: p.reviews || 15,
+          regular_price: p.regular_price || p.price || 0,
+          discount_price: p.discount_price || null,
+          stock_quantity: p.stock_quantity || 10,
+          rating_average: p.rating_average || p.rating || 4.8,
+          rating_count: p.rating_count || p.reviews || 15,
           image: p.image || null,
         }));
       }

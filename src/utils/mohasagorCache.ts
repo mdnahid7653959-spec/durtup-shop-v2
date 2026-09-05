@@ -4,6 +4,7 @@ import { getSmartProductImage } from "@/utils/productImageHelper";
 import { extractProductVariants } from "@/utils/productVariantHelper";
 import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
 import { findCategoryOrSubcategory, CATEGORIES_DATA } from "@/data/categoriesData";
+import { EcomsellerEngine } from "@/services/suppliers/ecomsellerEngine";
 
 const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v13";
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -177,6 +178,68 @@ export function clearCategoryFilterCache() {
   categoryFilterCache.clear();
 }
 
+export function deduplicateProducts(list: Product[]): Product[] {
+  if (!list || list.length === 0) return [];
+  const seenIds = new Set<string>();
+  const seenSlugs = new Set<string>();
+  const seenNames = new Set<string>();
+  const result: Product[] = [];
+
+  for (const p of list) {
+    if (!p) continue;
+    const id = String(p.id || "").toLowerCase();
+    const slug = String(p.slug || "").toLowerCase();
+    const name = String(p.name || (p as any).title || "").trim().toLowerCase();
+
+    if (id && seenIds.has(id)) continue;
+    if (slug && seenSlugs.has(slug)) continue;
+    if (name && seenNames.has(name)) continue;
+
+    if (id) seenIds.add(id);
+    if (slug) seenSlugs.add(slug);
+    if (name) seenNames.add(name);
+    result.push(p);
+  }
+  return result;
+}
+
+export function interleaveCatalogs(listA: Product[], listB: Product[]): Product[] {
+  if (!listA || listA.length === 0) return deduplicateProducts(listB || []);
+  if (!listB || listB.length === 0) return deduplicateProducts(listA || []);
+
+  const seenIds = new Set<string>();
+  const seenSlugs = new Set<string>();
+  const seenNames = new Set<string>();
+
+  const isUnique = (p: any): boolean => {
+    if (!p) return false;
+    const id = String(p.id || "").toLowerCase();
+    const slug = String(p.slug || "").toLowerCase();
+    const name = String(p.name || p.title || "").trim().toLowerCase();
+
+    if (id && seenIds.has(id)) return false;
+    if (slug && seenSlugs.has(slug)) return false;
+    if (name && seenNames.has(name)) return false;
+
+    if (id) seenIds.add(id);
+    if (slug) seenSlugs.add(slug);
+    if (name) seenNames.add(name);
+    return true;
+  };
+
+  const result: Product[] = [];
+  const max = Math.max(listA.length, listB.length);
+  for (let i = 0; i < max; i++) {
+    if (i < listB.length && isUnique(listB[i])) {
+      result.push(listB[i]);
+    }
+    if (i < listA.length && isUnique(listA[i])) {
+      result.push(listA[i]);
+    }
+  }
+  return result;
+}
+
 export function getSyncProducts(): Product[] {
   if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
     return inMemoryProductsCache;
@@ -188,20 +251,30 @@ export function getSyncProducts(): Product[] {
 if (typeof window !== "undefined") {
   const hydrateCatalog = async () => {
     try {
-      const idbData = await getIdbProducts();
+      const [idbData, ecomProducts] = await Promise.all([
+        getIdbProducts().catch(() => []),
+        EcomsellerEngine.getCachedEcomsellerProducts().catch(() => [])
+      ]);
+
+      let baseList: Product[] = [];
       if (idbData && idbData.length >= 100) {
-        inMemoryProductsCache = idbData;
-        updateIndexMap(idbData);
+        baseList = deduplicateProducts(idbData);
+      } else {
+        baseList = await fetchStaticCatalog();
+      }
+
+      if (ecomProducts && ecomProducts.length > 0) {
+        const combined = interleaveCatalogs(baseList, ecomProducts);
+        inMemoryProductsCache = combined;
+        updateIndexMap(combined);
+        clearCategoryFilterCache();
+        setIdbProducts(combined).catch(() => {});
+        window.dispatchEvent(new Event("mohasagor_products_updated"));
+      } else if (baseList && baseList.length > 0) {
+        inMemoryProductsCache = baseList;
+        updateIndexMap(baseList);
         clearCategoryFilterCache();
         window.dispatchEvent(new Event("mohasagor_products_updated"));
-      } else {
-        // Fetch static catalog immediately in background without artificial delays
-        fetchStaticCatalog().then((mapped) => {
-          if (mapped && mapped.length > 0) {
-            clearCategoryFilterCache();
-            window.dispatchEvent(new Event("mohasagor_products_updated"));
-          }
-        }).catch(() => {});
       }
     } catch (e) {
       console.warn("Catalog background hydration warning:", e);
@@ -236,23 +309,28 @@ let ongoingFetchPromise: Promise<Product[]> | null = null;
 export async function getCachedMohasagorProducts(): Promise<Product[]> {
   // 1. Instant return from in-memory cache (0ms!)
   if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
-    return inMemoryProductsCache;
+    return deduplicateProducts(inMemoryProductsCache);
   }
 
   // 2. Check IndexedDB
   if (typeof window !== "undefined") {
     try {
-      const idbItems = await getIdbProducts();
-      if (idbItems && idbItems.length > 0) {
-        inMemoryProductsCache = idbItems;
-        updateIndexMap(idbItems);
+      const [idbItems, ecomItems] = await Promise.all([
+        getIdbProducts().catch(() => []),
+        EcomsellerEngine.getCachedEcomsellerProducts().catch(() => [])
+      ]);
+      const base = (idbItems && idbItems.length > 0) ? deduplicateProducts(idbItems) : await fetchStaticCatalog();
+      const combined = interleaveCatalogs(base, ecomItems || []);
+      if (combined && combined.length > 0) {
+        inMemoryProductsCache = combined;
+        updateIndexMap(combined);
         clearCategoryFilterCache();
-        return idbItems;
+        return combined;
       }
     } catch {}
   }
 
-  return FAST_SEED_PRODUCTS;
+  return deduplicateProducts(FAST_SEED_PRODUCTS);
 }
 
 export function mapRawProducts(rawProducts: any[], base: string = "https://mohasagor.com.bd"): Product[] {
@@ -476,6 +554,11 @@ export async function fetchAllPagesMohasagorProducts(forceRefresh = false): Prom
         staticList.forEach((p) => mergedMap.set(String(p.id), p));
         allMappedProducts.forEach((p) => mergedMap.set(String(p.id), p));
         allMappedProducts = Array.from(mergedMap.values());
+      }
+
+      const ecomList = await EcomsellerEngine.getCachedEcomsellerProducts().catch(() => []);
+      if (ecomList && ecomList.length > 0) {
+        allMappedProducts = interleaveCatalogs(allMappedProducts, ecomList);
       }
 
       updateIndexMap(allMappedProducts);

@@ -1,4 +1,4 @@
-import { memo, lazy, Suspense, useEffect, useState, useRef } from "react";
+import { memo, lazy, Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { HeroBanner } from "@/components/home/HeroBanner";
@@ -269,14 +269,22 @@ function SectionRenderer({
 const Index = () => {
   const { data, isLoading, isError } = useHomeProducts();
 
-  // Combine products for Deal of the Day across all catalog categories for maximum variety
-  const dealProducts = [
-    ...(data?.trending || []),
-    ...(data?.featured || []),
-    ...(data?.flashSale || []),
-    ...(data?.latestProducts || []),
-    ...(data?.recommended || []),
-  ];
+  // Combine products for Deal of the Day across full multi-supplier catalog (2,000+ items streaming)
+  const dealProducts = useMemo(() => {
+    if (data?.dealProducts && data.dealProducts.length > 0) {
+      return data.dealProducts;
+    }
+    if (data?.allProducts && data.allProducts.length > 0) {
+      return data.allProducts;
+    }
+    return [
+      ...(data?.trending || []),
+      ...(data?.featured || []),
+      ...(data?.flashSale || []),
+      ...(data?.latestProducts || []),
+      ...(data?.recommended || []),
+    ];
+  }, [data]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

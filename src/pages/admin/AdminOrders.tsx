@@ -27,6 +27,9 @@ import { db } from "@/integrations/firebase/client";
 import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { SupplierManager } from "@/services/suppliers/supplierManager";
+import { SupplierFulfillmentGroup } from "@/services/suppliers/supplierTypes";
+import { EcomsellerEngine } from "@/services/suppliers/ecomsellerEngine";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -174,6 +177,11 @@ export default function AdminOrders() {
   const [packingSlipOpen, setPackingSlipOpen] = useState(false);
   const [shippingLabelOpen, setShippingLabelOpen] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
+
+  // Ecomseller BD & Multi-Supplier Fulfillment State
+  const [ecomsellerModalOpen, setEcomsellerModalOpen] = useState(false);
+  const [selectedFulfillmentGroup, setSelectedFulfillmentGroup] = useState<SupplierFulfillmentGroup | null>(null);
+  const [supplierStatus, setSupplierStatus] = useState<string>("pending_supplier");
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -1418,12 +1426,128 @@ export default function AdminOrders() {
                 </Card>
               </div>
 
+              {/* Multi-Supplier Fulfillment Groups Section */}
+              {(() => {
+                const fulfillmentGroups = SupplierManager.groupOrderItemsBySupplier(orderItems);
+                if (fulfillmentGroups.length === 0) return null;
+
+                return (
+                  <Card className="border-orange-500/30 bg-orange-50/5 dark:bg-orange-950/10">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                          <Layers className="h-4 w-4 text-orange-600" />
+                          <span>Supplier Fulfillment Groups ({fulfillmentGroups.length})</span>
+                        </CardTitle>
+                        <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                          Auto-Routed
+                        </Badge>
+                      </div>
+                      <CardDescription className="text-xs">
+                        Order items grouped automatically by supplier for segregated fulfillment and dropshipping.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {fulfillmentGroups.map((grp, idx) => {
+                        const isEcomseller = grp.supplierId === EcomsellerEngine.SUPPLIER_ID;
+                        const isDropshipping = grp.supplierId === "dropshipping_bd" || grp.supplierId === "mohasagor";
+                        
+                        return (
+                          <div 
+                            key={grp.supplierId} 
+                            className={`p-4 rounded-xl border space-y-3 ${
+                              isEcomseller 
+                                ? "bg-orange-500/10 border-orange-500/30 dark:bg-orange-950/20" 
+                                : isDropshipping 
+                                  ? "bg-blue-500/10 border-blue-500/30 dark:bg-blue-950/20" 
+                                  : "bg-muted/40 border-border/60"
+                            }`}
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+                              <div className="flex items-center gap-2">
+                                <Badge className={`text-xs font-bold ${
+                                  isEcomseller 
+                                    ? "bg-orange-600 text-white" 
+                                    : isDropshipping 
+                                      ? "bg-blue-600 text-white" 
+                                      : "bg-muted text-foreground"
+                                }`}>
+                                  Group #{idx + 1}
+                                </Badge>
+                                <span className="font-bold text-sm text-foreground">{grp.supplierName}</span>
+                                <span className="text-[11px] text-muted-foreground">({grp.items.length} item{grp.items.length > 1 ? "s" : ""})</span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {isEcomseller && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedFulfillmentGroup(grp);
+                                      setEcomsellerModalOpen(true);
+                                    }}
+                                    className="bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold h-7 gap-1.5"
+                                  >
+                                    <ExternalLink className="h-3 w-3" /> Prepare Ecomseller Order
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Group Items */}
+                            <div className="space-y-2">
+                              {grp.items.map(it => (
+                                <div key={it.id} className="flex items-center justify-between gap-3 text-xs bg-card/70 p-2 rounded-lg border">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <div className="w-8 h-8 rounded border overflow-hidden bg-muted flex-shrink-0">
+                                      {it.product_image ? (
+                                        <img src={it.product_image} alt={it.product_name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <Package className="h-4 w-4 m-auto text-muted-foreground" />
+                                      )}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="font-semibold truncate">{it.product_name}</p>
+                                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                        {it.sku && <span className="font-mono bg-muted px-1 rounded">SKU: {it.sku}</span>}
+                                        <span>Qty: {it.quantity}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-right">
+                                    <div className="font-bold">৳{it.price * it.quantity}</div>
+                                    {it.wholesale_price ? (
+                                      <div className="text-[10px] text-muted-foreground">
+                                        Cost: ৳{it.wholesale_price * it.quantity}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Economics summary for group */}
+                            <div className="flex flex-wrap items-center justify-between text-xs pt-1 text-muted-foreground">
+                              <span>Total Items: <strong>{grp.totalQuantity}</strong></span>
+                              <span>Retail Total: <strong>৳{grp.totalRetailAmount}</strong></span>
+                              <span>Wholesale Cost: <strong>৳{grp.totalWholesaleCost}</strong></span>
+                              <span className="text-emerald-600 font-bold">Est. Profit: +৳{grp.estimatedProfit}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
               {/* Order Items */}
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Package className="h-4 w-4" />
-                    Order Items ({orderItems.length})
+                    All Order Items ({orderItems.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1572,6 +1696,158 @@ export default function AdminOrders() {
           />
         </>
       )}
+
+      {/* Ecomseller BD Fulfillment Modal */}
+      <Dialog open={ecomsellerModalOpen} onOpenChange={setEcomsellerModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-orange-600 text-white font-mono text-[10px]">
+                Ecomseller BD Fulfillment
+              </Badge>
+              <span className="text-xs text-muted-foreground font-semibold">
+                Order #{selectedOrder?.order_number}
+              </span>
+            </div>
+            <DialogTitle className="text-lg font-bold mt-1">
+              Prepare Order for Ecomseller BD Manual Placement
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Ecomseller BD requires manual order placement on their portal. Copy the pre-formatted order details below to place the order quickly.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedOrder && selectedFulfillmentGroup && (
+            <div className="space-y-4 text-xs">
+              
+              {/* Customer Delivery Details */}
+              <div className="p-3.5 rounded-xl border bg-muted/30 space-y-2">
+                <div className="font-bold text-foreground uppercase tracking-wider text-[11px] flex items-center justify-between">
+                  <span>Customer Shipping Information</span>
+                  <Badge variant="outline" className="text-[10px]">Recipient</Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-foreground">
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Recipient Name:</span>
+                    <strong className="text-sm">{selectedOrder.customer_name || customerInfo?.full_name || "Customer"}</strong>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Contact Phone:</span>
+                    <strong className="text-sm font-mono text-orange-600">{selectedOrder.customer_phone || customerInfo?.phone || "N/A"}</strong>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="text-muted-foreground block text-[10px]">Delivery Address:</span>
+                    <p className="whitespace-pre-line font-medium">{formatAddress(selectedOrder.shipping_address)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items to Order from Ecomseller */}
+              <div className="space-y-2">
+                <div className="font-bold uppercase tracking-wider text-[11px] text-muted-foreground">
+                  Products to Order ({selectedFulfillmentGroup.items.length} items)
+                </div>
+                <div className="border rounded-xl overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/40">
+                        <TableHead>Product</TableHead>
+                        <TableHead>SKU / Code</TableHead>
+                        <TableHead className="text-center">Qty</TableHead>
+                        <TableHead className="text-right">Wholesale Cost</TableHead>
+                        <TableHead className="text-right">Subtotal</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedFulfillmentGroup.items.map(it => (
+                        <TableRow key={it.id}>
+                          <TableCell className="font-semibold">{it.product_name}</TableCell>
+                          <TableCell className="font-mono text-orange-600 font-bold">{it.sku || "N/A"}</TableCell>
+                          <TableCell className="text-center font-bold">{it.quantity}</TableCell>
+                          <TableCell className="text-right font-mono">৳{it.wholesale_price || it.price}</TableCell>
+                          <TableCell className="text-right font-mono font-bold">৳{(it.wholesale_price || it.price) * it.quantity}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Status Update */}
+              <div className="p-3 rounded-xl border bg-card space-y-2">
+                <Label className="text-xs font-semibold">Supplier Order Status</Label>
+                <Select value={supplierStatus} onValueChange={setSupplierStatus}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending_supplier">Pending Supplier Placement</SelectItem>
+                    <SelectItem value="order_placed">Supplier Order Placed (Ecomseller BD)</SelectItem>
+                    <SelectItem value="processing">Supplier Processing</SelectItem>
+                    <SelectItem value="shipped">Shipped by Supplier</SelectItem>
+                    <SelectItem value="delivered">Delivered to Customer</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const text = `ORDER #${selectedOrder.order_number}\n\nCustomer:\nName: ${selectedOrder.customer_name || customerInfo?.full_name || "Customer"}\nPhone: ${selectedOrder.customer_phone || customerInfo?.phone || ""}\nAddress: ${formatAddress(selectedOrder.shipping_address)}\n\nItems to order from Ecomseller BD:\n${selectedFulfillmentGroup.items.map(it => `- ${it.product_name} | Code: ${it.sku || "N/A"} | Qty: ${it.quantity} | Cost: ৳${it.wholesale_price || it.price}`).join("\n")}\n\nTotal Wholesale Cost: ৳${selectedFulfillmentGroup.totalWholesaleCost}`;
+                    navigator.clipboard.writeText(text);
+                    toast({
+                      title: "Order Details Copied!",
+                      description: "Ecomseller order sheet copied to clipboard."
+                    });
+                  }}
+                  className="text-xs font-semibold gap-1.5"
+                >
+                  <Printer className="h-3.5 w-3.5" /> Copy Order Sheet
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  <a 
+                    href={EcomsellerEngine.CATALOG_URL} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                  >
+                    Open Ecomseller BD <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await supabase.from("orders").update({
+                          supplier_status: supplierStatus,
+                          supplier_name: "Ecomseller BD",
+                          updated_at: new Date().toISOString()
+                        }).eq("id", selectedOrder.id);
+
+                        toast({
+                          title: "Status Updated!",
+                          description: `Ecomseller order status set to "${supplierStatus}".`
+                        });
+                        setEcomsellerModalOpen(false);
+                        fetchOrders();
+                      } catch (e: any) {
+                        toast({ variant: "destructive", title: "Error", description: e.message });
+                      }
+                    }}
+                    className="bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold"
+                  >
+                    Save Supplier Status
+                  </Button>
+                </div>
+              </div>
+
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

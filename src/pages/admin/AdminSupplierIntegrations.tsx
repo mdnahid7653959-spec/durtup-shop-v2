@@ -18,7 +18,7 @@ import {
   Plus, RefreshCw, Play, Link2, ShieldCheck, HelpCircle,
   TrendingUp, Clock, AlertTriangle, ArrowRight, ArrowLeft,
   Terminal, ShieldAlert, Cpu, Sparkles, Check, Database, Eye,
-  Loader2, Calculator, Save
+  Loader2, Calculator, Save, DownloadCloud
 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { adminDb } from "@/lib/adminDb";
@@ -655,9 +655,14 @@ export default function AdminSupplierIntegrations() {
               Add your supplier API endpoints, paste a sample product response, and quickly map fields to display inventory.
             </p>
           </div>
-          <Button onClick={handleAddNew} className="bg-orange-600 hover:bg-orange-500 text-white font-medium gap-2">
-            <Plus className="h-4 w-4" /> Add API Connection
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => window.location.href = "/admin/supplier-import"} variant="outline" className="border-orange-500/30 text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 font-medium gap-2">
+              <DownloadCloud className="h-4 w-4" /> Catalog Importer (Ecomseller BD)
+            </Button>
+            <Button onClick={handleAddNew} className="bg-orange-600 hover:bg-orange-500 text-white font-medium gap-2">
+              <Plus className="h-4 w-4" /> Add API Connection
+            </Button>
+          </div>
         </div>
 
         {/* Dashboard Statistics */}

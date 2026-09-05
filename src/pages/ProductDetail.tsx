@@ -515,6 +515,66 @@ export default function ProductDetail() {
           console.warn("Supplier master lookup warning:", spErr);
         }
 
+        // 1b. Direct Ecomseller BD Catalog Lookup
+        try {
+          const { EcomsellerEngine } = await import("@/services/suppliers/ecomsellerEngine");
+          const ecomProducts = await EcomsellerEngine.getCachedEcomsellerProducts();
+          const foundEcom = ecomProducts.find((p: any) => 
+            p.slug === targetLower || 
+            p.id === targetLower || 
+            p.id === `ecom-${cleanId}` ||
+            p.supplier_sku === cleanId ||
+            p.sku?.toLowerCase() === targetLower
+          );
+
+          if (foundEcom) {
+            let fullDesc = foundEcom.description;
+            if (!fullDesc || fullDesc.length < 50) {
+              const detail = await EcomsellerEngine.fetchProductDetail(foundEcom.slug || targetSlug);
+              if (detail?.description) fullDesc = detail.description;
+            }
+
+            const imgList: ProductImage[] = (foundEcom.images && foundEcom.images.length > 0 ? foundEcom.images : [foundEcom.image]).map((imgUrl: string, idx: number) => ({
+              id: `ecom-img-${idx}`,
+              image_url: imgUrl,
+              is_primary: idx === 0,
+              sort_order: idx
+            }));
+
+            const formatted: Product = {
+              id: foundEcom.id,
+              name: foundEcom.name,
+              slug: foundEcom.slug || targetSlug,
+              short_description: null,
+              description: fullDesc || foundEcom.name,
+              regular_price: foundEcom.regular_price,
+              discount_price: foundEcom.discount_price || foundEcom.price,
+              stock_quantity: foundEcom.stock_quantity || 25,
+              free_shipping: true,
+              rating_average: 4.8,
+              rating_count: 18,
+              sold_count: 52,
+              is_featured: Boolean(foundEcom.is_featured),
+              warranty_info: "7 Days Replacement Warranty",
+              return_policy: "Standard 7 days return policy",
+              color: null,
+              video_url: null,
+              product_images: imgList,
+              product_variants: [],
+              category_id: foundEcom.category_id || foundEcom.category || null,
+              seller_id: "Durtup Express"
+            };
+
+            applyLoadedProduct(formatted);
+            trackView(formatted.id);
+            recordUserProductView(formatted);
+            setLoading(false);
+            return;
+          }
+        } catch (ecomErr) {
+          console.warn("Ecomseller product lookup warning:", ecomErr);
+        }
+
         // 2. Query Supabase Database by slug, ID, or cleanId
         try {
           const { data, error } = await supabase.from("products").select(`
@@ -1160,14 +1220,6 @@ export default function ProductDetail() {
                       />
                     </button>
 
-                    {/* Featured badge */}
-                    {product.is_featured && (
-                      <div className="absolute top-14 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-warning to-primary text-white text-xs font-bold shadow-md z-10">
-                        <Sparkles className="h-3 w-3" />
-                        FEATURED
-                      </div>
-                    )}
-
                     {/* Image Counter Badge */}
                     <div className="absolute top-3 right-14 sm:right-16 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur text-white text-xs font-bold shadow-md z-10">
                       {selectedImage + 1} / {(product as any).video_url ? images.length + 1 : images.length}
@@ -1519,48 +1571,52 @@ export default function ProductDetail() {
               )}
 
               {/* Description */}
-              {product.description && (
-                <div className="pt-5 border-t w-full max-w-full overflow-hidden">
-                  <h3 className="font-bold text-base sm:text-lg text-foreground mb-3 flex items-center gap-2">
-                    <span className="w-1 h-5 bg-gradient-to-b from-primary to-warning rounded-full" />
-                    Description
-                  </h3>
-                  {/<[a-z][\s\S]*>/i.test(product.description) ? (
-                    <div
-                      className="product-description-content text-muted-foreground text-sm leading-relaxed prose prose-sm max-w-none break-words overflow-hidden w-full
-                        [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg
-                        [&_table]:w-full [&_table]:max-w-full [&_table]:table-auto [&_table]:border-collapse [&_table]:block [&_table]:overflow-x-auto
-                        [&_td]:border [&_td]:border-border [&_td]:p-2 [&_td]:break-words
-                        [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:break-words
-                        [&_a]:text-primary [&_a]:underline [&_a]:break-all
-                        [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5
-                        [&_p]:break-words [&_p]:max-w-full [&_div]:max-w-full [&_span]:max-w-full"
-                      dangerouslySetInnerHTML={{
-                        __html: product.description
-                          .replace(/&nbsp;/gi, " ")
-                          .replace(/&amp;/gi, "&")
-                          .replace(/&lt;/gi, "<")
-                          .replace(/&gt;/gi, ">")
-                          .replace(/&quot;/gi, '"')
-                          .replace(/&#39;/gi, "'")
-                          .replace(/width\s*:\s*\d{3,}px/gi, "width: 100%")
-                          .replace(/min-width\s*:\s*\d{3,}px/gi, "min-width: 0px")
-                          .replace(/width="[0-9]{3,}"/gi, 'width="100%"'),
-                      }}
-                    />
-                  ) : (
-                    <p className="product-description-content text-muted-foreground text-sm leading-relaxed whitespace-pre-line break-words overflow-hidden max-w-full">
-                      {product.description
-                        .replace(/&nbsp;/gi, " ")
-                        .replace(/&amp;/gi, "&")
-                        .replace(/&lt;/gi, "<")
-                        .replace(/&gt;/gi, ">")
-                        .replace(/&quot;/gi, '"')
-                        .replace(/&#39;/gi, "'")}
-                    </p>
-                  )}
-                </div>
-              )}
+              {product.description && (() => {
+                const unescapedDesc = (product.description || "")
+                  .replace(/\\x3C/gi, "<")
+                  .replace(/\\x3E/gi, ">")
+                  .replace(/\\x22/gi, '"')
+                  .replace(/\\x27/gi, "'")
+                  .replace(/\\x2F/gi, "/")
+                  .replace(/\\x26/gi, "&")
+                  .replace(/\\x0A/gi, "\n")
+                  .replace(/\\x0D/gi, "\r")
+                  .replace(/\\"/g, '"');
+                const isHtml = /<[a-z][\s\S]*>/i.test(unescapedDesc);
+
+                return (
+                  <div className="pt-5 border-t w-full max-w-full overflow-hidden">
+                    <h3 className="font-bold text-base sm:text-lg text-foreground mb-3 flex items-center gap-2">
+                      <span className="w-1 h-5 bg-gradient-to-b from-primary to-warning rounded-full" />
+                      Description
+                    </h3>
+                    {isHtml ? (
+                      <div
+                        className="product-description-content text-muted-foreground text-sm leading-relaxed prose prose-sm max-w-none break-words overflow-hidden w-full
+                          [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg
+                          [&_table]:w-full [&_table]:max-w-full [&_table]:table-auto [&_table]:border-collapse [&_table]:block [&_table]:overflow-x-auto
+                          [&_td]:border [&_td]:border-border [&_td]:p-2 [&_td]:break-words
+                          [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:break-words
+                          [&_a]:text-primary [&_a]:underline [&_a]:break-all
+                          [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5
+                          [&_p]:break-words [&_p]:max-w-full [&_div]:max-w-full [&_span]:max-w-full"
+                        dangerouslySetInnerHTML={{
+                          __html: unescapedDesc
+                            .replace(/&nbsp;/gi, " ")
+                            .replace(/width\s*:\s*\d{3,}px/gi, "width: 100%")
+                            .replace(/min-width\s*:\s*\d{3,}px/gi, "min-width: 0px")
+                            .replace(/width="[0-9]{3,}"/gi, 'width="100%"'),
+                        }}
+                      />
+                    ) : (
+                      <p className="product-description-content text-muted-foreground text-sm leading-relaxed whitespace-pre-line break-words overflow-hidden max-w-full">
+                        {unescapedDesc
+                          .replace(/&nbsp;/gi, " ")}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
 
             </div>
           </div>

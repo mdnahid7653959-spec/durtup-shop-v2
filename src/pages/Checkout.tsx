@@ -616,8 +616,13 @@ export default function Checkout() {
           }
         }
 
-        const prodName = item.product?.name || (item as any)?.name || (item as any)?.title || "Product";
-        const itemPrice = item.product?.discount_price || item.product?.regular_price || (item as any)?.price || 0;
+        const prod = item.product || (item as any);
+        const prodName = prod?.name || (item as any)?.title || "Product";
+        const itemPrice = prod?.discount_price || prod?.regular_price || (item as any)?.price || 0;
+        const itemSku = prod?.sku || (item as any)?.sku || null;
+        const supplierId = prod?.supplier_id || (itemSku?.startsWith("ECOM-") ? "ecomseller_bd" : (itemSku?.startsWith("MOH-") ? "dropshipping_bd" : "durtup"));
+        const supplierName = prod?.supplier_name || (supplierId === "ecomseller_bd" ? "Ecomseller BD" : (supplierId === "dropshipping_bd" ? "Dropshipping.com.bd" : "Durtup Direct"));
+        const wholesalePrice = prod?.wholesale_price || (item as any)?.wholesale_price || null;
 
         return {
           order_id: orderId,
@@ -627,7 +632,12 @@ export default function Checkout() {
           price: itemPrice,
           total: itemPrice * (item.quantity || 1),
           variant_id: variantStr || item.variant_id || null,
-          product_image: item.image || (item as any)?.product?.image || null
+          product_image: item.image || prod?.image || null,
+          sku: itemSku,
+          supplier_id: supplierId,
+          supplier_name: supplierName,
+          supplier_sku: prod?.supplier_sku || (itemSku?.startsWith("ECOM-") ? itemSku.replace("ECOM-", "") : null),
+          wholesale_price: wholesalePrice
         };
       });
 

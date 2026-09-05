@@ -32,7 +32,8 @@ import {
   Banknote,
   Link2,
   Search,
-  Bot
+  Bot,
+  DownloadCloud
 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { Button } from "@/components/ui/button";
@@ -77,8 +78,8 @@ const menuItems = [
   { icon: MessageSquare, label: "Reviews", href: "/admin/reviews" },
   { icon: MessageSquare, label: "Seller Support", href: "/admin/seller-support" },
   { icon: Bell, label: "Push Notifications", href: "/admin/push-notifications" },
-  { icon: Settings, label: "CJ Settings", href: "/admin/cj-settings" },
   { icon: Link2, label: "Supplier Integrations", href: "/admin/supplier-integrations" },
+  { icon: DownloadCloud, label: "Supplier Product Import", href: "/admin/supplier-import" },
   { icon: Settings, label: "Settings", href: "/admin/settings" },
 ];
 

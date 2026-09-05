@@ -40,7 +40,10 @@ function ProductDealCard({
   };
 
   return (
-    <div className="w-[130px] xs:w-[145px] sm:w-[170px] md:w-[200px] shrink-0 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-0.5 hover:border-orange-300 dark:hover:border-orange-500/40 transition-all duration-200 flex flex-col justify-between p-1.5 sm:p-2.5 relative group/card shadow-2xs select-none">
+    <div 
+      className="w-[130px] xs:w-[145px] sm:w-[170px] md:w-[200px] shrink-0 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-0.5 hover:border-orange-300 dark:hover:border-orange-500/40 transition-all duration-200 flex flex-col justify-between p-1.5 sm:p-2.5 relative group/card shadow-2xs select-none"
+      style={{ contentVisibility: "auto", containIntrinsicSize: "170px 240px" }}
+    >
       <Link
         to={`/product/${product.slug || product.id}`}
         state={{ preloadedProduct: product }}
@@ -405,6 +408,18 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
       }
     });
 
+    // Scale smoothly up to 150 items per row, rotating dynamically across the 2,000+ catalog
+    const maxItemsPerRow = 150;
+    const timeShift = Math.floor(Date.now() / (3 * 60 * 1000));
+    
+    const sliceR1 = r1.length > maxItemsPerRow
+      ? [...r1.slice((timeShift * 15) % r1.length), ...r1.slice(0, (timeShift * 15) % r1.length)].slice(0, maxItemsPerRow)
+      : r1;
+      
+    const sliceR2 = r2.length > maxItemsPerRow
+      ? [...r2.slice((timeShift * 15) % r2.length), ...r2.slice(0, (timeShift * 15) % r2.length)].slice(0, maxItemsPerRow)
+      : r2;
+
     const ensureBuffer = (arr: Product[]) => {
       if (arr.length === 0) return [];
       let result = [...arr];
@@ -414,8 +429,8 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
       return result;
     };
 
-    const baseR1 = ensureBuffer(r1);
-    const baseR2 = ensureBuffer(r2.length > 0 ? r2 : r1);
+    const baseR1 = ensureBuffer(sliceR1);
+    const baseR2 = ensureBuffer(sliceR2.length > 0 ? sliceR2 : sliceR1);
 
     // Tripled buffer ensures seamless infinite scroll in both left & right directions
     return {

@@ -32,22 +32,44 @@ function RelatedProductsComponent({
   const [displayCount, setDisplayCount] = useState(18);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // Convert to ProductCard format
+  // Convert to ProductCard format and strictly deduplicate by id, slug, and name
   const mappedProducts: Product[] = useMemo(() => {
-    return products.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      image: p.image,
-      price: p.price,
-      originalPrice: p.originalPrice,
-      rating: p.rating,
-      reviews: p.reviews,
-      sold: p.sold,
-      freeShipping: p.freeShipping,
-      isBestSeller: p.isBestSeller,
-      isNew: p.isNew
-    }));
+    const seenIds = new Set<string>();
+    const seenSlugs = new Set<string>();
+    const seenNames = new Set<string>();
+    const uniqueList: Product[] = [];
+
+    for (const p of products) {
+      if (!p) continue;
+      const id = String(p.id || "").toLowerCase();
+      const slug = String(p.slug || "").toLowerCase();
+      const name = String(p.name || "").trim().toLowerCase();
+
+      if (id && seenIds.has(id)) continue;
+      if (slug && seenSlugs.has(slug)) continue;
+      if (name && seenNames.has(name)) continue;
+
+      if (id) seenIds.add(id);
+      if (slug) seenSlugs.add(slug);
+      if (name) seenNames.add(name);
+
+      uniqueList.push({
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        image: p.image,
+        price: p.price,
+        originalPrice: p.originalPrice,
+        rating: p.rating,
+        reviews: p.reviews,
+        sold: p.sold,
+        freeShipping: p.freeShipping,
+        isBestSeller: p.isBestSeller,
+        isNew: p.isNew
+      });
+    }
+
+    return uniqueList;
   }, [products]);
 
   // Proactively warm all related product images in advance

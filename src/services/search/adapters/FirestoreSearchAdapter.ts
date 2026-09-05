@@ -518,6 +518,41 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
           console.warn("[FirestoreSearchAdapter] Mohasagor master cache fetch error:", e);
         }
 
+        // 4b. Fetch/merge live products from Ecomseller BD
+        try {
+          const { EcomsellerEngine } = await import("@/services/suppliers/ecomsellerEngine");
+          const ecomList = await EcomsellerEngine.getCachedEcomsellerProducts();
+          if (ecomList && ecomList.length > 0) {
+            ecomList.forEach((p: any, idx: number) => {
+              const pid = String(p.id);
+              if (!productMap.has(pid)) {
+                productMap.set(pid, {
+                  id: pid,
+                  name: p.name,
+                  slug: p.slug || `product-${pid}`,
+                  regular_price: p.regular_price || p.price || 0,
+                  discount_price: p.discount_price || null,
+                  price: p.price || 0,
+                  category: p.category || "General",
+                  brand: p.brand || "Generic",
+                  seller_name: "Durtup Marketplace",
+                  sku: p.sku || `ECOM-${pid}`,
+                  image: p.image,
+                  product_images: Array.isArray(p.images) ? p.images.map((u: string) => ({ image_url: u })) : [{ image_url: p.image || defaultImages[idx % defaultImages.length] }],
+                  rating_average: p.rating_average || 4.8,
+                  rating_count: p.rating_count || 15,
+                  sold_count: p.sold_count || 45,
+                  in_stock: true,
+                  status: "active",
+                  description: p.description || ""
+                });
+              }
+            });
+          }
+        } catch (e) {
+          console.warn("[FirestoreSearchAdapter] Ecomseller BD cache fetch error:", e);
+        }
+
         if (productMap.size === 0) {
           FALLBACK_SUPPLIER_PRODUCTS.forEach((p, idx) => {
             const pid = String(p.id);

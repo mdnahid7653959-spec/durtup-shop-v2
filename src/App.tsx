@@ -40,6 +40,7 @@ const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminCJSettings = lazy(() => import("./pages/admin/AdminCJSettings"));
 const AdminSupplierIntegrations = lazy(() => import("./pages/admin/AdminSupplierIntegrations"));
+const AdminSupplierImport = lazy(() => import("./pages/admin/AdminSupplierImport"));
 const AdminSellers = lazy(() => import("./pages/admin/AdminSellers"));
 const AdminShipping = lazy(() => import("./pages/admin/AdminShipping"));
 const AdminCommissions = lazy(() => import("./pages/admin/AdminCommissions"));
@@ -308,6 +309,7 @@ const App = () => (
                               <Route path="/admin/search-management" element={<AdminProtectedRoute><AdminSearchManagement /></AdminProtectedRoute>} />
                               <Route path="/admin/cj-settings" element={<AdminProtectedRoute><AdminCJSettings /></AdminProtectedRoute>} />
                               <Route path="/admin/supplier-integrations" element={<AdminProtectedRoute><AdminSupplierIntegrations /></AdminProtectedRoute>} />
+                              <Route path="/admin/supplier-import" element={<AdminProtectedRoute><AdminSupplierImport /></AdminProtectedRoute>} />
                               <Route path="/admin/settings" element={<AdminProtectedRoute><AdminSettings /></AdminProtectedRoute>} />
 
                               {/* Enterprise Modules */}

@@ -22,7 +22,8 @@ import {
   Sparkles,
   Database,
   Store,
-  Filter
+  Filter,
+  DownloadCloud
 } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
@@ -71,6 +72,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useAdminCacheInvalidation } from "@/hooks/useRealtimeSync";
 import { AdminProductPreviewDialog } from "@/components/admin/AdminProductPreviewDialog";
 import { getCachedMohasagorProducts, fetchAllPagesMohasagorProducts } from "@/utils/mohasagorCache";
+import { EcomsellerEngine } from "@/services/suppliers/ecomsellerEngine";
 
 interface Product {
   id: string;
@@ -155,10 +157,11 @@ export default function AdminProducts() {
     }
 
     // 2. Fetch Database, Firestore, and Supplier API products in parallel
-    const [dbResult, firestoreSnapResult, supplierResult] = await Promise.allSettled([
+    const [dbResult, firestoreSnapResult, supplierResult, ecomResult] = await Promise.allSettled([
       supabase.from("products").select("*, product_images(image_url)").order("created_at", { ascending: false }),
       getDocs(collection(db, "products")),
-      getCachedMohasagorProducts()
+      getCachedMohasagorProducts(),
+      EcomsellerEngine.getCachedEcomsellerProducts()
     ]);
 
     let dbProdsList: Product[] = [];
@@ -224,12 +227,33 @@ export default function AdminProducts() {
       }));
     }
 
+    let ecomProdsList: Product[] = [];
+    if (ecomResult.status === "fulfilled" && ecomResult.value && ecomResult.value.length > 0) {
+      ecomProdsList = ecomResult.value.map((ep: any) => ({
+        id: String(ep.id),
+        name: ep.name,
+        slug: ep.slug || `product-${ep.id}`,
+        regular_price: Number(ep.regular_price || ep.price || 0),
+        discount_price: ep.discount_price ? Number(ep.discount_price) : null,
+        stock_quantity: Number(ep.stock_quantity ?? 25),
+        status: "active",
+        approval_status: "approved",
+        seller_id: "Ecomseller BD",
+        is_featured: Boolean(ep.is_featured),
+        created_at: ep.created_at || new Date().toISOString(),
+        image: ep.image || (Array.isArray(ep.images) ? ep.images[0] : "") || "",
+        sku: ep.sku || `ECOM-${ep.id}`,
+        category: ep.category || "General"
+      }));
+    }
+
     // 3. Merge Local + Firestore + DB + Supplier products cleanly
     const mergedMap = new Map<string, Product>();
     localAdminProds.forEach((p) => mergedMap.set(p.id, p));
     firestoreProdsList.forEach((p) => { if (!mergedMap.has(p.id)) mergedMap.set(p.id, p); });
     dbProdsList.forEach((p) => { if (!mergedMap.has(p.id)) mergedMap.set(p.id, p); });
     supplierProdsList.forEach((p) => { if (!mergedMap.has(p.id)) mergedMap.set(p.id, p); });
+    ecomProdsList.forEach((p) => { if (!mergedMap.has(p.id)) mergedMap.set(p.id, p); });
 
     const finalCatalog = Array.from(mergedMap.values());
     setProducts(finalCatalog);
@@ -454,11 +478,19 @@ export default function AdminProducts() {
     if (!sellerId || sellerId.toLowerCase() === "admin") {
       return <Badge variant="secondary" className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">Admin</Badge>;
     }
-    if (sellerId.toLowerCase().includes("mohasagor") || sellerId.toLowerCase().includes("supplier")) {
+    if (sellerId.toLowerCase().includes("ecomseller")) {
+      return (
+        <Badge className="text-[11px] bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 hover:bg-orange-500/25">
+          <DownloadCloud className="h-2.5 w-2.5 mr-1" />
+          Ecomseller BD
+        </Badge>
+      );
+    }
+    if (sellerId.toLowerCase().includes("mohasagor") || sellerId.toLowerCase().includes("supplier") || sellerId.toLowerCase().includes("dropshipping")) {
       return (
         <Badge className="text-[11px] bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20">
           <Database className="h-2.5 w-2.5 mr-1" />
-          API Supplier
+          Dropship API
         </Badge>
       );
     }
@@ -490,12 +522,14 @@ export default function AdminProducts() {
       if (stockFilter === "out_of_stock" && p.stock_quantity > 0) return false;
 
       const appStatus = (p.approval_status || p.status || "approved").toLowerCase();
-      const isSupplier = p.seller_id && (p.seller_id.toLowerCase().includes("mohasagor") || p.seller_id.toLowerCase().includes("supplier"));
+      const isEcomseller = (p.seller_id && p.seller_id.toLowerCase().includes("ecomseller")) || (p.sku && p.sku.startsWith("ECOM-"));
+      const isSupplier = isEcomseller || (p.seller_id && (p.seller_id.toLowerCase().includes("mohasagor") || p.seller_id.toLowerCase().includes("supplier")));
       const isAdmin = !p.seller_id || p.seller_id.toLowerCase() === "admin";
       const isSeller = p.seller_id && !isAdmin && !isSupplier;
 
       if (activeTab === "all") return true;
       if (activeTab === "supplier") return isSupplier;
+      if (activeTab === "ecomseller") return isEcomseller;
       if (activeTab === "admin") return isAdmin;
       if (activeTab === "seller") return isSeller;
       if (activeTab === "pending") return appStatus === "pending";
@@ -512,18 +546,21 @@ export default function AdminProducts() {
     let approved = 0;
     let rejected = 0;
     let supplier = 0;
+    let ecomseller = 0;
     let adminCount = 0;
     let seller = 0;
 
     products.forEach((p) => {
       const appStatus = (p.approval_status || p.status || "approved").toLowerCase();
-      const isSupplier = p.seller_id && (p.seller_id.toLowerCase().includes("mohasagor") || p.seller_id.toLowerCase().includes("supplier"));
+      const isEcom = (p.seller_id && p.seller_id.toLowerCase().includes("ecomseller")) || (p.sku && p.sku.startsWith("ECOM-"));
+      const isSupplier = isEcom || (p.seller_id && (p.seller_id.toLowerCase().includes("mohasagor") || p.seller_id.toLowerCase().includes("supplier")));
       const isAdmin = !p.seller_id || p.seller_id.toLowerCase() === "admin";
 
       if (appStatus === "pending") pending++;
       if (appStatus === "approved" || appStatus === "active") approved++;
       if (appStatus === "rejected" || appStatus === "banned") rejected++;
 
+      if (isEcom) ecomseller++;
       if (isSupplier) supplier++;
       else if (isAdmin) adminCount++;
       else seller++;
@@ -535,6 +572,7 @@ export default function AdminProducts() {
       approved,
       rejected,
       supplier,
+      ecomseller,
       admin: adminCount,
       seller
     };

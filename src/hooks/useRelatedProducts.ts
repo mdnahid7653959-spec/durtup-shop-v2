@@ -55,11 +55,29 @@ export function useRelatedProducts(productContext: ProductContext | null, limit:
         const currentCachedProd = cachedCatalog.find(p => p.id === productContext.id || p.name === productContext.name);
         const targetCategory = productContext.category_id || (currentCachedProd as any)?.category;
 
-        // Filter out current product
-        const otherProducts = cachedCatalog.filter(p => p.id !== productContext.id && p.name !== productContext.name);
+        // Filter out current product and strictly deduplicate by id, slug, and name
+        const seenIds = new Set<string>([String(productContext.id).toLowerCase()]);
+        const seenSlugs = new Set<string>();
+        const seenNames = new Set<string>([(productContext.name || "").trim().toLowerCase()]);
 
-        if (otherProducts.length > 0) {
-          const scored = otherProducts.map((p: any) => {
+        const uniqueOtherProducts = cachedCatalog.filter(p => {
+          if (!p) return false;
+          const id = String(p.id || "").toLowerCase();
+          const slug = String(p.slug || "").toLowerCase();
+          const name = String(p.name || (p as any).title || "").trim().toLowerCase();
+
+          if (id && seenIds.has(id)) return false;
+          if (slug && seenSlugs.has(slug)) return false;
+          if (name && seenNames.has(name)) return false;
+
+          if (id) seenIds.add(id);
+          if (slug) seenSlugs.add(slug);
+          if (name) seenNames.add(name);
+          return true;
+        });
+
+        if (uniqueOtherProducts.length > 0) {
+          const scored = uniqueOtherProducts.map((p: any) => {
             let score = 0;
 
             // Category match (highest priority) - 50 points
