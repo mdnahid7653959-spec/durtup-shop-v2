@@ -1,19 +1,14 @@
 import { useEffect, useLayoutEffect, useState, useRef, useCallback } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
-import { supabase } from "@/lib/firebaseAdapter";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
-import { CombinedProductCard, type CombinedProduct } from "@/components/products/CombinedProductCard";
 import { Loader2 } from "lucide-react";
 import { getCachedMohasagorProducts, getSyncProducts, filterProductsByCategory } from "@/utils/mohasagorCache";
 import { SEOHead } from "@/components/SEOHead";
 import { generateCategorySEOTitle, generateCategorySEODescription, DEFAULT_BANGLADESH_PRODUCT_FAQS } from "@/utils/seoHelper";
-import { useCJSettings, useCJCategoryMappings } from "@/hooks/useCJSettings";
 import { findCategoryOrSubcategory, CATEGORIES_DATA } from "@/data/categoriesData";
 import { cn } from "@/lib/utils";
-
-import { Breadcrumbs } from "@/components/common/Breadcrumbs";
 
 interface Category {
 
@@ -96,7 +91,7 @@ export default function CategoryPage() {
       setTimeout(() => {
         setIsSubDropletSliding(false);
         setSubDropletSlideDir("none");
-      }, 350);
+      }, 200);
     }
     prevSubLeftRef.current = elLeft;
 
@@ -143,7 +138,12 @@ export default function CategoryPage() {
   useLayoutEffect(() => {
     const syncList = getSyncProducts();
     const instantFiltered = filterProductsByCategory(syncList, filterKey, formattedName);
-    setProducts(instantFiltered);
+    setProducts(prev => {
+      if (prev.length === instantFiltered.length && prev[0]?.id === instantFiltered[0]?.id) {
+        return prev;
+      }
+      return instantFiltered;
+    });
   }, [slug, subcategoryParam, filterKey, formattedName]);
 
   // 3. Background hydration listener to refresh catalog when IDB/network loads
@@ -180,7 +180,7 @@ export default function CategoryPage() {
         setTimeout(() => {
           setIsSubDropletSliding(false);
           setSubDropletSlideDir("none");
-        }, 350);
+        }, 200);
       }
       prevSubLeftRef.current = elLeft;
 
@@ -229,19 +229,6 @@ export default function CategoryPage() {
       
       <main className="flex-1 pb-20 md:pb-0">
         <div className="px-3 sm:container py-2.5 sm:py-4">
-          
-          {/* Breadcrumb Navigation */}
-          <div className="mb-2">
-            <Breadcrumbs
-              items={[
-                { name: "Home", url: "/" },
-                { name: "Categories", url: "/categories" },
-                { name: categoryName, url: `/category/${slug || ""}` },
-                ...(subcategoryParam ? [{ name: subcategoryParam.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "), url: `/category/${slug}?subcategory=${subcategoryParam}` }] : []),
-              ]}
-            />
-          </div>
-
           {/* Subcategory Pills Row with Water Droplet Theme */}
           {mainCat && mainCat.subcategories.length > 0 && (
             <div className="mb-3 sm:mb-4 select-none">
@@ -264,7 +251,7 @@ export default function CategoryPage() {
                   <div
                     className={cn(
                       "absolute pointer-events-none z-0",
-                      "transition-all duration-350 ease-spring"
+                      "transition-all duration-200 ease-out"
                     )}
                     style={{
                       left: `${subDropletStyle.left}px`,
@@ -275,7 +262,7 @@ export default function CategoryPage() {
                   >
                     <div 
                       className={cn(
-                        "w-full h-full p-0.5 transition-transform duration-250",
+                        "w-full h-full p-0.5 transition-transform duration-150",
                         isSubDropletSliding && subDropletSlideDir === "right" && "scale-x-[1.12] scale-y-[0.90] origin-left",
                         isSubDropletSliding && subDropletSlideDir === "left" && "scale-x-[1.12] scale-y-[0.90] origin-right",
                         !isSubDropletSliding && "scale-100"

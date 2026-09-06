@@ -247,46 +247,68 @@ export function getSyncProducts(): Product[] {
   return FAST_SEED_PRODUCTS;
 }
 
-// Non-blocking background catalog hydrator - runs immediately
+// Non-blocking background catalog hydrator - deferred to idle time after full page render
+let isHydratingCatalog = false;
+
+async function hydrateCatalog() {
+  if (isHydratingCatalog) return;
+  isHydratingCatalog = true;
+
+  try {
+    const [idbData, ecomProducts] = await Promise.all([
+      getIdbProducts().catch(() => []),
+      EcomsellerEngine.getCachedEcomsellerProducts().catch(() => [])
+    ]);
+
+    let baseList: Product[] = [];
+    if (idbData && idbData.length >= 100) {
+      baseList = deduplicateProducts(idbData);
+    } else {
+      baseList = await fetchStaticCatalog();
+    }
+
+    if (ecomProducts && ecomProducts.length > 0) {
+      const combined = interleaveCatalogs(baseList, ecomProducts);
+      inMemoryProductsCache = combined;
+      updateIndexMap(combined);
+      clearCategoryFilterCache();
+      setIdbProducts(combined).catch(() => {});
+      window.dispatchEvent(new Event("mohasagor_products_updated"));
+    } else if (baseList && baseList.length > 0) {
+      inMemoryProductsCache = baseList;
+      updateIndexMap(baseList);
+      clearCategoryFilterCache();
+      window.dispatchEvent(new Event("mohasagor_products_updated"));
+    }
+  } catch (e) {
+    console.warn("Catalog background hydration warning:", e);
+  } finally {
+    isHydratingCatalog = false;
+  }
+}
+
 if (typeof window !== "undefined") {
-  const hydrateCatalog = async () => {
-    try {
-      const [idbData, ecomProducts] = await Promise.all([
-        getIdbProducts().catch(() => []),
-        EcomsellerEngine.getCachedEcomsellerProducts().catch(() => [])
-      ]);
-
-      let baseList: Product[] = [];
-      if (idbData && idbData.length >= 100) {
-        baseList = deduplicateProducts(idbData);
-      } else {
-        baseList = await fetchStaticCatalog();
-      }
-
-      if (ecomProducts && ecomProducts.length > 0) {
-        const combined = interleaveCatalogs(baseList, ecomProducts);
-        inMemoryProductsCache = combined;
-        updateIndexMap(combined);
-        clearCategoryFilterCache();
-        setIdbProducts(combined).catch(() => {});
-        window.dispatchEvent(new Event("mohasagor_products_updated"));
-      } else if (baseList && baseList.length > 0) {
-        inMemoryProductsCache = baseList;
-        updateIndexMap(baseList);
-        clearCategoryFilterCache();
-        window.dispatchEvent(new Event("mohasagor_products_updated"));
-      }
-    } catch (e) {
-      console.warn("Catalog background hydration warning:", e);
+  const scheduleHydration = () => {
+    if ("requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(() => hydrateCatalog(), { timeout: 4000 });
+    } else {
+      setTimeout(() => hydrateCatalog(), 2500);
     }
   };
 
-  hydrateCatalog();
+  if (document.readyState === "complete") {
+    scheduleHydration();
+  } else {
+    window.addEventListener("load", scheduleHydration, { once: true });
+  }
 }
 
 async function fetchStaticCatalog(): Promise<Product[]> {
   try {
-    const res = await fetch("/mohasagor_catalog.json");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch("/mohasagor_catalog.json", { signal: controller.signal });
+    clearTimeout(timeout);
     if (res.ok) {
       const rawProducts = await res.json();
       if (Array.isArray(rawProducts) && rawProducts.length > 0) {
@@ -299,9 +321,9 @@ async function fetchStaticCatalog(): Promise<Product[]> {
       }
     }
   } catch (err) {
-    console.warn("Failed to load static catalog:", err);
+    console.warn("Deferred static catalog load skipped or timed out:", err);
   }
-  return [];
+  return inMemoryProductsCache || FAST_SEED_PRODUCTS;
 }
 
 let ongoingFetchPromise: Promise<Product[]> | null = null;

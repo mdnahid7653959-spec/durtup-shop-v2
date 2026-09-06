@@ -166,6 +166,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         rawItems = getLocalWishlist();
       }
 
+      if (!rawItems || rawItems.length === 0) {
+        setItems([]);
+        setLoading(false);
+        return;
+      }
+
       const formatted: WishlistItem[] = await Promise.all(
         rawItems.map(async (item: any) => {
           const pid = typeof item === 'string' ? item : (item.product_id || item.id);
@@ -214,16 +220,24 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   };
 
   const isInWishlist = useCallback((productId: string) => {
-    return items.some(item => String(item.product_id) === String(productId));
+    if (!productId) return false;
+    const target = String(productId).replace(/^wish-/, "").replace(/^product-/, "").toLowerCase().trim();
+    return items.some(item => {
+      const pid = String(item.product_id || "").replace(/^wish-/, "").replace(/^product-/, "").toLowerCase().trim();
+      const id = String(item.id || "").replace(/^wish-/, "").replace(/^product-/, "").toLowerCase().trim();
+      const prodId = String(item.product?.id || "").replace(/^wish-/, "").replace(/^product-/, "").toLowerCase().trim();
+      return pid === target || id === target || prodId === target;
+    });
   }, [items]);
 
   const addToWishlist = useCallback(async (productId: string) => {
-    if (isInWishlist(productId)) return;
-    const info = await resolveProductInfo(productId);
+    if (!productId || isInWishlist(productId)) return;
+    const cleanId = String(productId).replace(/^wish-/, "").replace(/^product-/, "").trim();
+    const info = await resolveProductInfo(cleanId);
 
     const newItem: WishlistItem = {
-      id: `wish-${productId}`,
-      product_id: String(productId),
+      id: `wish-${cleanId}`,
+      product_id: String(cleanId),
       product: {
         id: info.id,
         name: info.name,
@@ -248,8 +262,16 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   }, [isInWishlist, toast]);
 
   const removeFromWishlist = useCallback(async (productId: string) => {
+    if (!productId) return;
+    const target = String(productId).replace(/^wish-/, "").replace(/^product-/, "").toLowerCase().trim();
+
     setItems(prev => {
-      const updated = prev.filter(item => String(item.product_id) !== String(productId));
+      const updated = prev.filter(item => {
+        const pid = String(item.product_id || "").replace(/^wish-/, "").replace(/^product-/, "").toLowerCase().trim();
+        const id = String(item.id || "").replace(/^wish-/, "").replace(/^product-/, "").toLowerCase().trim();
+        const prodId = String(item.product?.id || "").replace(/^wish-/, "").replace(/^product-/, "").toLowerCase().trim();
+        return pid !== target && id !== target && prodId !== target;
+      });
       syncWishlistToFirebase(updated);
       return updated;
     });

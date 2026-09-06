@@ -77,7 +77,7 @@ const GENERIC_GADGET_FALLBACKS = [
  * Converts heavy raw supplier images to ultra-fast, edge-cached WebP CDN images via Cloudflare/wsrv.nl
  * Uses fit=inside and full 800px resolution to ensure zero cropping and crystal-clear HD clarity.
  */
-export function optimizeImageUrl(url?: string, width: number = 800, quality: number = 85): string {
+export function optimizeImageUrl(url?: string, width: number = 420, quality: number = 75): string {
   if (!url || typeof url !== "string") return "";
   const trimmed = url.trim();
   if (!trimmed) return "";
@@ -91,13 +91,18 @@ export function optimizeImageUrl(url?: string, width: number = 800, quality: num
     return trimmed;
   }
 
+  // Mohasagor direct images - direct loading is reliable (wsrv.nl fails with 404 on high-resolution camera images exceeding 71Mpx)
+  if (trimmed.includes("mohasagor.com.bd")) {
+    return trimmed;
+  }
+
   // Unsplash images - use native high-speed dynamic CDN parameters with full uncropped aspect ratio
   if (trimmed.includes("images.unsplash.com")) {
     const clean = trimmed.split("?")[0];
     return `${clean}?w=${width}&q=${quality}&auto=format`;
   }
 
-  // Mohasagor and external supplier images - route through Cloudflare Edge CDN (wsrv.nl) with fit=inside so no image parts are cut off
+  // External supplier images - route through Cloudflare Edge CDN (wsrv.nl) with fit=inside so no image parts are cut off
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     return `https://wsrv.nl/?url=${encodeURIComponent(trimmed)}&w=${width}&fit=inside&output=webp&q=${quality}`;
   }

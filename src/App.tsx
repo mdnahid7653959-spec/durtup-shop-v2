@@ -11,7 +11,7 @@ import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
 import { StaffProvider } from "@/contexts/StaffContext";
 import { StaffProtectedRoute } from "@/components/staff/StaffProtectedRoute";
 import { AdminProtectedRoute } from "@/components/admin/AdminProtectedRoute";
-import { GlobalAdminNotificationListener } from "@/components/admin/GlobalAdminNotificationListener";
+const GlobalAdminNotificationListener = lazy(() => import("@/components/admin/GlobalAdminNotificationListener").then(m => ({ default: m.GlobalAdminNotificationListener })));
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { FacebookPixel } from "@/components/FacebookPixel";
@@ -20,10 +20,13 @@ import { NativeAppProvider } from "@/components/NativeAppProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RoutePrefetcher } from "@/components/RoutePrefetcher";
 
-// Eager load - critical pages
+// Eager load - critical customer pages for 0ms lag-free navigation
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import CategoryPage from "./pages/CategoryPage";
+import Categories from "./pages/Categories";
+import Products from "./pages/Products";
 
 // Admin Portal Pages - Lazy loaded
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
@@ -81,12 +84,9 @@ const EnterpriseThemeBuilder = lazy(() => import("./pages/admin/enterprise/Enter
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const Products = lazy(() => import("./pages/Products"));
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const CJProductDetail = lazy(() => import("./pages/CJProductDetail"));
 const CJProducts = lazy(() => import("./pages/CJProducts"));
-const CategoryPage = lazy(() => import("./pages/CategoryPage"));
-const Categories = lazy(() => import("./pages/Categories"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Account = lazy(() => import("./pages/Account"));
@@ -179,7 +179,9 @@ const App = () => (
                       <WishlistProvider>
                         <FacebookPixel />
                         <RoutePrefetcher />
-                        <GlobalAdminNotificationListener />
+                        <Suspense fallback={null}>
+                          <GlobalAdminNotificationListener />
+                        </Suspense>
                         <AppLayout>
                           <Suspense fallback={<PageLoader />}>
                             <Routes>

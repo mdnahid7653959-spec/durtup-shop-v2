@@ -356,6 +356,20 @@ export function ProductZoomViewer({
             alt={productName}
             className="max-h-[72vh] sm:max-h-[78vh] max-w-[92vw] object-contain drop-shadow-[0_15px_35px_rgba(0,0,0,0.8)] pointer-events-none select-none rounded-lg"
             draggable={false}
+            onError={(e) => {
+              const target = e.currentTarget;
+              const current = target.src;
+              target.onerror = null;
+              if (current.includes("wsrv.nl/?url=")) {
+                try {
+                  const parsed = new URL(current);
+                  const originalUrl = parsed.searchParams.get("url");
+                  if (originalUrl) {
+                    target.src = decodeURIComponent(originalUrl);
+                  }
+                } catch {}
+              }
+            }}
           />
         </div>
 
@@ -399,7 +413,25 @@ export function ProductZoomViewer({
                 )}
                 aria-label={`View image ${idx + 1}`}
               >
-                <img src={img} alt="" className="w-full h-full object-cover select-none pointer-events-none" />
+                <img 
+                  src={img} 
+                  alt="" 
+                  className="w-full h-full object-cover select-none pointer-events-none"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    const current = target.src;
+                    target.onerror = null;
+                    if (current.includes("wsrv.nl/?url=")) {
+                      try {
+                        const parsed = new URL(current);
+                        const originalUrl = parsed.searchParams.get("url");
+                        if (originalUrl) {
+                          target.src = decodeURIComponent(originalUrl);
+                        }
+                      } catch {}
+                    }
+                  }}
+                />
               </button>
             ))}
           </div>

@@ -148,12 +148,20 @@ export default function Wishlist() {
 
                       {/* Remove Button */}
                       <button
-                        onClick={() => removeFromWishlist(item.product_id)}
-                        className="absolute top-2 right-2 p-1.5 bg-background/90 hover:bg-destructive hover:text-destructive-foreground rounded-full shadow-sm transition-colors z-10"
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeFromWishlist(item.product_id || item.id || item.product?.id);
+                        }}
+                        onTouchEnd={(e) => {
+                          e.stopPropagation();
+                        }}
+                        className="absolute top-2 right-2 w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center bg-white/95 dark:bg-slate-900/95 hover:bg-destructive hover:text-white dark:hover:bg-destructive text-slate-600 dark:text-slate-300 rounded-full shadow-md border border-slate-200/80 dark:border-slate-700 transition-all z-20 touch-manipulation active:scale-90"
                         title="Remove from wishlist"
                         aria-label="Remove from wishlist"
                       >
-                        <Trash2 className="w-4 h-4 text-muted-foreground hover:text-inherit" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
 
                       {/* Discount Badge */}

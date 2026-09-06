@@ -161,7 +161,7 @@ export function HeroBanner() {
   const slide = BANNER_SLIDES[currentSlide];
 
   return (
-    <section className="w-full px-2.5 sm:px-4 pt-1 sm:pt-3 pb-1">
+    <section id="hero-banner-section" className="w-full px-2.5 sm:px-4 pt-1 sm:pt-3 pb-1">
       <div className="max-w-7xl mx-auto">
         <div
           className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-lg select-none group/banner"

@@ -71,7 +71,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const fetchCart = useCallback(async () => {
     try {
-      const catalog = await getCachedMohasagorProducts();
       let rawItems: any[] = [];
       const localCart = getLocalCart();
 
@@ -104,9 +103,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
         rawItems = localCart;
       }
 
-      if (rawItems.length > 0) {
-        const formatted: CartItem[] = rawItems.map((item: any) => {
-          const matched = catalog.find(p => p.id === item.product_id || p.id === item.id);
+      if (!rawItems || rawItems.length === 0) {
+        setItems([]);
+        return;
+      }
+
+      const catalog = await getCachedMohasagorProducts();
+      const formatted: CartItem[] = rawItems.map((item: any) => {
+        const matched = catalog.find(p => p.id === item.product_id || p.id === item.id);
           const prodData = item.product || (matched ? {
             id: matched.id,
             name: matched.name,
@@ -152,7 +156,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         setItems(formatted);
         setLocalCart(formatted);
-      }
     } catch (err) {
       console.error("Failed to load cart:", err);
     } finally {
@@ -179,20 +182,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addToCart = useCallback(async (productId: string, quantity: number = 1, variants?: Record<string, string>) => {
+  const addToCart = useCallback(async (productOrId: any, quantity: number = 1, variants?: Record<string, string>) => {
+    const isObject = typeof productOrId === "object" && productOrId !== null;
+    const productId = String(isObject ? (productOrId.id || productOrId.product_id) : productOrId);
+
     const catalog = await getCachedMohasagorProducts();
-    const targetProd = catalog.find(p => p.id === productId);
+    const targetProd = catalog.find(p => p.id === productId) || (isObject ? productOrId : null);
 
     const variantKey = variants && Object.keys(variants).length > 0 ? JSON.stringify(variants) : "";
     const variantName = variants && Object.keys(variants).length > 0 
       ? Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(", ")
-      : null;
-    const color = variants?.Color || variants?.color || null;
-    const size = variants?.Size || variants?.size || null;
+      : (isObject ? productOrId.variant_name || null : null);
+    const color = variants?.Color || variants?.color || (isObject ? productOrId.color : null);
+    const size = variants?.Size || variants?.size || (isObject ? productOrId.size : null);
 
     setItems((prev) => {
       const existingIdx = prev.findIndex(item => 
-        item.product_id === productId && 
+        (item.product_id === productId || item.id === productId) && 
         (JSON.stringify(item.selected_variants || {}) === JSON.stringify(variants || {}) || item.variant_name === variantName)
       );
       let updated: CartItem[];
@@ -214,19 +220,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
           product: targetProd ? {
             id: targetProd.id,
             name: targetProd.name,
-            slug: targetProd.slug,
-            regular_price: targetProd.originalPrice || targetProd.price,
-            discount_price: targetProd.price,
-            stock_quantity: 50
+            slug: targetProd.slug || `product-${targetProd.id}`,
+            regular_price: targetProd.originalPrice || targetProd.regular_price || targetProd.price,
+            discount_price: targetProd.discount_price || targetProd.price,
+            stock_quantity: targetProd.stock_quantity ?? targetProd.stock ?? 50
           } : {
             id: productId,
-            name: "Product",
-            slug: `product-${productId}`,
-            regular_price: 100,
+            name: isObject ? (productOrId.name || "Product") : "Product",
+            slug: isObject ? (productOrId.slug || `product-${productId}`) : `product-${productId}`,
+            regular_price: isObject ? (productOrId.price || 100) : 100,
             discount_price: null,
             stock_quantity: 50
           },
-          image: targetProd?.image || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400"
+          image: (isObject && productOrId.image) ? productOrId.image : (targetProd?.image || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400")
         };
         updated = [...prev, newItem];
       }
@@ -248,15 +254,37 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     setItems((prev) => {
-      const updated = prev.map(item => item.id === itemId ? { ...item, quantity } : item);
+      const updated = prev.map(item => (item.id === itemId || item.product_id === itemId) ? { ...item, quantity } : item);
       syncCartToFirebase(updated);
       return updated;
     });
   }, []);
 
-  const removeItem = useCallback(async (itemId: string) => {
+  const removeItem = useCallback(async (targetId: string) => {
+    if (!targetId) return;
+    const targetStr = String(targetId).toLowerCase().trim();
+    const cleanTarget = targetStr.replace(/^cart-/, "").replace(/^product-/, "");
+
     setItems((prev) => {
-      const updated = prev.filter(item => item.id !== itemId);
+      const updated = prev.filter((item) => {
+        const id = String(item.id || "").toLowerCase().trim();
+        const pId = String(item.product_id || "").toLowerCase().trim();
+        const prodId = String(item.product?.id || "").toLowerCase().trim();
+        const cleanId = id.replace(/^cart-/, "").replace(/^product-/, "");
+        const cleanPId = pId.replace(/^cart-/, "").replace(/^product-/, "");
+        const cleanProdId = prodId.replace(/^cart-/, "").replace(/^product-/, "");
+
+        const isMatch =
+          id === targetStr ||
+          pId === targetStr ||
+          prodId === targetStr ||
+          cleanId === cleanTarget ||
+          cleanPId === cleanTarget ||
+          cleanProdId === cleanTarget;
+
+        return !isMatch;
+      });
+
       syncCartToFirebase(updated);
       return updated;
     });

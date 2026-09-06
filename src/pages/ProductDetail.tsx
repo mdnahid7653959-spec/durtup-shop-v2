@@ -28,7 +28,6 @@ import { ProductZoomViewer } from "@/components/products/ProductZoomViewer";
 import { SEOHead } from "@/components/SEOHead";
 import { generateProductSEOTitle, generateProductSEODescription, DEFAULT_BANGLADESH_PRODUCT_FAQS } from "@/utils/seoHelper";
 import { trackViewContent, trackAddToCart } from "@/components/FacebookPixel";
-import { Breadcrumbs } from "@/components/common/Breadcrumbs";
 
 interface ProductImage {
   id: string;
@@ -180,11 +179,17 @@ const mapSupplierImages = (raw: any): ProductImage[] => {
     return trimmed.startsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
   };
 
-  const addedUrls = new Set<string>();
+  const addedKeys = new Set<string>();
   const addImg = (url: any) => {
     const u = resolveUrl(url);
-    if (u && !addedUrls.has(u)) {
-      addedUrls.add(u);
+    if (!u) return;
+
+    // Normalize and extract filename to prevent duplicates with proxy prefixes or query strings
+    const filenameMatch = u.match(/\/([^\/?#]+\.(?:jpg|jpeg|png|webp|gif|svg))/i);
+    const key = filenameMatch ? filenameMatch[1].toLowerCase() : u.toLowerCase().replace(/^https?:\/\//, "").split("?")[0];
+
+    if (!addedKeys.has(key)) {
+      addedKeys.add(key);
       product_images.push({
         id: `img-${product_images.length}`,
         image_url: u,
@@ -216,11 +221,13 @@ const mapSupplierImages = (raw: any): ProductImage[] => {
     });
   }
 
-  // 3. Single image properties
-  if (raw.thumbnail_img) addImg(raw.thumbnail_img);
-  if (raw.image_url) addImg(raw.image_url);
-  if (raw.image) addImg(raw.image);
-  if (raw.thumbnail) addImg(raw.thumbnail);
+  // 3. Single image properties - only add if no images have been captured yet
+  if (product_images.length === 0) {
+    if (raw.thumbnail_img) addImg(raw.thumbnail_img);
+    if (raw.image_url) addImg(raw.image_url);
+    if (raw.image) addImg(raw.image);
+    if (raw.thumbnail) addImg(raw.thumbnail);
+  }
 
   return product_images;
 };
@@ -382,7 +389,18 @@ export default function ProductDetail() {
     ? [(product as any).image_url || (product as any).image]
     : [getSmartProductImage(product?.name || "", "", product?.category_id || "")];
 
-  const images = (rawImgList || []).map(resolveImage).filter(Boolean);
+  const rawResolved = (rawImgList || []).map(resolveImage).filter(Boolean);
+  const seenImgKeys = new Set<string>();
+  const images: string[] = [];
+  for (const u of rawResolved) {
+    if (!u) continue;
+    const filenameMatch = u.match(/\/([^\/?#]+\.(?:jpg|jpeg|png|webp|gif|svg))/i);
+    const key = filenameMatch ? filenameMatch[1].toLowerCase() : u.toLowerCase().replace(/^https?:\/\//, "").split("?")[0];
+    if (!seenImgKeys.has(key)) {
+      seenImgKeys.add(key);
+      images.push(u);
+    }
+  }
   if (images.length === 0) images.push(getSmartProductImage(product?.name || "", "", product?.category_id || ""));
 
   // Eagerly prefetch all product images into memory for instant transitions
@@ -926,6 +944,34 @@ export default function ProductDetail() {
     }
   };
 
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.currentTarget;
+    const current = target.src;
+    target.onerror = null;
+
+    // 1. If failed through wsrv.nl proxy, extract original URL and load directly
+    if (current.includes("wsrv.nl/?url=")) {
+      try {
+        const parsed = new URL(current);
+        const originalUrl = parsed.searchParams.get("url");
+        if (originalUrl) {
+          target.src = decodeURIComponent(originalUrl);
+          return;
+        }
+      } catch {}
+    }
+
+    // 2. Try smart category fallback image before blank placeholder
+    const fallback = getSmartProductImage(product?.name || "", "", product?.category_id || "");
+    if (fallback && fallback !== current) {
+      target.src = fallback;
+      return;
+    }
+
+    // 3. Ultimate fallback
+    target.src = defaultImages[0];
+  };
+
   const { user: authUser } = useAuth();
   const [contactingSeller, setContactingSeller] = useState(false);
 
@@ -1116,23 +1162,7 @@ export default function ProductDetail() {
       <MobileProductTopBar />
 
       <main className="flex-1 pb-40 md:pb-8 w-full max-w-full overflow-hidden">
-        <div className="container py-4 sm:py-8 w-full max-w-full">
-          {/* Breadcrumb - Clean semantic navigation */}
-          <div className="mb-4">
-            <Breadcrumbs
-              items={[
-                { name: "Home", url: "/" },
-                ...((product as any).category_name ? [
-                  { name: "Categories", url: "/categories" },
-                  { name: (product as any).category_name, url: `/category/${((product as any).category_slug || (product as any).category_name.toLowerCase().replace(/\s+/g, '-'))}` },
-                ] : [
-                  { name: "Products", url: "/products" }
-                ]),
-                { name: product.name, url: `/product/${product.slug || product.id}` }
-              ]}
-            />
-          </div>
-
+        <div className="container py-3 sm:py-6 w-full max-w-full">
           <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 w-full max-w-full min-w-0">
             {/* Product Images Section */}
             <div className="w-full max-w-full min-w-0">
@@ -1187,10 +1217,7 @@ export default function ProductDetail() {
                         loading="eager"
                         fetchPriority="high"
                         decoding="async"
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src = defaultImages[0];
-                        }}
+                        onError={handleImageError}
                       />
                     )}
 
@@ -1233,38 +1260,44 @@ export default function ProductDetail() {
                       />
                     </button>
 
-                    {/* Image Counter Badge */}
-                    <div className="absolute top-3 right-14 sm:right-16 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur text-white text-xs font-bold shadow-md z-10">
-                      {selectedImage + 1} / {(product as any).video_url ? images.length + 1 : images.length}
-                    </div>
+                    {/* Image Counter Badge - only show when multiple images/video exist */}
+                    {((product as any).video_url ? images.length + 1 : images.length) > 1 && (
+                      <div className="absolute top-3 right-14 sm:right-16 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur text-white text-xs font-bold shadow-md z-10">
+                        {selectedImage + 1} / {(product as any).video_url ? images.length + 1 : images.length}
+                      </div>
+                    )}
 
-                    {/* Image navigation arrows */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedImage(Math.max(0, selectedImage - 1));
-                        setShowVideo(false);
-                      }}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all disabled:opacity-0 z-10"
-                      disabled={selectedImage === 0}
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const totalImages = (product as any)?.video_url ? images.length : images.length - 1;
-                        if (selectedImage < totalImages) {
-                          setSelectedImage(selectedImage + 1);
-                          if (selectedImage === images.length - 1 && (product as any)?.video_url) {
-                            setShowVideo(true);
-                          }
-                        }
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all z-10"
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
+                    {/* Image navigation arrows - only show when multiple images/video exist */}
+                    {((product as any)?.video_url ? images.length + 1 : images.length) > 1 && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedImage(Math.max(0, selectedImage - 1));
+                            setShowVideo(false);
+                          }}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all disabled:opacity-0 z-10"
+                          disabled={selectedImage === 0}
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const totalImages = (product as any)?.video_url ? images.length : images.length - 1;
+                            if (selectedImage < totalImages) {
+                              setSelectedImage(selectedImage + 1);
+                              if (selectedImage === images.length - 1 && (product as any)?.video_url) {
+                                setShowVideo(true);
+                              }
+                            }
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all z-10"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </button>
+                      </>
+                    )}
 
                     {/* Share button */}
                     <button
@@ -1275,66 +1308,67 @@ export default function ProductDetail() {
                       <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
 
-                    {/* Image indicator dots */}
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:hidden z-10 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
-                      {images.map((_, i) => (
-                        <div key={i} className={`h-1.5 rounded-full transition-all ${selectedImage === i && !showVideo ? 'bg-white w-5' : 'bg-white/50 w-1.5'}`} />
-                      ))}
-                      {product.video_url && <div className={`h-1.5 rounded-full transition-all ${showVideo ? 'bg-white w-5' : 'bg-white/50 w-1.5'}`} />}
-                    </div>
+                    {/* Image indicator dots - only show when multiple images/video exist */}
+                    {((product as any)?.video_url ? images.length + 1 : images.length) > 1 && (
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:hidden z-10 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                        {images.map((_, i) => (
+                          <div key={i} className={`h-1.5 rounded-full transition-all ${selectedImage === i && !showVideo ? 'bg-white w-5' : 'bg-white/50 w-1.5'}`} />
+                        ))}
+                        {product.video_url && <div className={`h-1.5 rounded-full transition-all ${showVideo ? 'bg-white w-5' : 'bg-white/50 w-1.5'}`} />}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Thumbnail strip */}
-              <div className="flex gap-2 sm:gap-3 justify-start sm:justify-center overflow-x-auto py-2 px-1 scrollbar-hide w-full max-w-full">
-                {images.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setSelectedImage(i);
-                      setShowVideo(false);
-                    }}
-                    className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-neutral-50/80 dark:bg-card hover:scale-105 ${
-                      selectedImage === i && !showVideo
-                        ? 'border-primary ring-2 ring-primary/30 shadow-md shadow-primary/10 scale-105'
-                        : 'border-border/60 hover:border-primary/50 opacity-80 hover:opacity-100'
-                    }`}
-                  >
-                    <img
-                      src={img}
-                      alt=""
-                      className="w-full h-full object-cover transition-transform duration-200"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = defaultImages[0];
+              {/* Thumbnail strip - only show when multiple images/video exist */}
+              {((product as any)?.video_url ? images.length + 1 : images.length) > 1 && (
+                <div className="flex gap-2 sm:gap-3 justify-start sm:justify-center overflow-x-auto py-2 px-1 scrollbar-hide w-full max-w-full">
+                  {images.map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setSelectedImage(i);
+                        setShowVideo(false);
                       }}
-                    />
-                  </button>
-                ))}
-                {/* Video thumbnail */}
-                {product.video_url && (
-                  <button
-                    onClick={() => setShowVideo(true)}
-                    className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all flex items-center justify-center bg-muted flex-shrink-0 relative hover:scale-105 ${
-                      showVideo ? 'border-primary ring-2 ring-primary/30 shadow-md scale-105' : 'border-border/60 hover:border-primary/50 opacity-80 hover:opacity-100'
-                    }`}
-                  >
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-                      <Play className="h-5 w-5 sm:h-7 sm:w-7 text-white fill-white" />
-                    </div>
-                    {getYouTubeEmbedUrl(product.video_url) ? (
+                      className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-neutral-50/80 dark:bg-card hover:scale-105 ${
+                        selectedImage === i && !showVideo
+                          ? 'border-primary ring-2 ring-primary/30 shadow-md shadow-primary/10 scale-105'
+                          : 'border-border/60 hover:border-primary/50 opacity-80 hover:opacity-100'
+                      }`}
+                    >
                       <img
-                        src={`https://img.youtube.com/vi/${product.video_url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]}/mqdefault.jpg`}
-                        alt="Video thumbnail"
-                        className="w-full h-full object-cover"
+                        src={img}
+                        alt=""
+                        className="w-full h-full object-cover transition-transform duration-200"
+                        onError={handleImageError}
                       />
-                    ) : (
-                      <video src={product.video_url} className="w-full h-full object-cover" muted playsInline />
-                    )}
-                  </button>
-                )}
-              </div>
+                    </button>
+                  ))}
+                  {/* Video thumbnail */}
+                  {product.video_url && (
+                    <button
+                      onClick={() => setShowVideo(true)}
+                      className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all flex items-center justify-center bg-muted flex-shrink-0 relative hover:scale-105 ${
+                        showVideo ? 'border-primary ring-2 ring-primary/30 shadow-md scale-105' : 'border-border/60 hover:border-primary/50 opacity-80 hover:opacity-100'
+                      }`}
+                    >
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+                        <Play className="h-5 w-5 sm:h-7 sm:w-7 text-white fill-white" />
+                      </div>
+                      {getYouTubeEmbedUrl(product.video_url) ? (
+                        <img
+                          src={`https://img.youtube.com/vi/${product.video_url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]}/mqdefault.jpg`}
+                          alt="Video thumbnail"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <video src={product.video_url} className="w-full h-full object-cover" muted playsInline />
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
 

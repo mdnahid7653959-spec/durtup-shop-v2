@@ -80,40 +80,29 @@ if (typeof window !== "undefined") {
 
 export function RoutePrefetcher() {
   useEffect(() => {
-    // Sequentially prefetch all critical routes during browser idle time
-    const routesToPrefetch = [
-      "/products",
-      "/categories",
-      "/cart",
-      "/messages",
-      "/category",
-      "/product",
-      "/checkout",
-      "/account",
-      "/orders",
-      "/search",
-      "/wishlist",
-      "/admin",
-      "/admin/orders",
-      "/admin/products"
-    ];
+    // Only prefetch the most basic customer routes after a long idle period (10s)
+    const customerRoutes = ["/products", "/cart"];
 
     const runIdlePrefetch = () => {
-      let idx = 0;
-      const step = () => {
-        if (idx >= routesToPrefetch.length) return;
-        const route = routesToPrefetch[idx++];
-        prefetchRoute(route);
-        setTimeout(step, 100);
-      };
-      step();
+      customerRoutes.forEach((route) => prefetchRoute(route));
     };
 
+    let timer: any;
     if ("requestIdleCallback" in window) {
-      (window as any).requestIdleCallback(runIdlePrefetch, { timeout: 2000 });
+      timer = (window as any).requestIdleCallback(runIdlePrefetch, { timeout: 10000 });
     } else {
-      setTimeout(runIdlePrefetch, 500);
+      timer = setTimeout(runIdlePrefetch, 8000);
     }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        if ("cancelIdleCallback" in window) {
+          (window as any).cancelIdleCallback(timer);
+        } else {
+          clearTimeout(timer);
+        }
+      }
+    };
   }, []);
 
   return null;

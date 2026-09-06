@@ -137,7 +137,12 @@ export default function Cart() {
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center border rounded-lg overflow-hidden">
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              updateQuantity(item.id, item.quantity - 1);
+                            }}
                             className="p-2 sm:p-2.5 hover:bg-muted transition-colors touch-manipulation active:bg-muted/70"
                             disabled={item.quantity <= 1}
                           >
@@ -145,7 +150,12 @@ export default function Cart() {
                           </button>
                           <span className="px-3 sm:px-4 font-medium">{item.quantity}</span>
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              updateQuantity(item.id, item.quantity + 1);
+                            }}
                             className="p-2 sm:p-2.5 hover:bg-muted transition-colors touch-manipulation active:bg-muted/70"
                             disabled={item.quantity >= item.product.stock_quantity}
                           >
@@ -153,8 +163,18 @@ export default function Cart() {
                           </button>
                         </div>
                         <button
-                          onClick={() => removeItem(item.id)}
-                          className="p-2 text-muted-foreground hover:text-destructive transition-colors touch-manipulation"
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            removeItem(item.id || item.product_id);
+                          }}
+                          onTouchEnd={(e) => {
+                            e.stopPropagation();
+                          }}
+                          className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors touch-manipulation active:scale-90"
+                          title="Remove item"
+                          aria-label="Remove item"
                         >
                           <Trash2 className="h-5 w-5" />
                         </button>
@@ -192,7 +212,12 @@ export default function Cart() {
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center border rounded-lg overflow-hidden">
                         <button
-                          onClick={() => updateCJQuantity(item.id, item.variantId, item.quantity - 1)}
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            updateCJQuantity(item.id, item.variantId, item.quantity - 1);
+                          }}
                           className="p-2 sm:p-2.5 hover:bg-muted transition-colors touch-manipulation active:bg-muted/70"
                           disabled={item.quantity <= 1}
                         >
@@ -200,15 +225,30 @@ export default function Cart() {
                         </button>
                         <span className="px-3 sm:px-4 font-medium">{item.quantity}</span>
                         <button
-                          onClick={() => updateCJQuantity(item.id, item.variantId, item.quantity + 1)}
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            updateCJQuantity(item.id, item.variantId, item.quantity + 1);
+                          }}
                           className="p-2 sm:p-2.5 hover:bg-muted transition-colors touch-manipulation active:bg-muted/70"
                         >
                           <Plus className="h-4 w-4" />
                         </button>
                       </div>
                       <button
-                        onClick={() => removeCJItem(item.id, item.variantId)}
-                        className="p-2 text-muted-foreground hover:text-destructive transition-colors touch-manipulation"
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeCJItem(item.id, item.variantId);
+                        }}
+                        onTouchEnd={(e) => {
+                          e.stopPropagation();
+                        }}
+                        className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors touch-manipulation active:scale-90"
+                        title="Remove item"
+                        aria-label="Remove item"
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>

@@ -2,8 +2,6 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
-import { getDataConnect } from "firebase/data-connect";
-import { connectorConfig } from "./dataconnect/esm/index.esm.js";
 
 const firebaseConfig = {
   apiKey: (typeof import.meta !== "undefined" && import.meta?.env?.VITE_FIREBASE_API_KEY) || "AIzaSyCIcvphAtwx7rup-aV3MZPDK0w-xCN1Xoc",
@@ -21,7 +19,6 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const db = getFirestore(app);
-export const dataConnect = getDataConnect(app, connectorConfig);
 
 // Google Auth Setup
 export const googleProvider = new GoogleAuthProvider();

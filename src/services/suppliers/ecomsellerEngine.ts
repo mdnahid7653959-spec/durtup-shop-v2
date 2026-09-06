@@ -108,6 +108,19 @@ export class EcomsellerEngine {
   /**
    * Helper to perform HTTP GET requests with CORS proxies when in browser
    */
+  private static async fetchWithTimeout(url: string, opts: RequestInit = {}, timeoutMs = 2500): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...opts, signal: controller.signal });
+      clearTimeout(timer);
+      return res;
+    } catch (e) {
+      clearTimeout(timer);
+      throw e;
+    }
+  }
+
   private static async executeFetch(url: string, headers: Record<string, string> = {}): Promise<string> {
     const defaultHeaders = {
       "Accept": "application/json",
@@ -115,33 +128,33 @@ export class EcomsellerEngine {
       ...headers
     };
 
-    // 1. Local Vite Proxy attempt (if in browser or dev server)
+    // 1. Local Vite Proxy attempt (fastest on localhost)
     if (typeof window !== "undefined" && url.startsWith(ECOMSELLER_BASE)) {
       try {
         const localProxyUrl = url.replace(ECOMSELLER_BASE, "/api/ecomseller");
-        const res = await fetch(localProxyUrl, { headers: defaultHeaders });
+        const res = await this.fetchWithTimeout(localProxyUrl, { headers: defaultHeaders }, 2000);
         if (res.ok) {
           return await res.text();
         }
       } catch (proxyErr) {
-        console.warn("[Ecomseller] Local proxy attempt skipped, trying next...");
+        // Local proxy not available or timed out
       }
     }
 
     // 2. Direct fetch attempt
     try {
-      const res = await fetch(url, { headers: defaultHeaders });
+      const res = await this.fetchWithTimeout(url, { headers: defaultHeaders }, 2000);
       if (res.ok) {
         return await res.text();
       }
     } catch (directErr) {
-      console.warn("[Ecomseller] Direct fetch blocked by CORS, trying proxy...");
+      // CORS or network error
     }
 
-    // 3. High reliability CORS proxy fallback (AllOrigins raw)
+    // 3. Fast CORS proxy fallback (AllOrigins raw)
     try {
       const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-      const proxyRes = await fetch(proxyUrl);
+      const proxyRes = await this.fetchWithTimeout(proxyUrl, {}, 2500);
       if (proxyRes.ok) {
         const text = await proxyRes.text();
         if (text && text.length > 50) {
@@ -149,32 +162,18 @@ export class EcomsellerEngine {
         }
       }
     } catch (proxyErr) {
-      console.warn("[Ecomseller] Allorigins raw proxy failed...");
+      // Proxy failed
     }
 
-    // 4. Secondary proxy fallback (Allorigins json wrapper)
-    try {
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-      const proxyRes = await fetch(proxyUrl);
-      if (proxyRes.ok) {
-        const json = await proxyRes.json();
-        if (json && json.contents) {
-          return json.contents;
-        }
-      }
-    } catch (proxyErr) {
-      console.warn("[Ecomseller] Primary CORS proxy failed, trying secondary...");
-    }
-
-    // 5. Tertiary proxy fallback
+    // 4. Secondary proxy fallback (corsproxy.io)
     try {
       const secProxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
-      const secRes = await fetch(secProxyUrl, { headers: defaultHeaders });
+      const secRes = await this.fetchWithTimeout(secProxyUrl, { headers: defaultHeaders }, 2500);
       if (secRes.ok) {
         return await secRes.text();
       }
     } catch (secErr) {
-      console.error("[Ecomseller] All fetch attempts failed:", secErr);
+      // All fetch attempts failed
     }
 
     throw new Error(`Failed to fetch data from ${url}. Check your internet connection or proxy availability.`);
@@ -246,6 +245,25 @@ export class EcomsellerEngine {
     }
 
     try {
+      // Check localStorage first
+      let hasLocalCache = false;
+      if (!forceRefresh && typeof window !== "undefined") {
+        const cached = localStorage.getItem(CACHE_KEY_CATALOG);
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed && parsed.products && parsed.products.length > 0) {
+              hasLocalCache = true;
+            }
+          } catch {}
+        }
+      }
+
+      // If no local cache and not forced, return empty quickly so page rendering is instant
+      if (!forceRefresh && !hasLocalCache && typeof window !== "undefined") {
+        return this.inMemoryProductsCache || [];
+      }
+
       const catalog = await this.fetchLiveCatalog(forceRefresh);
       const pricingConfig = this.getPricingConfig();
       const rawCategories = catalog.categories || [];
