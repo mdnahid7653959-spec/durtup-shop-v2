@@ -12,16 +12,17 @@ export function HomeMidBannerComponent() {
         >
           <div className="w-full aspect-[1024/334] relative bg-gradient-to-r from-[#e65100] via-[#f57c00] to-[#ff9800] overflow-hidden">
             <img
-              src="/hero-banner-durtup.png"
+              src="/hero-banner-durtup.webp"
               alt="Durtup.shop - Everything You Need"
+              width={1024}
+              height={334}
               className="w-full h-full object-cover object-center transform transition-transform duration-500 ease-out group-hover:scale-[1.015]"
               loading="lazy"
               decoding="async"
               onError={(e) => {
-                // Fallback if hero-banner-durtup.png fails
                 const target = e.currentTarget;
-                if (!target.src.includes("hero-banner-durtu.png")) {
-                  target.src = "/hero-banner-durtu.png";
+                if (!target.src.includes("hero-banner-durtu.webp")) {
+                  target.src = "/hero-banner-durtu.webp";
                 }
               }}
             />

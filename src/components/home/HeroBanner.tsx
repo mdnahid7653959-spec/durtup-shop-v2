@@ -33,7 +33,7 @@ const BANNER_SLIDES: BannerSlide[] = [
     trustPoints: ["100% Genuine Warranty", "Fast Delivery in 64 Districts", "Best Price Guarantee"],
     ctaText: "Shop Tech Deals",
     ctaLink: "/category/gadgets-electronics",
-    image: "/hero-gadgets.jpg",
+    image: "/hero-gadgets.webp",
     alt: "Durtup.shop Tech & Gadget Deals",
     gradientClass: "from-[#d84315] via-[#ef6c00] to-[#f57c00]",
     fadeGradient: "from-[#ef6c00] via-[#ef6c00]/60 to-transparent",
@@ -50,7 +50,7 @@ const BANNER_SLIDES: BannerSlide[] = [
     trustPoints: ["Cash On Delivery Across BD", "Check Before Paying", "Verified Authentic Sellers"],
     ctaText: "Shop with Trust",
     ctaLink: "/products",
-    image: "/banner-trust-delivery.jpg",
+    image: "/banner-trust-delivery.webp",
     alt: "100% Authentic & Cash on Delivery Guarantee",
     gradientClass: "from-[#004d40] via-[#00695c] to-[#00897b]",
     fadeGradient: "from-[#00695c] via-[#00695c]/60 to-transparent",
@@ -67,7 +67,7 @@ const BANNER_SLIDES: BannerSlide[] = [
     trustPoints: ["Premium Quality Fabrics", "Hassle-Free Size Exchange", "Express Home Delivery"],
     ctaText: "Explore Fashion",
     ctaLink: "/category/mens-fashion",
-    image: "/banner-fashion.jpg",
+    image: "/banner-fashion.webp",
     alt: "Durtup Trendy Fashion Collection",
     gradientClass: "from-[#280659] via-[#4a148c] to-[#6a1b9a]",
     fadeGradient: "from-[#4a148c] via-[#4a148c]/60 to-transparent",
@@ -84,7 +84,7 @@ const BANNER_SLIDES: BannerSlide[] = [
     trustPoints: ["Same-Day Fast Dispatch", "Limited Hourly Stock", "Extra Bkash/Nagad Discounts"],
     ctaText: "Grab Flash Deals",
     ctaLink: "/products",
-    image: "/banner-flash-deals.jpg",
+    image: "/banner-flash-deals.webp",
     alt: "Mega Flash Sale Deals",
     gradientClass: "from-[#b71c1c] via-[#c2185b] to-[#d81b60]",
     fadeGradient: "from-[#c2185b] via-[#c2185b]/60 to-transparent",
@@ -101,7 +101,7 @@ const BANNER_SLIDES: BannerSlide[] = [
     trustPoints: ["Live Order Tracking", "Instant Price Alerts", "Exclusive Secret Coupons"],
     ctaText: "Claim Free Voucher",
     ctaLink: "/account",
-    image: "/hero-gadgets.jpg",
+    image: "/hero-gadgets.webp",
     alt: "Durtup Mobile App Benefits",
     gradientClass: "from-[#0a192f] via-[#112240] to-[#0f4c81]",
     fadeGradient: "from-[#112240] via-[#112240]/60 to-transparent",
@@ -252,8 +252,12 @@ export function HeroBanner() {
                   key={slide.image}
                   src={slide.image}
                   alt={slide.alt}
+                  width={600}
+                  height={360}
                   className="w-full h-full object-cover object-center filter drop-shadow-xl animate-in fade-in zoom-in-95 duration-500"
-                  loading="eager"
+                  loading={currentSlide === 0 ? "eager" : "lazy"}
+                  // @ts-expect-error fetchPriority attribute is supported in modern browsers
+                  fetchPriority={currentSlide === 0 ? "high" : "low"}
                   decoding="async"
                 />
                 

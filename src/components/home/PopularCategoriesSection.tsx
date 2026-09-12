@@ -20,7 +20,7 @@ const POPULAR_TILES: CategoryTile[] = [
     href: "/category/gadgets-electronics",
     bgGradient: "bg-[#e8edff] dark:bg-indigo-950/30",
     border: "border-indigo-100 dark:border-indigo-900/40",
-    image: "/category-gadgets.jpg",
+    image: "/category-gadgets.webp",
   },
   {
     id: "mens-fashion",
@@ -29,7 +29,7 @@ const POPULAR_TILES: CategoryTile[] = [
     href: "/category/mens-fashion",
     bgGradient: "bg-[#fef4db] dark:bg-amber-950/30",
     border: "border-amber-100 dark:border-amber-900/40",
-    image: "/category-mens.jpg",
+    image: "/category-mens.webp",
   },
   {
     id: "womens-fashion",
@@ -38,7 +38,7 @@ const POPULAR_TILES: CategoryTile[] = [
     href: "/category/womens-fashion",
     bgGradient: "bg-[#fdebf3] dark:bg-pink-950/30",
     border: "border-pink-100 dark:border-pink-900/40",
-    image: "/category-womens.jpg",
+    image: "/category-womens.webp",
   },
   {
     id: "smart-watch",
@@ -47,7 +47,7 @@ const POPULAR_TILES: CategoryTile[] = [
     href: "/category/watch",
     bgGradient: "bg-[#e8f7ee] dark:bg-emerald-950/30",
     border: "border-emerald-100 dark:border-emerald-900/40",
-    image: "/category-smartwatch.jpg",
+    image: "/category-smartwatch.webp",
   },
 ];
 

@@ -166,10 +166,28 @@ function DealRow({
     return () => clearTimeout(timer);
   }, [direction, items]);
 
+  const [isVisible, setIsVisible] = useState<boolean>(true);
+
+  // IntersectionObserver to pause auto-scroll when off-screen (saves massive CPU & battery)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      { rootMargin: "150px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   // RequestAnimationFrame Infinite Continuous Auto-Scroll Loop
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el || !isVisible) return;
 
     lastTimeRef.current = performance.now();
     scrollPosRef.current = el.scrollLeft;
@@ -210,7 +228,7 @@ function DealRow({
         cancelAnimationFrame(rafRef.current);
       }
     };
-  }, [direction, speed]);
+  }, [direction, speed, isVisible]);
 
   // Infinite Wrap helper
   const handleWrapIfNeeded = useCallback(() => {
@@ -411,8 +429,8 @@ function DealOfTheDayComponent({ products = [] }: DealOfTheDayProps) {
       }
     });
 
-    // Scale smoothly up to 150 items per row, rotating dynamically across the 2,000+ catalog
-    const maxItemsPerRow = 150;
+    // Perfectly sized 14 items per row (42 with 3x buffer = 84 cards total, saving 91% DOM nodes)
+    const maxItemsPerRow = 14;
     const timeShift = Math.floor(Date.now() / (3 * 60 * 1000));
     
     const sliceR1 = r1.length > maxItemsPerRow

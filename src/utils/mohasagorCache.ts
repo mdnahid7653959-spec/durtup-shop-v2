@@ -109,35 +109,50 @@ export function updateIndexMap(products: (Product & { [key: string]: any })[]) {
       productIndexMap.set(codeStr, p);
       productIndexMap.set(`product-${codeStr}`, p);
     }
+    if (p.supplier_sku) {
+      const sSku = String(p.supplier_sku).toLowerCase();
+      productIndexMap.set(sSku, p);
+      productIndexMap.set(`ecom-${sSku}`, p);
+    }
   });
 }
 
 export function findMohasagorProductSync(slugOrId: string): (Product & { [key: string]: any }) | null {
   if (!slugOrId) return null;
-  const targetRaw = decodeURIComponent(slugOrId).split("?")[0].split("&")[0].trim().toLowerCase();
+  let targetRaw = String(slugOrId);
+  try {
+    targetRaw = decodeURIComponent(targetRaw);
+    if (targetRaw.includes("%")) {
+      try { targetRaw = decodeURIComponent(targetRaw); } catch {}
+    }
+  } catch {}
+  targetRaw = targetRaw.split("?")[0].split("&")[0].split("#")[0].trim().replace(/\/+$/, "").toLowerCase();
   if (!targetRaw) return null;
   
   if (productIndexMap.has(targetRaw)) return productIndexMap.get(targetRaw)!;
 
-  const cleanId = targetRaw.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "");
+  const cleanId = targetRaw.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "").replace(/^ecom-/, "").replace(/^ecom_/, "");
   if (productIndexMap.has(cleanId)) return productIndexMap.get(cleanId)!;
+  if (productIndexMap.has(`ecom-${cleanId}`)) return productIndexMap.get(`ecom-${cleanId}`)!;
 
   const suffixMatch = targetRaw.match(/-(\d+)$/);
-  if (suffixMatch && productIndexMap.has(suffixMatch[1])) return productIndexMap.get(suffixMatch[1])!;
+  const suffixId = suffixMatch ? suffixMatch[1] : (/^\d+$/.test(cleanId) ? cleanId : "");
+  if (suffixId && productIndexMap.has(suffixId)) return productIndexMap.get(suffixId)!;
 
   // Fallback scan across in-memory cache
   if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
     const found = inMemoryProductsCache.find((p: any) => {
       const pSlug = String(p.slug || "").toLowerCase();
       const pId = String(p.id || "").toLowerCase();
-      const pCode = String(p.product_code || p.sku || "").toLowerCase();
+      const pCode = String(p.product_code || p.sku || p.supplier_sku || "").toLowerCase();
       return pSlug === targetRaw || 
              pId === targetRaw || 
              pId === cleanId || 
+             pId === `ecom-${cleanId}` ||
              pCode === cleanId || 
              pCode === targetRaw ||
              pSlug === `product-${cleanId}` ||
-             (suffixMatch && (pId === suffixMatch[1] || pCode === suffixMatch[1] || pSlug.endsWith(`-${suffixMatch[1]}`))) ||
+             (suffixId && (pId === suffixId || pCode === suffixId || pSlug.endsWith(`-${suffixId}`))) ||
              pSlug.endsWith(`-${cleanId}`);
     });
     if (found) {
@@ -148,6 +163,7 @@ export function findMohasagorProductSync(slugOrId: string): (Product & { [key: s
 
   return null;
 }
+
 
 export function getLastSyncTime(): string | null {
   if (!lastSyncTimestamp) return null;
@@ -264,7 +280,7 @@ async function hydrateCatalog() {
     if (idbData && idbData.length >= 100) {
       baseList = deduplicateProducts(idbData);
     } else {
-      baseList = await fetchStaticCatalog();
+      baseList = await fetchSlimCatalog();
     }
 
     if (ecomProducts && ecomProducts.length > 0) {
@@ -273,12 +289,12 @@ async function hydrateCatalog() {
       updateIndexMap(combined);
       clearCategoryFilterCache();
       setIdbProducts(combined).catch(() => {});
-      window.dispatchEvent(new Event("mohasagor_products_updated"));
+      notifyCatalogUpdated();
     } else if (baseList && baseList.length > 0) {
       inMemoryProductsCache = baseList;
       updateIndexMap(baseList);
       clearCategoryFilterCache();
-      window.dispatchEvent(new Event("mohasagor_products_updated"));
+      notifyCatalogUpdated();
     }
   } catch (e) {
     console.warn("Catalog background hydration warning:", e);
@@ -287,10 +303,19 @@ async function hydrateCatalog() {
   }
 }
 
+let updateEventTimer: any = null;
+function notifyCatalogUpdated() {
+  if (typeof window === "undefined") return;
+  if (updateEventTimer) clearTimeout(updateEventTimer);
+  updateEventTimer = setTimeout(() => {
+    window.dispatchEvent(new Event("mohasagor_products_updated"));
+  }, 400);
+}
+
 if (typeof window !== "undefined") {
   const scheduleHydration = () => {
     if ("requestIdleCallback" in window) {
-      (window as any).requestIdleCallback(() => hydrateCatalog(), { timeout: 4000 });
+      (window as any).requestIdleCallback(() => hydrateCatalog(), { timeout: 5000 });
     } else {
       setTimeout(() => hydrateCatalog(), 2500);
     }
@@ -303,38 +328,94 @@ if (typeof window !== "undefined") {
   }
 }
 
-async function fetchStaticCatalog(): Promise<Product[]> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
-    const res = await fetch("/mohasagor_catalog.json", { signal: controller.signal });
-    clearTimeout(timeout);
-    if (res.ok) {
-      const rawProducts = await res.json();
-      if (Array.isArray(rawProducts) && rawProducts.length > 0) {
-        const mapped = mapRawProducts(rawProducts, "https://mohasagor.com.bd");
-        inMemoryProductsCache = mapped;
-        updateIndexMap(mapped);
-        clearCategoryFilterCache();
-        setIdbProducts(mapped).catch(() => {});
-        return mapped;
-      }
-    }
-  } catch (err) {
-    console.warn("Deferred static catalog load skipped or timed out:", err);
+let ongoingSlimCatalogPromise: Promise<Product[]> | null = null;
+
+export async function fetchSlimCatalog(): Promise<Product[]> {
+  if (inMemoryProductsCache && inMemoryProductsCache.length >= 2000) {
+    return inMemoryProductsCache;
   }
-  return inMemoryProductsCache || FAST_SEED_PRODUCTS;
+  if (ongoingSlimCatalogPromise) {
+    return ongoingSlimCatalogPromise;
+  }
+
+  ongoingSlimCatalogPromise = (async () => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+      const res = await fetch("/mohasagor_catalog_slim.json", { signal: controller.signal });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const rawProducts = await res.json();
+        if (Array.isArray(rawProducts) && rawProducts.length > 0) {
+          const mapped = mapRawProducts(rawProducts, "https://mohasagor.com.bd");
+          inMemoryProductsCache = mapped;
+          updateIndexMap(mapped);
+          clearCategoryFilterCache();
+          setIdbProducts(mapped).catch(() => {});
+          notifyCatalogUpdated();
+          return mapped;
+        }
+      }
+    } catch (err) {
+      console.warn("Slim catalog load warning:", err);
+    } finally {
+      ongoingSlimCatalogPromise = null;
+    }
+    return inMemoryProductsCache || FAST_SEED_PRODUCTS;
+  })();
+
+  return ongoingSlimCatalogPromise;
 }
+
+let ongoingStaticCatalogPromise: Promise<Product[]> | null = null;
+
+export async function fetchStaticCatalog(): Promise<Product[]> {
+  if (inMemoryProductsCache && inMemoryProductsCache.length >= 2000 && inMemoryProductsCache.some(p => (p.description || "").length > 80)) {
+    return inMemoryProductsCache;
+  }
+  if (ongoingStaticCatalogPromise) {
+    return ongoingStaticCatalogPromise;
+  }
+
+  ongoingStaticCatalogPromise = (async () => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+      const res = await fetch("/mohasagor_catalog.json", { signal: controller.signal });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const rawProducts = await res.json();
+        if (Array.isArray(rawProducts) && rawProducts.length > 0) {
+          const mapped = mapRawProducts(rawProducts, "https://mohasagor.com.bd");
+          inMemoryProductsCache = mapped;
+          updateIndexMap(mapped);
+          clearCategoryFilterCache();
+          setIdbProducts(mapped).catch(() => {});
+          notifyCatalogUpdated();
+          return mapped;
+        }
+      }
+    } catch (err) {
+      console.warn("Static catalog load skipped or timed out:", err);
+    } finally {
+      ongoingStaticCatalogPromise = null;
+    }
+    return inMemoryProductsCache || (await fetchSlimCatalog());
+  })();
+
+  return ongoingStaticCatalogPromise;
+}
+
 
 let ongoingFetchPromise: Promise<Product[]> | null = null;
 
 export async function getCachedMohasagorProducts(): Promise<Product[]> {
-  // 1. Instant return from in-memory cache (0ms!)
-  if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
+  // 1. Instant return from in-memory cache if fully hydrated with supplier products
+  if (inMemoryProductsCache && inMemoryProductsCache.length >= 200) {
     return deduplicateProducts(inMemoryProductsCache);
   }
 
-  // 2. Check IndexedDB
+  // 2. Check IndexedDB and Ecomseller products
   if (typeof window !== "undefined") {
     try {
       const [idbItems, ecomItems] = await Promise.all([
@@ -350,6 +431,10 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
         return combined;
       }
     } catch {}
+  }
+
+  if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
+    return deduplicateProducts(inMemoryProductsCache);
   }
 
   return deduplicateProducts(FAST_SEED_PRODUCTS);
@@ -611,12 +696,19 @@ export async function findMohasagorProduct(slugOrId: string): Promise<(Product &
   const syncMatch = findMohasagorProductSync(slugOrId);
   if (syncMatch) return syncMatch;
 
-  const targetRaw = decodeURIComponent(slugOrId).split("?")[0].split("&")[0].trim();
+  let targetRaw = String(slugOrId);
+  try {
+    targetRaw = decodeURIComponent(targetRaw);
+    if (targetRaw.includes("%")) {
+      try { targetRaw = decodeURIComponent(targetRaw); } catch {}
+    }
+  } catch {}
+  targetRaw = targetRaw.split("?")[0].split("&")[0].split("#")[0].trim().replace(/\/+$/, "");
   const targetLower = targetRaw.toLowerCase();
   
   // Extract suffix (e.g. "mens-stylish-joggers-pant-4034" -> "4034")
   const suffixMatch = targetLower.match(/-(\d+)$/);
-  const suffixId = suffixMatch ? suffixMatch[1] : "";
+  const suffixId = suffixMatch ? suffixMatch[1] : (/^\d+$/.test(targetLower) ? targetLower : "");
   const cleanId = targetLower.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "");
 
   const matcher = (p: any): boolean => {
@@ -656,12 +748,84 @@ export async function findMohasagorProduct(slugOrId: string): Promise<(Product &
     }
   } catch {}
 
-  // 3. Fallback to fast seed catalog
+  // 3. Load slim catalog first (Instant resolution, contains all 2,818 items with images & variants)
+  try {
+    const slimCatalog = await fetchSlimCatalog();
+    if (slimCatalog && slimCatalog.length > 0) {
+      const found = slimCatalog.find(matcher);
+      if (found) {
+        updateIndexMap([found as any]);
+        return found as any;
+      }
+    }
+  } catch (catalogErr) {
+    console.warn("fetchSlimCatalog lookup error:", catalogErr);
+  }
+
+  // 3b. Load static catalog if needed
+  try {
+    const staticCatalog = await fetchStaticCatalog();
+    if (staticCatalog && staticCatalog.length > 0) {
+      const found = staticCatalog.find(matcher);
+      if (found) {
+        updateIndexMap([found as any]);
+        return found as any;
+      }
+    }
+  } catch (catalogErr) {
+    console.warn("fetchStaticCatalog lookup error:", catalogErr);
+  }
+
+  // 4. Check Ecomseller BD products
+  try {
+    const ecomProducts = await EcomsellerEngine.getCachedEcomsellerProducts();
+    if (ecomProducts && ecomProducts.length > 0) {
+      const found = ecomProducts.find(matcher);
+      if (found) {
+        updateIndexMap([found as any]);
+        return found as any;
+      }
+    }
+  } catch {}
+
+  // 5. Live crawl if product code / suffix exists but not found in catalog (newly added products)
+  try {
+    if (suffixId || cleanId) {
+      const liveCatalog = await fetchAllPagesMohasagorProducts(true);
+      if (liveCatalog && liveCatalog.length > 0) {
+        const found = liveCatalog.find(matcher);
+        if (found) {
+          updateIndexMap([found as any]);
+          return found as any;
+        }
+      }
+    }
+  } catch {}
+
+  // 6. Fuzzy keyword fallback: match keywords in slug
+  if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
+    const cleanWords = targetLower.replace(/[^a-z0-9]+/g, " ").split(" ").filter(w => w.length > 3 && isNaN(Number(w)));
+    if (cleanWords.length >= 2) {
+      const fuzzy = inMemoryProductsCache.find((p: any) => {
+        const pSlug = String(p.slug || "").toLowerCase();
+        const pName = String(p.name || p.title || "").toLowerCase();
+        const matched = cleanWords.filter(w => pSlug.includes(w) || pName.includes(w));
+        return matched.length >= Math.min(2, cleanWords.length);
+      });
+      if (fuzzy) {
+        updateIndexMap([fuzzy as any]);
+        return fuzzy as any;
+      }
+    }
+  }
+
+  // 7. Fallback to fast seed catalog
   const fallback = FALLBACK_SUPPLIER_PRODUCTS.find(matcher);
   if (fallback) return fallback as any;
 
   return null;
 }
+
 
 // Lightweight Automatic Background Sync Service (Non-blocking)
 export function startAutoProductSync() {

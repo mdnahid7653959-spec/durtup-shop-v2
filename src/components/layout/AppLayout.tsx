@@ -3,8 +3,6 @@ import { useLocation } from "react-router-dom";
 import { MobileBottomNav } from "./MobileBottomNav";
 
 const PushNotificationInitializer = lazy(() => import("@/components/PushNotificationInitializer").then(m => ({ default: m.PushNotificationInitializer })));
-const PWAInstallPrompt = lazy(() => import("@/components/pwa/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
-const FloatingOfferChatbot = lazy(() => import("@/components/chat/FloatingOfferChatbot").then(m => ({ default: m.FloatingOfferChatbot })));
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -45,14 +43,6 @@ export function AppLayout({ children }: AppLayoutProps) {
         <PushNotificationInitializer />
       </Suspense>
       {children}
-      <Suspense fallback={null}>
-        <PWAInstallPrompt />
-      </Suspense>
-      {shouldShowFloatingBot && (
-        <Suspense fallback={null}>
-          <FloatingOfferChatbot />
-        </Suspense>
-      )}
       {shouldShowMobileNav && <MobileBottomNav />}
     </>
   );

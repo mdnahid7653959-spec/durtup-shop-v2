@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { TopAppInstallBanner } from "@/components/pwa/TopAppInstallBanner";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useToast } from "@/hooks/use-toast";
@@ -290,7 +289,16 @@ export default function ProductDetail() {
       return mapSupplierProduct(preloaded, preloaded.slug || slug || "", mappedImages);
     }
     if (slug) {
-      const cached = findMohasagorProductSync(slug);
+      const targetLower = String(slug).toLowerCase().trim();
+      const suffixMatch = targetLower.match(/-(\d+)$/);
+      const cleanId = targetLower.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "").replace(/^ecom-/, "").replace(/^ecom_/, "");
+      const extractedId = suffixMatch ? suffixMatch[1] : (/^\d+$/.test(cleanId) ? cleanId : "");
+
+      const cached = findMohasagorProductSync(slug) || 
+        (extractedId ? findMohasagorProductSync(extractedId) : null) || 
+        (cleanId ? findMohasagorProductSync(cleanId) : null) ||
+        (cleanId ? findMohasagorProductSync(`ecom-${cleanId}`) : null);
+
       if (cached) {
         const mappedImages = mapSupplierImages(cached);
         return mapSupplierProduct(cached, cached.slug || slug, mappedImages);
@@ -491,18 +499,26 @@ export default function ProductDetail() {
 
     async function fetchProduct() {
       if (!slug) return;
-      const targetSlug = decodeURIComponent(slug).split("?")[0].split("&")[0].trim();
+      let rawSlug = String(slug);
+      try {
+        rawSlug = decodeURIComponent(rawSlug);
+        if (rawSlug.includes("%")) {
+          try { rawSlug = decodeURIComponent(rawSlug); } catch {}
+        }
+      } catch {}
+      const targetSlug = rawSlug.split("?")[0].split("&")[0].split("#")[0].trim().replace(/\/+$/, "");
       const targetLower = targetSlug.toLowerCase();
       
       // Extract numeric ID suffix if present (e.g. "stylishcomfortable-sports-t-shirt-4-four-pis-combo-offer-9749" -> "9749")
       const suffixMatch = targetLower.match(/-(\d+)$/);
-      const extractedId = suffixMatch ? suffixMatch[1] : "";
-      const cleanId = targetLower.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "");
+      const cleanId = targetLower.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "").replace(/^ecom-/, "").replace(/^ecom_/, "");
+      const extractedId = suffixMatch ? suffixMatch[1] : (/^\d+$/.test(cleanId) ? cleanId : "");
 
       // Check synchronous cache / preloadedProduct first to render instantly
       const syncProduct = findMohasagorProductSync(targetSlug) || 
         (extractedId ? findMohasagorProductSync(extractedId) : null) || 
         (cleanId ? findMohasagorProductSync(cleanId) : null) ||
+        (cleanId ? findMohasagorProductSync(`ecom-${cleanId}`) : null) ||
         (location.state as any)?.preloadedProduct;
 
       if (syncProduct && syncProduct.name) {
@@ -542,8 +558,10 @@ export default function ProductDetail() {
             p.slug === targetLower || 
             p.id === targetLower || 
             p.id === `ecom-${cleanId}` ||
+            p.id === cleanId ||
             p.supplier_sku === cleanId ||
-            p.sku?.toLowerCase() === targetLower
+            p.sku?.toLowerCase() === targetLower ||
+            p.sku?.toLowerCase() === `ecom-${cleanId}`
           );
 
           if (foundEcom) {
@@ -860,6 +878,39 @@ export default function ProductDetail() {
     fetchProduct();
   }, [slug, trackView]);
 
+  // If background catalog hydrates or updates while user is on this page and product is still missing, retry!
+  useEffect(() => {
+    const handleUpdate = () => {
+      if (!product && slug) {
+        let rawSlug = String(slug);
+        try {
+          rawSlug = decodeURIComponent(rawSlug);
+          if (rawSlug.includes("%")) {
+            try { rawSlug = decodeURIComponent(rawSlug); } catch {}
+          }
+        } catch {}
+        const targetSlug = rawSlug.split("?")[0].split("&")[0].split("#")[0].trim().replace(/\/+$/, "");
+        const targetLower = targetSlug.toLowerCase();
+        const suffixMatch = targetLower.match(/-(\d+)$/);
+        const cleanId = targetLower.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "");
+        const extractedId = suffixMatch ? suffixMatch[1] : (/^\d+$/.test(cleanId) ? cleanId : "");
+
+        const syncProduct = findMohasagorProductSync(targetSlug) || 
+          (extractedId ? findMohasagorProductSync(extractedId) : null) || 
+          (cleanId ? findMohasagorProductSync(cleanId) : null);
+
+        if (syncProduct && syncProduct.name) {
+          const mappedImages = mapSupplierImages(syncProduct);
+          const mappedProduct = mapSupplierProduct(syncProduct, syncProduct.slug || targetSlug, mappedImages);
+          applyLoadedProduct(mappedProduct);
+          setLoading(false);
+        }
+      }
+    };
+    window.addEventListener("mohasagor_products_updated", handleUpdate);
+    return () => window.removeEventListener("mohasagor_products_updated", handleUpdate);
+  }, [product, slug]);
+
   useEffect(() => {
     if (product) {
       const pPrice = product.discount_price || product.regular_price || 0;
@@ -1063,9 +1114,6 @@ export default function ProductDetail() {
           ]}
           faqs={DEFAULT_BANGLADESH_PRODUCT_FAQS}
         />
-        <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-          <TopAppInstallBanner />
-        </div>
         <div className="hidden md:block">
           <Header />
         </div>
@@ -1090,30 +1138,66 @@ export default function ProductDetail() {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <SEOHead
-          title={`Product Not Found | Durtup.shop`}
-          description="The product you are looking for is currently unavailable. Browse thousands of other deals at Durtup.shop."
+          title={`Product Details | Durtup.shop`}
+          description="Browse thousands of genuine deals, electronics, and fashion items at Durtup.shop."
           noindex={true}
         />
-        <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-          <TopAppInstallBanner />
-        </div>
         <div className="hidden md:block">
           <Header />
         </div>
         <MobileProductTopBar />
         <main className="flex-1 container py-8 pb-20 md:pb-8">
-          <div className="text-center py-16">
-            <h1 className="text-2xl font-bold text-foreground mb-4">Product Not Found</h1>
-            <p className="text-muted-foreground mb-6">The product you're looking for doesn't exist.</p>
-            <Link to="/">
-              <Button size="lg">Back to Home</Button>
-            </Link>
+          <div className="max-w-xl mx-auto text-center py-6 px-4">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-600 flex items-center justify-center">
+              <Package className="h-8 w-8" />
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black text-foreground mb-2">পণ্যটি খুঁজে পাওয়া যায়নি</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm mb-6">
+              আপনি যে লিঙ্কটি খুঁজছেন তা হয়তো সরানো হয়েছে বা লিঙ্কটিতে সমস্যা আছে। নিচের ডিলগুলো দেখতে পারেন অথবা হোমপেজে যান:
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+              <Link to="/">
+                <Button size="default" className="font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-md">
+                  হোমে ফিরে যান (Back to Home)
+                </Button>
+              </Link>
+              <Link to="/products">
+                <Button size="default" variant="outline" className="font-bold border-orange-200 hover:border-orange-400">
+                  সব প্রোডাক্ট দেখুন (All Products)
+                </Button>
+              </Link>
+            </div>
+
+            {/* Recommended Products Grid so customer never hits a dead end */}
+            <div className="text-left mt-6 border-t pt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="h-4 w-4 text-orange-600" />
+                <h2 className="text-sm sm:text-base font-bold text-foreground">জনপ্রিয় কিছু প্রডাক্ট দেখুন:</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {FALLBACK_SUPPLIER_PRODUCTS.slice(0, 6).map((p) => (
+                  <Link
+                    key={p.id}
+                    to={`/product/${p.slug || p.id}`}
+                    state={{ preloadedProduct: p }}
+                    className="group block bg-card border rounded-xl overflow-hidden hover:shadow-md transition-all p-2"
+                  >
+                    <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-2">
+                      <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    </div>
+                    <p className="text-[11px] sm:text-xs font-semibold line-clamp-1 group-hover:text-orange-600">{p.name}</p>
+                    <p className="text-xs font-black text-orange-600 mt-1">৳{p.price}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
         </main>
         <Footer />
       </div>
     );
   }
+
   const price = product.discount_price || product.regular_price;
   const discount = product.discount_price ? Math.round((1 - product.discount_price / product.regular_price) * 100) : 0;
   return <div className="min-h-screen flex flex-col bg-background">
@@ -1153,9 +1237,6 @@ export default function ProductDetail() {
         ]}
         faqs={DEFAULT_BANGLADESH_PRODUCT_FAQS}
       />
-      <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        <TopAppInstallBanner />
-      </div>
       <div className="hidden md:block">
         <Header />
       </div>

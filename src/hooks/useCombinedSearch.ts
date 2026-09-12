@@ -9,6 +9,7 @@ interface SearchParams {
   search?: string;
   category?: string;
   brand?: string;
+  supplier?: string;
   minPrice?: number;
   maxPrice?: number;
   sort?: string;
@@ -31,6 +32,8 @@ export interface CombinedProduct extends Product {
   source: "local" | "cj";
   cjProductId?: string;
   matchType?: string;
+  supplier_id?: string;
+  supplier_name?: string;
 }
 
 async function searchLocalProducts(params: SearchParams): Promise<CombinedProduct[]> {
@@ -71,15 +74,25 @@ async function searchLocalProducts(params: SearchParams): Promise<CombinedProduc
       isNew: p.isNew || false,
       isBestSeller: p.isBestSeller || false,
       source: "local" as const,
-      matchType: p.matchType
+      matchType: p.matchType,
+      supplier_id: (p as any).supplier_id,
+      supplier_name: (p as any).supplier_name || (p as any).seller_name
     }));
 
-    // Fallback: If search adapter returned empty, directly fetch and filter from master supplier catalog
+    // Fallback: If search adapter returned empty, directly fetch and filter from master supplier catalogs
     if (mapped.length === 0) {
-      const allMohasagor = await getCachedMohasagorProducts();
-      let fallbackList = allMohasagor;
+      const { getCachedMohasagorProducts, filterProductsByCategory, interleaveCatalogs } = await import("@/utils/mohasagorCache");
+      const { EcomsellerEngine } = await import("@/services/suppliers/ecomsellerEngine");
+      
+      const [allMohasagor, allEcom] = await Promise.all([
+        getCachedMohasagorProducts().catch(() => []),
+        EcomsellerEngine.getCachedEcomsellerProducts().catch(() => [])
+      ]);
+      const combinedAll = interleaveCatalogs(allMohasagor, allEcom);
+
+      let fallbackList = combinedAll;
       if (params.category && params.category !== "all") {
-        fallbackList = filterProductsByCategory(allMohasagor, params.category);
+        fallbackList = filterProductsByCategory(combinedAll, params.category);
       }
       if (fallbackList && fallbackList.length > 0) {
         mapped = fallbackList.map((p) => ({
@@ -96,9 +109,28 @@ async function searchLocalProducts(params: SearchParams): Promise<CombinedProduc
           isNew: p.isNew || false,
           isBestSeller: p.isBestSeller || false,
           source: "local" as const,
-          matchType: "fallback"
+          matchType: "fallback",
+          supplier_id: (p as any).supplier_id,
+          supplier_name: (p as any).supplier_name || (p as any).seller_name
         }));
       }
+    }
+
+    // Filter by Supplier if explicitly specified
+    if (params.supplier && params.supplier !== "all") {
+      const supTarget = params.supplier.toLowerCase();
+      mapped = mapped.filter((p: any) => {
+        const sid = String(p.supplier_id || p.seller_id || "").toLowerCase();
+        const sname = String(p.supplier_name || p.seller_name || "").toLowerCase();
+        const pid = String(p.id || "").toLowerCase();
+        if (supTarget.includes("ecom")) {
+          return sid.includes("ecom") || sname.includes("ecom") || pid.startsWith("ecom-");
+        }
+        if (supTarget.includes("mohasagor")) {
+          return sid.includes("mohasagor") || sname.includes("mohasagor") || (!pid.startsWith("ecom-") && !sid.includes("ecom"));
+        }
+        return sid.includes(supTarget) || sname.includes(supTarget);
+      });
     }
 
     // Post-filter by Special Filter Type

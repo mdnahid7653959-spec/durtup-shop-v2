@@ -15,7 +15,7 @@ interface CombinedProductCardProps {
 }
 
 const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ product }) => {
-  const displayImage = getSmartProductImage(product.name, product.image);
+  const displayImage = getSmartProductImage(product.name, product.image, (product as any).category || "");
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { items: wishlistItems, addToWishlist, removeFromWishlist } = useWishlist();

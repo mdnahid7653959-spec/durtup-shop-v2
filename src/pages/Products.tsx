@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Filter, ChevronRight, Globe, X, SlidersHorizontal, ArrowUpDown, Tag, Sparkles, Camera } from "lucide-react";
+import { Filter, ChevronRight, Globe, X, SlidersHorizontal, ArrowUpDown, Tag, Sparkles, Camera, Store } from "lucide-react";
 import { useCombinedSearch } from "@/hooks/useCombinedSearch";
 import { useCategories } from "@/hooks/useProductSearch";
 import { useCJSettings } from "@/hooks/useCJSettings";
@@ -25,6 +25,7 @@ export default function Products() {
     : undefined;
 
   const currentCategory = searchParams.get("category") || undefined;
+  const currentSupplier = searchParams.get("supplier") || undefined;
   const currentSort = searchParams.get("sort") || "newest";
   const currentFilter = searchParams.get("filter") || pathFilter || "all";
   const minPrice = searchParams.get("minPrice") ? Number(searchParams.get("minPrice")) : undefined;
@@ -36,6 +37,7 @@ export default function Products() {
   const params = {
     search: searchParams.get("search") || undefined,
     category: currentCategory,
+    supplier: currentSupplier,
     sort: currentSort,
     filter: currentFilter !== "all" ? currentFilter : undefined,
     minPrice,
@@ -116,6 +118,10 @@ export default function Products() {
 
   const pageHeading = params.search 
     ? `Results for "${params.search}"`
+    : currentSupplier === "ecomseller"
+    ? "Ecomseller BD Products"
+    : currentSupplier === "mohasagor"
+    ? "Mohasagor BD Products"
     : activeCategoryObj 
     ? activeCategoryObj.name 
     : fallbackCategoryName
@@ -178,6 +184,27 @@ export default function Products() {
                         {categories?.map((cat) => (
                           <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Supplier & Store Filter */}
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+                      <Store className="h-3.5 w-3.5 text-orange-500" />
+                      Supplier & Store
+                    </label>
+                    <Select 
+                      value={currentSupplier || "all"} 
+                      onValueChange={(v) => updateFilter("supplier", v === "all" ? null : v)}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="All Suppliers" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        <SelectItem value="all">All Suppliers</SelectItem>
+                        <SelectItem value="ecomseller">Ecomseller BD</SelectItem>
+                        <SelectItem value="mohasagor">Mohasagor BD</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

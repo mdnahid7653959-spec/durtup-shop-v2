@@ -24,7 +24,6 @@ import { supabase } from "@/lib/firebaseAdapter";
 import { SmartSearchBar } from "@/components/search/SmartSearchBar";
 import { CategoryPillsNav } from "@/components/layout/CategoryPillsNav";
 import { cn } from "@/lib/utils";
-import { TopAppInstallBanner } from "@/components/pwa/TopAppInstallBanner";
 
 export function Header() {
   const location = useLocation();
@@ -39,33 +38,6 @@ export function Header() {
   const { itemCount: wishlistCount } = useWishlist();
   const { toast } = useToast();
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
-
-  // Track scroll position past the Hero Banner to trigger the smooth sticky search & category bar
-  const [isPastBanner, setIsPastBanner] = useState(false);
-
-  useEffect(() => {
-    const checkPastBanner = () => {
-      const bannerEl = document.getElementById("hero-banner-section");
-      if (bannerEl) {
-        const rect = bannerEl.getBoundingClientRect();
-        // Trigger right when the banner bottom scrolls off the top of the viewport
-        setIsPastBanner(rect.bottom <= 20);
-      } else {
-        // Fallback for non-home pages
-        setIsPastBanner(window.scrollY > 200);
-      }
-    };
-
-    window.addEventListener("scroll", checkPastBanner, { passive: true });
-    window.addEventListener("resize", checkPastBanner, { passive: true });
-    checkPastBanner();
-    const timer = setTimeout(checkPastBanner, 100);
-    return () => {
-      window.removeEventListener("scroll", checkPastBanner);
-      window.removeEventListener("resize", checkPastBanner);
-      clearTimeout(timer);
-    };
-  }, [location.pathname]);
 
   useEffect(() => {
     if (!user) { setHasUnreadMessages(false); return; }
@@ -112,12 +84,7 @@ export function Header() {
 
   return (
     <>
-      {/* 0. Locked Smart App Banner (Only banner is sticky/locked at the top until installed) */}
-      <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        <TopAppInstallBanner />
-      </div>
-
-      {/* 1. Main Header (Scrolls naturally with page content) */}
+      {/* Main Header (Scrolls naturally with page content) */}
       <header className="relative w-full max-w-[100vw] bg-white dark:bg-slate-900 shadow-xs border-b border-slate-100 dark:border-slate-800">
 
       {/* 1. Main Header Row (Logo, Search, Actions) */}
@@ -250,76 +217,6 @@ export function Header() {
       )}
 
     </header>
-
-    {/* 2. Floating Sticky Search & Category Bar (Smoothly animates in when scrolling past Hero Banner) */}
-    {!hideSearchAndCategories && (
-      <aside
-        aria-label="Sticky Search and Categories"
-        className={cn(
-          "fixed top-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl backdrop-saturate-150 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.45)] border-b border-slate-200/90 dark:border-slate-800",
-          "transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform",
-          isPastBanner
-            ? "translate-y-0 opacity-100 pointer-events-auto"
-            : "-translate-y-full opacity-0 pointer-events-none"
-        )}
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
-      >
-        {/* Mobile View: Search Bar + Compact Category Navigation (matches circled elements in screenshots) */}
-        <div className="md:hidden px-2.5 sm:px-4 pt-2 pb-1 flex flex-col gap-1.5 max-w-lg mx-auto">
-          <SmartSearchBar variant="mobile" />
-          <div className="-mx-1">
-            <CategoryPillsNav isCompact isVisible={isPastBanner} />
-          </div>
-        </div>
-
-        {/* Desktop View: Compact Brand + Search Bar + Quick Actions + Compact Category Navigation */}
-        <div className="hidden md:block max-w-7xl mx-auto px-4 pt-2 pb-1">
-          <div className="flex items-center justify-between gap-4 pb-1">
-            {/* Left: Compact Brand Logo */}
-            <Link to="/" className="flex items-baseline tracking-tight font-black leading-none shrink-0 select-none py-0.5">
-              <span className="text-xl text-orange-600 font-extrabold tracking-tight">Durtup</span>
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">.shop</span>
-            </Link>
-
-            {/* Center: Search Bar */}
-            <div className="flex-1 max-w-2xl mx-2">
-              <SmartSearchBar variant="desktop" />
-            </div>
-
-            {/* Right: Quick Action Icons */}
-            <div className="flex items-center gap-1 shrink-0">
-              <Link to="/messages" className="p-1.5 rounded-xl text-slate-700 dark:text-slate-300 hover:text-orange-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all relative" title="Messages">
-                <MessageCircle className="h-5 w-5" />
-                {hasUnreadMessages && (
-                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-orange-600 ring-2 ring-white dark:ring-slate-900" />
-                )}
-              </Link>
-              <Link to="/wishlist" className="p-1.5 rounded-xl text-slate-700 dark:text-slate-300 hover:text-orange-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all relative" title="Wishlist">
-                <Heart className="h-5 w-5" />
-                {wishlistCount > 0 && (
-                  <span className="absolute top-0 right-0 min-w-[15px] h-3.5 rounded-full bg-orange-600 text-white text-[9px] font-bold flex items-center justify-center px-1 shadow-xs">
-                    {wishlistCount > 99 ? "99+" : wishlistCount}
-                  </span>
-                )}
-              </Link>
-              <Link to="/cart" className="p-1.5 rounded-xl text-slate-700 dark:text-slate-300 hover:text-orange-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all relative" title="Cart">
-                <ShoppingCart className="h-5 w-5" />
-                {cartCount > 0 && (
-                  <span className="absolute top-0 right-0 min-w-[15px] h-3.5 rounded-full bg-orange-600 text-white text-[9px] font-bold flex items-center justify-center px-1 shadow-xs">
-                    {cartCount > 99 ? "99+" : cartCount}
-                  </span>
-                )}
-              </Link>
-            </div>
-          </div>
-
-          {/* Category Navigation Pills */}
-          <div className="-mx-2">
-            <CategoryPillsNav isCompact isVisible={isPastBanner} />
-          </div>
-        </div>
-      </aside>
-    )}
     </>
   );
 }

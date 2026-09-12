@@ -20,13 +20,15 @@ import { NativeAppProvider } from "@/components/NativeAppProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RoutePrefetcher } from "@/components/RoutePrefetcher";
 
-// Eager load - critical customer pages for 0ms lag-free navigation
+// Eager load - Only critical landing page for instant first paint
 import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import CategoryPage from "./pages/CategoryPage";
-import Categories from "./pages/Categories";
-import Products from "./pages/Products";
+
+// Lazy load - customer browsing and auth pages
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const CategoryPage = lazy(() => import("./pages/CategoryPage"));
+const Categories = lazy(() => import("./pages/Categories"));
+const Products = lazy(() => import("./pages/Products"));
 
 // Admin Portal Pages - Lazy loaded
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
@@ -180,7 +182,12 @@ const App = () => (
                         <FacebookPixel />
                         <RoutePrefetcher />
                         <Suspense fallback={null}>
-                          <GlobalAdminNotificationListener />
+                          {typeof window !== "undefined" && (
+                            window.location.pathname.startsWith("/admin") ||
+                            window.location.pathname.startsWith("/staff") ||
+                            window.location.pathname.startsWith("/seller") ||
+                            Boolean(localStorage.getItem("megamart_admin_session") || localStorage.getItem("staff_token") || localStorage.getItem("durtup_admin_authenticated"))
+                          ) ? <GlobalAdminNotificationListener /> : null}
                         </Suspense>
                         <AppLayout>
                           <Suspense fallback={<PageLoader />}>
@@ -200,10 +207,15 @@ const App = () => (
                               <Route path="/search" element={<SearchPage />} />
 
                               <Route path="/product/:slug" element={<ProductDetail />} />
+                              <Route path="/product/:slug/*" element={<ProductDetail />} />
                               <Route path="/products/:slug" element={<ProductDetail />} />
+                              <Route path="/products/:slug/*" element={<ProductDetail />} />
                               <Route path="/p/:slug" element={<ProductDetail />} />
+                              <Route path="/p/:slug/*" element={<ProductDetail />} />
                               <Route path="/item/:slug" element={<ProductDetail />} />
+                              <Route path="/item/:slug/*" element={<ProductDetail />} />
                               <Route path="/product/cj/:id" element={<CJProductDetail />} />
+                              <Route path="/product/cj/:id/*" element={<CJProductDetail />} />
                               <Route path="/cj-product/:id" element={<CJProductDetail />} />
                               <Route path="/products/cj" element={<CJProducts />} />
                               <Route path="/category/:slug" element={<CategoryPage />} />

@@ -5,7 +5,7 @@ import type { Product } from "@/components/products/ProductCard";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { titleStyle, subtitleStyle, type TextStyle } from "@/lib/bentoText";
-import { getCachedMohasagorProducts, filterProductsByCategory } from "@/utils/mohasagorCache";
+import { getCachedMohasagorProducts, filterProductsByCategory, FALLBACK_SUPPLIER_PRODUCTS } from "@/utils/mohasagorCache";
 import { optimizeImageUrl, getSmartProductImage } from "@/utils/productImageHelper";
 
 
@@ -510,11 +510,7 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
             <div className="grid grid-cols-3 gap-2 sm:gap-3 md:grid-cols-1 md:space-y-3 md:gap-0">
               {(forYouItems.length > 0
                 ? forYouItems
-                : [
-                    { id: "fy1", name: "Men's Solid Colour Ban...", price: 350, image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=300&h=300&fit=crop", slug: "mens-shirt" },
-                    { id: "fy2", name: "Wireless Bluetooth Speaker", price: 450, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop", slug: "speaker" },
-                    { id: "fy3", name: "Smart Fitness Tracker Watch", price: 850, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop", slug: "watch" }
-                  ]
+                : FALLBACK_SUPPLIER_PRODUCTS.slice(0, 3)
               ).map((p) => {
                 const optimizedSrc = optimizeImageUrl(p.image) || getSmartProductImage(p.name, p.image, (p as any).category || "");
                 return (

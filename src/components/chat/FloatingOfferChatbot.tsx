@@ -53,7 +53,10 @@ const BOT_SIZE_MOBILE = 46;
 const BOT_SIZE_DESKTOP = 52;
 
 export function FloatingOfferChatbot() {
-  const navigate = useNavigate();
+  return null;
+}
+
+function _DisabledFloatingOfferChatbot() {
 
   const [isHidden, setIsHidden] = useState<boolean>(() => {
     try {

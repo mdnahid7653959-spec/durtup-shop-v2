@@ -2,8 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback,
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+import { findMohasagorProductSync } from "@/utils/mohasagorCache";
 
 export interface CartItem {
   id: string;
@@ -108,9 +107,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const catalog = await getCachedMohasagorProducts();
       const formatted: CartItem[] = rawItems.map((item: any) => {
-        const matched = catalog.find(p => p.id === item.product_id || p.id === item.id);
+        const matched = item.product ? null : findMohasagorProductSync(item.product_id || item.id);
           const prodData = item.product || (matched ? {
             id: matched.id,
             name: matched.name,

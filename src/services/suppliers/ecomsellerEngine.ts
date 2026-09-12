@@ -108,7 +108,10 @@ export class EcomsellerEngine {
   /**
    * Helper to perform HTTP GET requests with CORS proxies when in browser
    */
-  private static async fetchWithTimeout(url: string, opts: RequestInit = {}, timeoutMs = 2500): Promise<Response> {
+  /**
+   * Helper to perform HTTP GET requests with CORS proxies when in browser
+   */
+  private static async fetchWithTimeout(url: string, opts: RequestInit = {}, timeoutMs = 12000): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -123,18 +126,21 @@ export class EcomsellerEngine {
 
   private static async executeFetch(url: string, headers: Record<string, string> = {}): Promise<string> {
     const defaultHeaders = {
-      "Accept": "application/json",
+      "Accept": "application/json, text/plain, */*",
       "x-tsr-serverfn": "true",
       ...headers
     };
 
-    // 1. Local Vite Proxy attempt (fastest on localhost)
+    // 1. Local Vite or Vercel API Proxy attempt (fastest and handles CORS cleanly)
     if (typeof window !== "undefined" && url.startsWith(ECOMSELLER_BASE)) {
       try {
         const localProxyUrl = url.replace(ECOMSELLER_BASE, "/api/ecomseller");
-        const res = await this.fetchWithTimeout(localProxyUrl, { headers: defaultHeaders }, 2000);
+        const res = await this.fetchWithTimeout(localProxyUrl, { headers: defaultHeaders }, 10000);
         if (res.ok) {
-          return await res.text();
+          const text = await res.text();
+          if (text && !text.trim().startsWith("<!DOCTYPE") && !text.trim().startsWith("<html")) {
+            return text;
+          }
         }
       } catch (proxyErr) {
         // Local proxy not available or timed out
@@ -143,40 +149,108 @@ export class EcomsellerEngine {
 
     // 2. Direct fetch attempt
     try {
-      const res = await this.fetchWithTimeout(url, { headers: defaultHeaders }, 2000);
+      const res = await this.fetchWithTimeout(url, { headers: defaultHeaders }, 8000);
       if (res.ok) {
-        return await res.text();
+        const text = await res.text();
+        if (text && !text.trim().startsWith("<!DOCTYPE") && !text.trim().startsWith("<html")) {
+          return text;
+        }
       }
     } catch (directErr) {
       // CORS or network error
     }
 
-    // 3. Fast CORS proxy fallback (AllOrigins raw)
-    try {
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-      const proxyRes = await this.fetchWithTimeout(proxyUrl, {}, 2500);
-      if (proxyRes.ok) {
-        const text = await proxyRes.text();
-        if (text && text.length > 50) {
-          return text;
+    // 3. Fallback to public seed catalog if requesting catalog endpoint
+    if (url.includes(CATALOG_SERVER_FN) && typeof window !== "undefined") {
+      try {
+        const seedRes = await this.fetchWithTimeout("/ecomseller_catalog.json", {}, 6000);
+        if (seedRes.ok) {
+          const text = await seedRes.text();
+          if (text && text.length > 50 && !text.trim().startsWith("<!DOCTYPE")) {
+            return text;
+          }
         }
-      }
-    } catch (proxyErr) {
-      // Proxy failed
+      } catch {}
     }
 
     // 4. Secondary proxy fallback (corsproxy.io)
     try {
       const secProxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
-      const secRes = await this.fetchWithTimeout(secProxyUrl, { headers: defaultHeaders }, 2500);
+      const secRes = await this.fetchWithTimeout(secProxyUrl, { headers: defaultHeaders }, 8000);
       if (secRes.ok) {
-        return await secRes.text();
+        const text = await secRes.text();
+        if (text && !text.trim().startsWith("<!DOCTYPE")) {
+          return text;
+        }
       }
     } catch (secErr) {
       // All fetch attempts failed
     }
 
     throw new Error(`Failed to fetch data from ${url}. Check your internet connection or proxy availability.`);
+  }
+
+  /**
+   * Convert raw Ecomseller BD catalog data into unified Durtup store Product format
+   */
+  public static convertCatalogToUnified(catalog: {
+    products?: EcomsellerRawProduct[];
+    categories?: EcomsellerRawCategory[];
+    brands?: EcomsellerRawBrand[];
+  }): any[] {
+    const pricingConfig = this.getPricingConfig();
+    const rawCategories = catalog.categories || [];
+    const catMap = new Map<string, { id: string; name: string; slug: string }>();
+    rawCategories.forEach(c => {
+      catMap.set(c.id, { id: c.id, name: c.name, slug: c.slug });
+    });
+
+    return (catalog.products || []).map((p) => {
+      const rawCat = catMap.get(p.categoryId);
+      const mappedCategory = CategoryMappingService.resolveCategory(rawCat?.slug || "", rawCat?.name || "");
+      const priceInfo = this.calculatePrice(p.price, mappedCategory.slug, p.id, pricingConfig);
+
+      const numId = typeof p.id === "string" ? p.id.split("-")[0].replace(/\D/g, "") || "10" : Number(p.id) || 10;
+      const seedNum = parseInt(numId, 10) || 15;
+      const regPrice = priceInfo.regularStrikethroughPrice;
+      const sellPrice = priceInfo.finalSellingPrice;
+      const hasDiscount = regPrice && regPrice > sellPrice;
+
+      return {
+        id: `ecom-${p.id}`,
+        name: p.name,
+        slug: p.slug || `product-${p.id}`,
+        regular_price: regPrice,
+        discount_price: sellPrice,
+        price: sellPrice,
+        originalPrice: hasDiscount ? regPrice : undefined,
+        wholesale_price: p.resellerPrice,
+        stock_quantity: 25,
+        in_stock: true,
+        status: "active",
+        approval_status: "approved",
+        seller_id: "Ecomseller BD",
+        seller_name: "Ecomseller BD",
+        supplier_id: this.SUPPLIER_ID,
+        supplier_name: this.SUPPLIER_NAME,
+        supplier_sku: p.code,
+        sku: `ECOM-${p.code || p.id}`,
+        category: mappedCategory.name,
+        category_id: mappedCategory.id,
+        category_slug: mappedCategory.slug,
+        brand: "Generic",
+        image: p.image || (Array.isArray(p.images) && p.images[0]) || "",
+        images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : []),
+        is_featured: Boolean(p.featured),
+        rating: 4.8,
+        reviews: 15 + (seedNum % 30),
+        sold: 45 + (seedNum % 80),
+        freeShipping: true,
+        isNew: true,
+        isBestSeller: Boolean(p.featured) || (seedNum % 4 === 0),
+        created_at: new Date().toISOString()
+      };
+    });
   }
 
   /**
@@ -199,32 +273,60 @@ export class EcomsellerEngine {
       }
     }
 
-    const endpointUrl = `${ECOMSELLER_BASE}/_serverFn/${CATALOG_SERVER_FN}`;
-    const rawText = await this.executeFetch(endpointUrl);
-    const rawJson = JSON.parse(rawText);
-    const decoded = parseTssResponse(rawJson);
+    let catalogData: {
+      products: EcomsellerRawProduct[];
+      categories: EcomsellerRawCategory[];
+      brands: EcomsellerRawBrand[];
+    } | null = null;
 
-    const result = decoded?.result || {};
-    const categories: EcomsellerRawCategory[] = result.categories || [];
-    const brands: EcomsellerRawBrand[] = result.brands || [];
-    const products: EcomsellerRawProduct[] = (result.products || []).map((p: any) => ({
-      id: p.id,
-      name: p.name || "Untitled Ecomseller Product",
-      slug: p.slug,
-      code: p.code || p.id,
-      short: p.short || "",
-      price: Number(p.price) || 0,
-      resellerPrice: Number(p.resellerPrice) || 0,
-      categoryId: p.categoryId,
-      brandId: p.brandId,
-      featured: Number(p.featured) || 0,
-      image: p.image || (Array.isArray(p.images) ? p.images[0] : ""),
-      images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : [])
-    }));
+    try {
+      const endpointUrl = `${ECOMSELLER_BASE}/_serverFn/${CATALOG_SERVER_FN}`;
+      const rawText = await this.executeFetch(endpointUrl);
+      const rawJson = JSON.parse(rawText);
 
-    const catalogData = { products, categories, brands };
+      // Check if already decoded (e.g. from static /ecomseller_catalog.json)
+      if (rawJson && Array.isArray(rawJson.products)) {
+        catalogData = rawJson;
+      } else {
+        const decoded = parseTssResponse(rawJson);
+        const result = decoded?.result || {};
+        const categories: EcomsellerRawCategory[] = result.categories || [];
+        const brands: EcomsellerRawBrand[] = result.brands || [];
+        const products: EcomsellerRawProduct[] = (result.products || []).map((p: any) => ({
+          id: p.id,
+          name: p.name || "Untitled Ecomseller Product",
+          slug: p.slug,
+          code: p.code || p.id,
+          short: p.short || "",
+          price: Number(p.price) || 0,
+          resellerPrice: Number(p.resellerPrice) || 0,
+          categoryId: p.categoryId,
+          brandId: p.brandId,
+          featured: Number(p.featured) || 0,
+          image: p.image || (Array.isArray(p.images) ? p.images[0] : ""),
+          images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : [])
+        }));
+        catalogData = { products, categories, brands };
+      }
+    } catch (netErr) {
+      console.warn("[EcomsellerEngine] Live catalog fetch failed, loading static seed catalog:", netErr);
+      if (typeof window !== "undefined") {
+        try {
+          const res = await fetch("/ecomseller_catalog.json");
+          if (res.ok) {
+            catalogData = await res.json();
+          }
+        } catch (staticErr) {
+          console.error("[EcomsellerEngine] Static catalog fallback also failed:", staticErr);
+        }
+      }
+    }
 
-    if (typeof window !== "undefined") {
+    if (!catalogData) {
+      catalogData = { products: [], categories: [], brands: [] };
+    }
+
+    if (catalogData.products && catalogData.products.length > 0 && typeof window !== "undefined") {
       try {
         localStorage.setItem(CACHE_KEY_CATALOG, JSON.stringify(catalogData));
       } catch (e) {
@@ -245,81 +347,48 @@ export class EcomsellerEngine {
     }
 
     try {
-      // Check localStorage first
-      let hasLocalCache = false;
+      // 1. Check localStorage first
       if (!forceRefresh && typeof window !== "undefined") {
         const cached = localStorage.getItem(CACHE_KEY_CATALOG);
         if (cached) {
           try {
             const parsed = JSON.parse(cached);
             if (parsed && parsed.products && parsed.products.length > 0) {
-              hasLocalCache = true;
+              const unified = this.convertCatalogToUnified(parsed);
+              this.inMemoryProductsCache = unified;
+              return unified;
             }
           } catch {}
         }
       }
 
-      // If no local cache and not forced, return empty quickly so page rendering is instant
-      if (!forceRefresh && !hasLocalCache && typeof window !== "undefined") {
-        return this.inMemoryProductsCache || [];
+      // 2. Fetch live catalog (which automatically falls back to /ecomseller_catalog.json)
+      const catalog = await this.fetchLiveCatalog(forceRefresh);
+      if (catalog && catalog.products && catalog.products.length > 0) {
+        const unified = this.convertCatalogToUnified(catalog);
+        this.inMemoryProductsCache = unified;
+        return unified;
       }
 
-      const catalog = await this.fetchLiveCatalog(forceRefresh);
-      const pricingConfig = this.getPricingConfig();
-      const rawCategories = catalog.categories || [];
-      const catMap = new Map<string, { id: string; name: string; slug: string }>();
-      rawCategories.forEach(c => {
-        catMap.set(c.id, { id: c.id, name: c.name, slug: c.slug });
-      });
+      // 3. Guaranteed instant static seed fetch if live fetch returned empty
+      if (typeof window !== "undefined") {
+        try {
+          const res = await fetch("/ecomseller_catalog.json");
+          if (res.ok) {
+            const seed = await res.json();
+            if (seed && seed.products && seed.products.length > 0) {
+              const unified = this.convertCatalogToUnified(seed);
+              this.inMemoryProductsCache = unified;
+              try {
+                localStorage.setItem(CACHE_KEY_CATALOG, JSON.stringify(seed));
+              } catch {}
+              return unified;
+            }
+          }
+        } catch {}
+      }
 
-      const unifiedList = (catalog.products || []).map((p) => {
-        const rawCat = catMap.get(p.categoryId);
-        const mappedCategory = CategoryMappingService.resolveCategory(rawCat?.slug || "", rawCat?.name || "");
-        const priceInfo = this.calculatePrice(p.price, mappedCategory.slug, p.id, pricingConfig);
-
-        const numId = Number(p.id) || 0;
-        const regPrice = priceInfo.regularStrikethroughPrice;
-        const sellPrice = priceInfo.finalSellingPrice;
-        const hasDiscount = regPrice && regPrice > sellPrice;
-
-        return {
-          id: `ecom-${p.id}`,
-          name: p.name,
-          slug: p.slug || `product-${p.id}`,
-          regular_price: regPrice,
-          discount_price: sellPrice,
-          price: sellPrice,
-          originalPrice: hasDiscount ? regPrice : undefined,
-          wholesale_price: p.resellerPrice,
-          stock_quantity: 25,
-          in_stock: true,
-          status: "active",
-          approval_status: "approved",
-          seller_id: "Ecomseller BD",
-          seller_name: "Ecomseller BD",
-          supplier_id: this.SUPPLIER_ID,
-          supplier_name: this.SUPPLIER_NAME,
-          supplier_sku: p.code,
-          sku: `ECOM-${p.code || p.id}`,
-          category: mappedCategory.name,
-          category_id: mappedCategory.id,
-          category_slug: mappedCategory.slug,
-          brand: "Generic",
-          image: p.image || (p.images && p.images[0]) || "",
-          images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : []),
-          is_featured: Boolean(p.featured),
-          rating: 4.8,
-          reviews: 15 + (numId % 30),
-          sold: 45 + (numId % 80),
-          freeShipping: true,
-          isNew: true,
-          isBestSeller: Boolean(p.featured) || (numId % 4 === 0),
-          created_at: new Date().toISOString()
-        };
-      });
-
-      this.inMemoryProductsCache = unifiedList;
-      return unifiedList;
+      return this.inMemoryProductsCache || [];
     } catch (err) {
       console.warn("[EcomsellerEngine] getCachedEcomsellerProducts error:", err);
       return this.inMemoryProductsCache || [];

@@ -1,9 +1,8 @@
-const CACHE_NAME = 'durtup-v15';
-const STATIC_CACHE = 'durtup-static-v15';
-const DYNAMIC_CACHE = 'durtup-dynamic-v15';
+const CACHE_NAME = 'durtup-v16';
+const STATIC_CACHE = 'durtup-static-v16';
+const DYNAMIC_CACHE = 'durtup-dynamic-v16';
 
-
-// Assets to cache immediately
+// Assets to cache immediately on SW install
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -11,12 +10,15 @@ const STATIC_ASSETS = [
   '/durtup-logo-transparent.png',
   '/icon-192.png',
   '/icon-512.png',
+  '/hero-gadgets.webp',
+  '/banner-trust-delivery.webp',
+  '/banner-fashion.webp',
+  '/banner-flash-deals.webp',
 ];
-
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
+  console.log('[SW] Installing service worker v16...');
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
       console.log('[SW] Caching static assets');
@@ -28,7 +30,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
+  console.log('[SW] Activating service worker v16...');
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
@@ -44,7 +46,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - network first with cache fallback
+// Fetch event
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -55,24 +57,58 @@ self.addEventListener('fetch', (event) => {
   // Skip chrome-extension and other non-http requests
   if (!request.url.startsWith('http')) return;
 
-  // IMPORTANT: never cache dev/build module files (prevents blank screens after updates)
+  // Skip Vite dev module files (prevents blank screens in local development)
   if (
     url.pathname.startsWith('/src/') ||
-    url.pathname.includes('/node_modules/.vite/') ||
+    url.pathname.includes('/node_modules/') ||
+    url.pathname.startsWith('/@') ||
     url.pathname.endsWith('.ts') ||
     url.pathname.endsWith('.tsx') ||
-    url.pathname.endsWith('.js') ||
     url.searchParams.has('v')
   ) {
-    return; // let browser handle normally (network)
-  }
-
-  // Skip API requests from caching
-  if (url.pathname.startsWith('/rest/') || url.hostname.includes('supabase')) {
     return;
   }
 
-  // For navigation requests, use network first
+  // Skip API requests from caching
+  if (url.pathname.startsWith('/rest/') || url.hostname.includes('supabase') || url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  // Stale-While-Revalidate for catalog slim (instant load on revisit)
+  if (url.pathname === '/mohasagor_catalog_slim.json') {
+    event.respondWith(
+      caches.open(DYNAMIC_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        const fetchPromise = fetch(request).then((response) => {
+          if (response.status === 200) {
+            cache.put(request, response.clone());
+          }
+          return response;
+        }).catch(() => cached);
+        return cached || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // Production hashed assets (/assets/...) - Cache First (immutable)
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(request).then((cachedResponse) => {
+        if (cachedResponse) return cachedResponse;
+        return fetch(request).then((response) => {
+          if (response.status === 200) {
+            const clone = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // For navigation requests, use network first with offline fallback
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -92,30 +128,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For static assets, use cache first
+  // Static images & fonts - Cache First with background refresh
   if (
-    request.destination === 'script' ||
-    request.destination === 'style' ||
     request.destination === 'image' ||
-    request.destination === 'font'
+    request.destination === 'font' ||
+    request.destination === 'style'
   ) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {
-          // Return cached version and update cache in background
           fetch(request).then((response) => {
-            caches.open(DYNAMIC_CACHE).then((cache) => {
-              cache.put(request, response);
-            });
-          });
+            if (response.status === 200) {
+              caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, response));
+            }
+          }).catch(() => {});
           return cachedResponse;
         }
 
         return fetch(request).then((response) => {
-          const clonedResponse = response.clone();
-          caches.open(DYNAMIC_CACHE).then((cache) => {
-            cache.put(request, clonedResponse);
-          });
+          if (response.status === 200) {
+            const clonedResponse = response.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => {
+              cache.put(request, clonedResponse);
+            });
+          }
           return response;
         });
       })

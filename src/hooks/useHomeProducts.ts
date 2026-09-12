@@ -276,8 +276,8 @@ function buildSections(products: Product[]) {
     newArrivals,
     trending,
     recommended,
-    dealProducts: uniqueAll, // Full streaming deduplicated catalog for Deal of the Day marquee!
-    allProducts: uniqueAll,  // Full streaming deduplicated catalog for feeds & views!
+    dealProducts: uniqueAll.slice(0, 48), // Ample 48 items for rotating Deal of the Day marquee
+    allProducts: uniqueAll.slice(0, 48),  // Lightweight deduplicated catalog
   };
 }
 
@@ -285,6 +285,22 @@ import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
 
 const CACHE_KEY = "mohasagor_cached_home_products_v12";
 const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes 
+
+function cacheSectionsToLocalStorage(result: any) {
+  if (typeof window === "undefined") return;
+  const scheduleWrite = () => {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(result));
+    } catch (e) {
+      // Ignore quota errors safely
+    }
+  };
+  if ("requestIdleCallback" in window) {
+    (window as any).requestIdleCallback(scheduleWrite, { timeout: 3000 });
+  } else {
+    setTimeout(scheduleWrite, 300);
+  }
+}
 
 function preloadImages(products: Product[]) {
   // Let the browser load images on demand via native loading="lazy"
@@ -364,9 +380,7 @@ async function fetchAllHomeProducts() {
         ...combinedSuppliers.filter(m => !adminCreatedProducts.some(ap => ap.id === m.id))
       ];
       const result = buildSections(merged);
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(result));
-      } catch (e) {}
+      cacheSectionsToLocalStorage(result);
       return result;
     }
   } catch (cachedErr) {
@@ -393,9 +407,7 @@ async function fetchAllHomeProducts() {
         ...mapped.filter(m => !adminCreatedProducts.some(ap => ap.id === m.id))
       ];
       const result = buildSections(merged);
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(result));
-      } catch (e) {}
+      cacheSectionsToLocalStorage(result);
       return result;
     }
   } catch (dbErr) {

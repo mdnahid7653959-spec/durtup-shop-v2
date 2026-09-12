@@ -2,8 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback,
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+import { findMohasagorProductSync } from "@/utils/mohasagorCache";
 import { supabase } from "@/lib/firebaseAdapter";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 
@@ -47,28 +46,19 @@ async function resolveProductInfo(productId: string): Promise<{
   const pid = String(productId);
   const cleanId = pid.replace("product-", "").replace("supplier-", "");
 
-  // 1. Check Mohasagor catalog
-  try {
-    const catalog = await getCachedMohasagorProducts();
-    const matched = catalog.find(
-      (p: any) =>
-        String(p.id) === pid ||
-        String(p.id) === cleanId ||
-        p.slug === pid ||
-        p.slug === `product-${cleanId}`
-    );
-    if (matched) {
-      return {
-        id: String(matched.id),
-        name: matched.name,
-        slug: matched.slug || `product-${matched.id}`,
-        regular_price: matched.originalPrice || matched.price || 0,
-        discount_price: matched.originalPrice ? matched.price : null,
-        image: getSmartProductImage(matched.name, matched.image, matched.category || ""),
-        stock_quantity: 50,
-      };
-    }
-  } catch {}
+  // 1. Check Mohasagor catalog via instant O(1) hash map
+  const matched = findMohasagorProductSync(pid);
+  if (matched) {
+    return {
+      id: String(matched.id),
+      name: matched.name,
+      slug: matched.slug || `product-${matched.id}`,
+      regular_price: matched.originalPrice || matched.price || 0,
+      discount_price: matched.originalPrice ? matched.price : null,
+      image: getSmartProductImage(matched.name, matched.image, (matched as any).category || ""),
+      stock_quantity: 50,
+    };
+  }
 
   // 2. Check Local Storage admin products
   try {

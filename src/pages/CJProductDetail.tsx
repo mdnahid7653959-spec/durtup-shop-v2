@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { TopAppInstallBanner } from "@/components/pwa/TopAppInstallBanner";
 import { useCJCart } from "@/hooks/useCJCart";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -204,9 +203,6 @@ export default function CJProductDetail() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-          <TopAppInstallBanner />
-        </div>
         <div className="hidden md:block">
           <Header />
         </div>
@@ -242,9 +238,6 @@ export default function CJProductDetail() {
   if (error || !product) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-          <TopAppInstallBanner />
-        </div>
         <div className="hidden md:block">
           <Header />
         </div>
@@ -315,9 +308,6 @@ export default function CJProductDetail() {
         ]}
         faqs={DEFAULT_BANGLADESH_PRODUCT_FAQS}
       />
-      <div className="sticky top-0 z-50 w-full" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        <TopAppInstallBanner />
-      </div>
       <div className="hidden md:block">
         <Header />
       </div>

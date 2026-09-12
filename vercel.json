@@ -5,6 +5,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/mohasagor/:path*", "destination": "https://mohasagor.com.bd/:path*" },
+    { "source": "/api/ecomseller/:path*", "destination": "https://ecomsellerbd.com/:path*" },
     { "source": "/:path*", "destination": "/index.html" }
   ],
   "headers": [

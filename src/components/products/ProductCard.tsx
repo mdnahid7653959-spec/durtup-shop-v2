@@ -29,8 +29,7 @@ interface ProductCardProps {
 }
 
 function ProductCardComponent({ product, priority = false }: ProductCardProps) {
-  const displayImage = getSmartProductImage(product.name, product.image);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const displayImage = getSmartProductImage(product.name, product.image, (product as any).category || "");
   const navigate = useNavigate();
   const discount = product.originalPrice ? Math.round((1 - product.price / product.originalPrice) * 100) : 0;
   const { addToCart } = useCart();
@@ -107,25 +106,20 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
           onTouchStart={handlePreload}
           className="block"
         >
-          <div className="relative aspect-square overflow-hidden bg-muted/40">
-            {/* Shimmer Placeholder */}
-            {!imageLoaded && (
-              <div className="absolute inset-0 bg-gradient-to-r from-muted/30 via-muted/70 to-muted/30 animate-pulse" />
-            )}
+          <div className="relative aspect-square overflow-hidden bg-muted/30">
             <img
-              src={displayImage}
+              src={displayImage || "/placeholder.svg"}
               alt={product.name}
-              className={cn(
-                "w-full h-full object-cover group-hover:scale-105 transition-all duration-300",
-                imageLoaded ? "opacity-100" : "opacity-0"
-              )}
+              className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
               loading={priority ? "eager" : "lazy"}
               {...({ fetchpriority: priority ? "high" : "auto" } as any)}
               decoding="async"
-              onLoad={() => setImageLoaded(true)}
               onError={(e) => {
-                setImageLoaded(true);
-                (e.target as HTMLImageElement).src = getSmartProductImage(product.name, "", "");
+                const target = e.target as HTMLImageElement;
+                const fallback = getSmartProductImage(product.name, "", (product as any).category || "");
+                if (target.src !== fallback) {
+                  target.src = fallback;
+                }
               }}
             />
           </div>

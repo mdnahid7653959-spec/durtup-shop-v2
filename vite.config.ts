@@ -93,6 +93,7 @@ export default defineConfig(({ mode }) => ({
   build: {
     target: "es2022",
     cssCodeSplit: true,
+    cssMinify: true,
     chunkSizeWarningLimit: 1200,
     minify: "esbuild",
     rollupOptions: {
@@ -104,8 +105,10 @@ export default defineConfig(({ mode }) => ({
           "vendor-react": ["react", "react-dom", "react-router-dom"],
           "vendor-query": ["@tanstack/react-query"],
           "vendor-icons": ["lucide-react"],
-          "vendor-charts": ["recharts"],
-          "vendor-firebase": ["firebase/app", "firebase/auth", "firebase/firestore", "firebase/storage"],
+          "vendor-recharts": ["recharts"],
+          "vendor-carousel": ["embla-carousel-react"],
+          "vendor-dompurify": ["dompurify"],
+          "vendor-firebase": ["firebase/app", "firebase/auth", "firebase/firestore"],
           "vendor-ui": [
             "@radix-ui/react-dialog",
             "@radix-ui/react-dropdown-menu",
