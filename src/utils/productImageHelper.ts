@@ -57,6 +57,10 @@ const CATEGORY_IMAGES = {
   beauty: [
     "https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=600&h=600&fit=crop",
     "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&h=600&fit=crop",
+  ],
+  tools: [
+    "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=600&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=600&h=600&fit=crop",
   ]
 };
 
@@ -82,10 +86,6 @@ export function optimizeImageUrl(url?: string, width: number = 1000, quality: nu
   let trimmed = url.trim();
   if (!trimmed) return "";
 
-  // Upgrade known low-res 225px supplier thumbnail to crystal-clear HD studio image
-  if (trimmed.includes("f985ea3b-c93c-46a3-9b7e-42fab826c073")) {
-    trimmed = trimmed.replace("f985ea3b-c93c-46a3-9b7e-42fab826c073", "3c162314-d0fa-4080-b66c-301aaa1f2706");
-  }
 
   if (trimmed.startsWith("data:") || trimmed.startsWith("blob:") || trimmed.includes(".svg")) {
     return trimmed;
@@ -158,6 +158,8 @@ export function getSmartProductImage(
     key = "shirt";
   } else if (text.match(/home|kitchen|mug|pump|fan|lamp|dispenser|blender|grinder|bottle|flask|pillow|cushion|shelf|rack|mop/i)) {
     key = "home";
+  } else if (text.match(/screwdriver|drill|tool|hardware|wrench|hammer|plier|screw|repair.*kit|machine|saw|socket/i)) {
+    key = "tools";
   }
 
   // Check if currentImageUrl is a genuine uploaded/supplier image URL (not a generic Unsplash placeholder)

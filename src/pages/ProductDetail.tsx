@@ -196,9 +196,6 @@ const mapSupplierImages = (raw: any): ProductImage[] => {
   const resolveUrl = (url: any): string => {
     if (!url || typeof url !== "string") return "";
     let trimmed = url.trim();
-    if (trimmed.includes("f985ea3b-c93c-46a3-9b7e-42fab826c073")) {
-      trimmed = trimmed.replace("f985ea3b-c93c-46a3-9b7e-42fab826c073", "3c162314-d0fa-4080-b66c-301aaa1f2706");
-    }
     if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
       return trimmed;
     }
@@ -386,9 +383,6 @@ export default function ProductDetail() {
     if (!url || typeof url !== "string") return getSmartProductImage(product?.name || "", "", product?.category_id || "");
     let trimmed = url.trim();
     if (!trimmed) return getSmartProductImage(product?.name || "", "", product?.category_id || "");
-    if (trimmed.includes("f985ea3b-c93c-46a3-9b7e-42fab826c073")) {
-      trimmed = trimmed.replace("f985ea3b-c93c-46a3-9b7e-42fab826c073", "3c162314-d0fa-4080-b66c-301aaa1f2706");
-    }
     let fullUrl = trimmed;
     if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://") && !trimmed.startsWith("data:") && !trimmed.startsWith("blob:")) {
       if (trimmed.startsWith("//")) fullUrl = `https:${trimmed}`;
@@ -1086,14 +1080,23 @@ export default function ProductDetail() {
       } catch {}
     }
 
-    // 2. Try smart category fallback image before blank placeholder
+    // 2. Try another available product image before generic fallback
+    if (images && images.length > 1) {
+      const alternate = images.find(img => img && img !== current);
+      if (alternate) {
+        target.src = alternate;
+        return;
+      }
+    }
+
+    // 3. Try smart category fallback image before blank placeholder
     const fallback = getSmartProductImage(product?.name || "", "", product?.category_id || "");
     if (fallback && fallback !== current) {
       target.src = fallback;
       return;
     }
 
-    // 3. Ultimate fallback
+    // 4. Ultimate fallback
     target.src = defaultImages[0];
   };
 

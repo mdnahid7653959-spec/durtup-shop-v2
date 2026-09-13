@@ -95,7 +95,7 @@ const CATALOG_SERVER_FN = "2a45d9b79d4ba9547992f1eac18039c2bae0ddf7df7670a8638b3
 const DETAIL_SERVER_FN = "007261ee9d86e87592cfcd5491f56565cca84574c79db98974ab1951a1437f9d";
 const ECOMSELLER_BASE = "https://ecomsellerbd.com";
 
-const CACHE_KEY_CATALOG = "ecomseller_catalog_cache_v5";
+const CACHE_KEY_CATALOG = "ecomseller_catalog_cache_v6";
 const CACHE_KEY_PRICING = "durtup_supplier_pricing_config_v2";
 
 export class EcomsellerEngine {
@@ -218,11 +218,7 @@ export class EcomsellerEngine {
 
       const sanitizeImg = (u: any): string => {
         if (!u || typeof u !== "string") return "";
-        let trimmed = u.trim();
-        if (trimmed.includes("f985ea3b-c93c-46a3-9b7e-42fab826c073")) {
-          trimmed = trimmed.replace("f985ea3b-c93c-46a3-9b7e-42fab826c073", "3c162314-d0fa-4080-b66c-301aaa1f2706");
-        }
-        return trimmed;
+        return u.trim();
       };
 
       const rawImgs = Array.isArray(p.images) && p.images.length > 0 ? p.images.map(sanitizeImg).filter(Boolean) : (p.image ? [sanitizeImg(p.image)] : []);
