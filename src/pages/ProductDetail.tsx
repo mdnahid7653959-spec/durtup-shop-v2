@@ -1315,12 +1315,12 @@ export default function ProductDetail() {
           <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 w-full max-w-full min-w-0">
             {/* Product Images Section */}
             <div className="w-full max-w-full min-w-0">
-              {/* Main Image with clean, premium presentation */}
-              <div className="flex justify-center mb-4 w-full max-w-full">
-                <div className="relative w-full max-w-full sm:max-w-[480px] lg:max-w-[540px]">
+              {/* Main Image with clean, compact, HD presentation */}
+              <div className="flex justify-center mb-3 w-full max-w-full">
+                <div className="relative w-full max-w-[270px] xs:max-w-[290px] sm:max-w-[340px] md:max-w-[380px] lg:max-w-[420px] mx-auto">
                   <div
                     ref={imageContainerRef}
-                    className="relative aspect-square w-full rounded-2xl overflow-hidden bg-neutral-50/80 dark:bg-card border border-border/70 shadow-sm cursor-zoom-in group flex items-center justify-center"
+                    className="relative aspect-square w-full max-h-[270px] xs:max-h-[290px] sm:max-h-[340px] md:max-h-[380px] lg:max-h-[420px] rounded-2xl overflow-hidden bg-white dark:bg-card border border-border/80 shadow-md cursor-zoom-in group flex items-center justify-center p-2 sm:p-3"
                     onClick={() => !showVideo && setLightboxOpen(true)}
                     onMouseMove={(e) => {
                       if (showVideo) return;
@@ -1350,8 +1350,9 @@ export default function ProductDetail() {
                       <img
                         src={images[selectedImage]}
                         alt={product.name}
-                        style={
-                          hoverPos
+                        style={{
+                          imageRendering: "-webkit-optimize-contrast",
+                          ...(hoverPos
                             ? {
                                 transformOrigin: `${hoverPos.x}% ${hoverPos.y}%`,
                                 transform: "scale(2)",
@@ -1360,9 +1361,9 @@ export default function ProductDetail() {
                             : {
                                 transform: "scale(1)",
                                 transition: "transform 0.25s ease-out",
-                              }
-                        }
-                        className="w-full h-full object-contain object-center select-none will-change-transform"
+                              }),
+                        }}
+                        className="w-full h-full max-h-full object-contain object-center select-none will-change-transform drop-shadow-sm"
                         loading="eager"
                         fetchPriority="high"
                         decoding="async"
@@ -1374,10 +1375,10 @@ export default function ProductDetail() {
                     {!showVideo && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); setLightboxOpen(true); }}
-                        className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 hover:bg-primary backdrop-blur-md text-white text-xs font-bold shadow-lg transition-all hover:scale-105 active:scale-95 z-10 border border-white/20"
+                        className="absolute bottom-2.5 left-2.5 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/75 hover:bg-primary backdrop-blur-md text-white text-[11px] font-bold shadow-lg transition-all hover:scale-105 active:scale-95 z-10 border border-white/20"
                         title="Click to open Fullscreen HD Zoom"
                       >
-                        <ZoomIn className="h-3.5 w-3.5 text-primary-foreground" />
+                        <ZoomIn className="h-3 w-3 text-primary-foreground" />
                         <span className="hidden sm:inline">Click to Zoom (HD)</span>
                         <span className="sm:hidden">Tap to Zoom</span>
                       </button>
@@ -1393,7 +1394,7 @@ export default function ProductDetail() {
                         }
                       }}
                       className={cn(
-                        "absolute top-3 left-3 w-9 h-9 sm:w-10 sm:h-10 rounded-full backdrop-blur-md shadow-md flex items-center justify-center transition-all z-10 hover:scale-105 active:scale-95 border cursor-pointer",
+                        "absolute top-2.5 left-2.5 w-8 h-8 sm:w-9 sm:h-9 rounded-full backdrop-blur-md shadow-md flex items-center justify-center transition-all z-10 hover:scale-105 active:scale-95 border cursor-pointer",
                         product && isInWishlist(product.id)
                           ? "bg-rose-600 text-white border-rose-500 shadow-rose-600/30"
                           : "bg-white/90 dark:bg-card/90 text-slate-700 dark:text-slate-200 hover:text-rose-600 border-slate-200/60 dark:border-slate-700/60"
@@ -1403,7 +1404,7 @@ export default function ProductDetail() {
                     >
                       <Heart
                         className={cn(
-                          "h-4 w-4 sm:h-5 sm:w-5 transition-transform",
+                          "h-4 w-4 transition-transform",
                           product && isInWishlist(product.id) ? "fill-current text-white scale-110" : ""
                         )}
                       />
@@ -1411,7 +1412,7 @@ export default function ProductDetail() {
 
                     {/* Image Counter Badge - only show when multiple images/video exist */}
                     {((product as any).video_url ? images.length + 1 : images.length) > 1 && (
-                      <div className="absolute top-3 right-14 sm:right-16 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur text-white text-xs font-bold shadow-md z-10">
+                      <div className="absolute top-2.5 right-11 sm:right-12 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-white text-[11px] font-bold shadow-md z-10">
                         {selectedImage + 1} / {(product as any).video_url ? images.length + 1 : images.length}
                       </div>
                     )}
@@ -1425,10 +1426,10 @@ export default function ProductDetail() {
                             setSelectedImage(Math.max(0, selectedImage - 1));
                             setShowVideo(false);
                           }}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all disabled:opacity-0 z-10"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all disabled:opacity-0 z-10"
                           disabled={selectedImage === 0}
                         >
-                          <ChevronLeft className="h-5 w-5" />
+                          <ChevronLeft className="h-4 w-4" />
                         </button>
                         <button
                           onClick={(e) => {
@@ -1441,9 +1442,9 @@ export default function ProductDetail() {
                               }
                             }
                           }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all z-10"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all z-10"
                         >
-                          <ChevronRight className="h-5 w-5" />
+                          <ChevronRight className="h-4 w-4" />
                         </button>
                       </>
                     )}
@@ -1451,28 +1452,28 @@ export default function ProductDetail() {
                     {/* Share button */}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleShare(); }}
-                      className="absolute top-3 right-3 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center hover:bg-primary hover:text-white transition-all z-10"
+                      className="absolute top-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center hover:bg-primary hover:text-white transition-all z-10"
                       aria-label="Share"
                     >
-                      <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </button>
 
                     {/* Image indicator dots - only show when multiple images/video exist */}
                     {((product as any)?.video_url ? images.length + 1 : images.length) > 1 && (
-                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:hidden z-10 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                      <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1 sm:hidden z-10 bg-black/30 backdrop-blur-sm px-2 py-0.5 rounded-full">
                         {images.map((_, i) => (
-                          <div key={i} className={`h-1.5 rounded-full transition-all ${selectedImage === i && !showVideo ? 'bg-white w-5' : 'bg-white/50 w-1.5'}`} />
+                          <div key={i} className={`h-1.5 rounded-full transition-all ${selectedImage === i && !showVideo ? 'bg-white w-4' : 'bg-white/50 w-1.5'}`} />
                         ))}
-                        {product.video_url && <div className={`h-1.5 rounded-full transition-all ${showVideo ? 'bg-white w-5' : 'bg-white/50 w-1.5'}`} />}
+                        {product.video_url && <div className={`h-1.5 rounded-full transition-all ${showVideo ? 'bg-white w-4' : 'bg-white/50 w-1.5'}`} />}
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Thumbnail strip - only show when multiple images/video exist */}
+              {/* Thumbnail strip - compact, HD, neat */}
               {((product as any)?.video_url ? images.length + 1 : images.length) > 1 && (
-                <div className="flex gap-2 sm:gap-3 justify-start sm:justify-center overflow-x-auto py-2 px-1 scrollbar-hide w-full max-w-full">
+                <div className="flex gap-1.5 sm:gap-2 justify-center items-center overflow-x-auto py-1.5 px-1 scrollbar-hide w-full max-w-[320px] xs:max-w-[360px] sm:max-w-[420px] mx-auto">
                   {images.map((img, i) => (
                     <button
                       key={i}
@@ -1480,16 +1481,17 @@ export default function ProductDetail() {
                         setSelectedImage(i);
                         setShowVideo(false);
                       }}
-                      className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-neutral-50/80 dark:bg-card hover:scale-105 ${
+                      className={`w-11 h-11 xs:w-12 xs:h-12 sm:w-13 sm:h-13 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-white dark:bg-card p-0.5 hover:scale-105 ${
                         selectedImage === i && !showVideo
-                          ? 'border-primary ring-2 ring-primary/30 shadow-md shadow-primary/10 scale-105'
-                          : 'border-border/60 hover:border-primary/50 opacity-80 hover:opacity-100'
+                          ? 'border-orange-500 ring-2 ring-orange-500/30 shadow-md scale-105'
+                          : 'border-border/60 hover:border-orange-500/50 opacity-80 hover:opacity-100'
                       }`}
                     >
                       <img
                         src={img}
                         alt=""
-                        className="w-full h-full object-cover transition-transform duration-200"
+                        style={{ imageRendering: "-webkit-optimize-contrast" }}
+                        className="w-full h-full object-contain transition-transform duration-200"
                         onError={handleImageError}
                       />
                     </button>
@@ -1498,12 +1500,12 @@ export default function ProductDetail() {
                   {product.video_url && (
                     <button
                       onClick={() => setShowVideo(true)}
-                      className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all flex items-center justify-center bg-muted flex-shrink-0 relative hover:scale-105 ${
-                        showVideo ? 'border-primary ring-2 ring-primary/30 shadow-md scale-105' : 'border-border/60 hover:border-primary/50 opacity-80 hover:opacity-100'
+                      className={`w-11 h-11 xs:w-12 xs:h-12 sm:w-13 sm:h-13 rounded-xl overflow-hidden border-2 transition-all flex items-center justify-center bg-muted flex-shrink-0 relative hover:scale-105 ${
+                        showVideo ? 'border-orange-500 ring-2 ring-orange-500/30 shadow-md scale-105' : 'border-border/60 hover:border-orange-500/50 opacity-80 hover:opacity-100'
                       }`}
                     >
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-                        <Play className="h-5 w-5 sm:h-7 sm:w-7 text-white fill-white" />
+                        <Play className="h-4 w-4 sm:h-5 sm:w-5 text-white fill-white" />
                       </div>
                       {getYouTubeEmbedUrl(product.video_url) ? (
                         <img

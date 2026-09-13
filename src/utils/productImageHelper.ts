@@ -77,7 +77,7 @@ const GENERIC_GADGET_FALLBACKS = [
  * Converts heavy raw supplier images to ultra-fast, edge-cached WebP CDN images via Cloudflare/wsrv.nl
  * Uses fit=inside and full 800px resolution to ensure zero cropping and crystal-clear HD clarity.
  */
-export function optimizeImageUrl(url?: string, width: number = 420, quality: number = 75): string {
+export function optimizeImageUrl(url?: string, width: number = 1000, quality: number = 88): string {
   if (!url || typeof url !== "string") return "";
   const trimmed = url.trim();
   if (!trimmed) return "";
@@ -96,20 +96,25 @@ export function optimizeImageUrl(url?: string, width: number = 420, quality: num
     return trimmed;
   }
 
+  // Supabase direct storage images - already high quality WebP from CDN
+  if (trimmed.includes("supabase.co/storage")) {
+    return trimmed;
+  }
+
   // Unsplash images - use native high-speed dynamic CDN parameters with full uncropped aspect ratio
   if (trimmed.includes("images.unsplash.com")) {
     const clean = trimmed.split("?")[0];
     return `${clean}?w=${width}&q=${quality}&auto=format`;
   }
 
-  // External supplier images - route through Cloudflare Edge CDN (wsrv.nl) with fit=inside so no image parts are cut off
+  // External supplier images - route through Cloudflare Edge CDN (wsrv.nl) with fit=inside and we=0 for crisp HD clarity
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return `https://wsrv.nl/?url=${encodeURIComponent(trimmed)}&w=${width}&fit=inside&output=webp&q=${quality}`;
+    return `https://wsrv.nl/?url=${encodeURIComponent(trimmed)}&w=${width}&fit=inside&we=0&output=webp&q=${quality}`;
   }
 
   if (trimmed.startsWith("//")) {
     const full = `https:${trimmed}`;
-    return `https://wsrv.nl/?url=${encodeURIComponent(full)}&w=${width}&fit=inside&output=webp&q=${quality}`;
+    return `https://wsrv.nl/?url=${encodeURIComponent(full)}&w=${width}&fit=inside&we=0&output=webp&q=${quality}`;
   }
 
   return trimmed;
