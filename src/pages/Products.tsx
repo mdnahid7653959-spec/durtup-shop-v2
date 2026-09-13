@@ -24,9 +24,11 @@ export default function Products() {
     : location.pathname.includes("free-shipping") ? "free-shipping"
     : undefined;
 
+  const rawSearch = searchParams.get("search");
+  const searchQuery = rawSearch ? rawSearch.trim().replace(/\s+/g, " ") : undefined;
   const currentCategory = searchParams.get("category") || undefined;
   const currentSupplier = searchParams.get("supplier") || undefined;
-  const currentSort = searchParams.get("sort") || "newest";
+  const currentSort = searchParams.get("sort") || (searchQuery ? "relevance" : "newest");
   const currentFilter = searchParams.get("filter") || pathFilter || "all";
   const minPrice = searchParams.get("minPrice") ? Number(searchParams.get("minPrice")) : undefined;
   const maxPrice = searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : undefined;
@@ -35,7 +37,7 @@ export default function Products() {
   const [maxPriceInput, setMaxPriceInput] = useState<string>(searchParams.get("maxPrice") || "");
 
   const params = {
-    search: searchParams.get("search") || undefined,
+    search: searchQuery,
     category: currentCategory,
     supplier: currentSupplier,
     sort: currentSort,
@@ -223,6 +225,7 @@ export default function Products() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-popover">
+                        <SelectItem value="relevance">Best Match</SelectItem>
                         <SelectItem value="newest">Newest First</SelectItem>
                         <SelectItem value="price-low">Price: Low to High (৳)</SelectItem>
                         <SelectItem value="price-high">Price: High to Low (৳)</SelectItem>

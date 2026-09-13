@@ -97,7 +97,7 @@ export function SmartSearchBar({
 
   const submit = useCallback(
     (term: string) => {
-      const t = term.trim();
+      const t = term.trim().replace(/\s+/g, " ");
       if (!t) return;
       pushRecentSearch(t);
       setOpen(false);

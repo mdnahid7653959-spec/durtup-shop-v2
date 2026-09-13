@@ -100,7 +100,7 @@ export default function SearchPage() {
   const hasQuery = query.trim().length >= 1;
 
   const submit = (t: string) => {
-    const term = t.trim();
+    const term = t.trim().replace(/\s+/g, " ");
     if (!term) return;
     pushRecentSearch(term);
     navigate(`/products?search=${encodeURIComponent(term)}`);

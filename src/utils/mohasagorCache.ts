@@ -422,7 +422,11 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
         getIdbProducts().catch(() => []),
         EcomsellerEngine.getCachedEcomsellerProducts().catch(() => [])
       ]);
-      const base = (idbItems && idbItems.length > 0) ? deduplicateProducts(idbItems) : await fetchStaticCatalog();
+      const base = (idbItems && idbItems.length > 0) ? deduplicateProducts(idbItems) : await fetchSlimCatalog();
+      if (!idbItems || idbItems.length === 0) {
+        // Trigger detailed catalog hydration in background without blocking initial search
+        setTimeout(() => fetchStaticCatalog().catch(() => {}), 1500);
+      }
       const combined = interleaveCatalogs(base, ecomItems || []);
       if (combined && combined.length > 0) {
         inMemoryProductsCache = combined;

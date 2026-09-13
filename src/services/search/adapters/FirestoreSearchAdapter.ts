@@ -738,9 +738,15 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
           let matchedTokensCount = 0;
           for (const token of queryTokens) {
             if (token.length < 2) continue;
-            if (pNameNorm.includes(token)) {
+            const hasExactWord = pWords.includes(token);
+            const hasPrefixWord = pWords.some(w => w.length > token.length && w.startsWith(token) && !(token === "stand" && (w === "standard" || w.startsWith("standard"))));
+
+            if (hasExactWord) {
               matchedTokensCount++;
-              score += 40;
+              score += 50;
+            } else if (hasPrefixWord) {
+              matchedTokensCount += 0.8;
+              score += 35;
             } else if (pCatNorm.includes(token) || pBrandNorm.includes(token)) {
               matchedTokensCount += 0.5;
               score += 25;
@@ -749,10 +755,15 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
             }
           }
 
-          // Massive bonus if ALL query tokens appear in the product title (e.g. "magic flip n cook", "casual shirt")
+          // Massive bonus if ALL query tokens appear in the product title (e.g. "laptop stand", "casual shirt")
           if (queryTokens.length > 1 && matchedTokensCount >= queryTokens.length) {
-            score += 100;
+            score += 200;
             if (matchType !== "exact") matchType = "exact";
+          } else if (queryTokens.length > 1 && matchedTokensCount < queryTokens.length) {
+            const matchRatio = matchedTokensCount / queryTokens.length;
+            if (matchRatio < 0.6) {
+              score = Math.floor(score * 0.2);
+            }
           } else if (matchedTokensCount > 0) {
             score += Math.floor(matchedTokensCount * 20);
           }
@@ -892,6 +903,10 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
         if (sortBy === "price_desc") return b.price - a.price;
         if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0);
         if (sortBy === "newest") {
+          if (queryNorm) {
+            const scoreDiff = b.score - a.score;
+            if (Math.abs(scoreDiff) > 80) return scoreDiff;
+          }
           const idA = parseInt(a.id) || 0;
           const idB = parseInt(b.id) || 0;
           if (idA && idB) return idB - idA;

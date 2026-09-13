@@ -43,7 +43,9 @@ async function searchLocalProducts(params: SearchParams): Promise<CombinedProduc
       brand: params.brand,
       minPrice: params.minPrice,
       maxPrice: params.maxPrice,
-      sortBy: (params.sort === "price-low" || params.sort === "price_asc"
+      sortBy: (params.sort === "relevance"
+        ? "relevance"
+        : params.sort === "price-low" || params.sort === "price_asc"
         ? "price_asc"
         : params.sort === "price-high" || params.sort === "price_desc"
         ? "price_desc"
@@ -53,7 +55,7 @@ async function searchLocalProducts(params: SearchParams): Promise<CombinedProduc
         ? "newest"
         : params.sort === "trending" || params.sort === "popular" || params.sort === "popularity"
         ? "popularity"
-        : "relevance") as any,
+        : params.search ? "relevance" : "newest") as any,
       page: params.page || 1,
       limit: 1000
     };
@@ -79,8 +81,8 @@ async function searchLocalProducts(params: SearchParams): Promise<CombinedProduc
       supplier_name: (p as any).supplier_name || (p as any).seller_name
     }));
 
-    // Fallback: If search adapter returned empty, directly fetch and filter from master supplier catalogs
-    if (mapped.length === 0) {
+    // Fallback: If browsing without a search query and search adapter returned empty, directly fetch and filter from master supplier catalogs
+    if (mapped.length === 0 && !params.search) {
       const { getCachedMohasagorProducts, filterProductsByCategory, interleaveCatalogs } = await import("@/utils/mohasagorCache");
       const { EcomsellerEngine } = await import("@/services/suppliers/ecomsellerEngine");
       
