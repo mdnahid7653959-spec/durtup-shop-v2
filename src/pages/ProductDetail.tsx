@@ -1312,15 +1312,15 @@ export default function ProductDetail() {
 
       <main className="flex-1 pb-40 md:pb-8 w-full max-w-full overflow-hidden">
         <div className="container py-3 sm:py-6 w-full max-w-full">
-          <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 w-full max-w-full min-w-0">
+          <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 xl:gap-12 w-full max-w-full min-w-0 items-start">
             {/* Product Images Section */}
-            <div className="w-full max-w-full min-w-0">
-              {/* Main Image with clean, compact, HD presentation */}
-              <div className="flex justify-center mb-3 w-full max-w-full">
-                <div className="relative w-full max-w-[270px] xs:max-w-[290px] sm:max-w-[340px] md:max-w-[380px] lg:max-w-[420px] mx-auto">
+            <div className="w-full max-w-full min-w-0 lg:sticky lg:top-24">
+              {/* Main Image with clean, perfect-fit presentation */}
+              <div className="flex justify-center mb-3 sm:mb-4 w-full max-w-full">
+                <div className="relative w-full max-w-[340px] xs:max-w-[380px] sm:max-w-[440px] md:max-w-[480px] lg:max-w-[520px] xl:max-w-[560px]">
                   <div
                     ref={imageContainerRef}
-                    className="relative aspect-square w-full max-h-[270px] xs:max-h-[290px] sm:max-h-[340px] md:max-h-[380px] lg:max-h-[420px] rounded-2xl overflow-hidden bg-white dark:bg-card border border-border/80 shadow-md cursor-zoom-in group flex items-center justify-center p-2 sm:p-3"
+                    className="relative aspect-square w-full rounded-2xl overflow-hidden bg-white dark:bg-card border border-border/80 shadow-sm cursor-zoom-in group flex items-center justify-center p-2.5 sm:p-4 lg:p-5"
                     onClick={() => !showVideo && setLightboxOpen(true)}
                     onMouseMove={(e) => {
                       if (showVideo) return;
@@ -1471,9 +1471,9 @@ export default function ProductDetail() {
                 </div>
               </div>
 
-              {/* Thumbnail strip - compact, HD, neat */}
+              {/* Thumbnail strip - perfectly aligned under the image */}
               {((product as any)?.video_url ? images.length + 1 : images.length) > 1 && (
-                <div className="flex gap-1.5 sm:gap-2 justify-center items-center overflow-x-auto py-1.5 px-1 scrollbar-hide w-full max-w-[320px] xs:max-w-[360px] sm:max-w-[420px] mx-auto">
+                <div className="flex gap-2 sm:gap-2.5 justify-center overflow-x-auto py-2 px-1 scrollbar-hide w-full max-w-[340px] xs:max-w-[380px] sm:max-w-[440px] md:max-w-[480px] lg:max-w-[520px] xl:max-w-[560px] mx-auto">
                   {images.map((img, i) => (
                     <button
                       key={i}
@@ -1481,10 +1481,10 @@ export default function ProductDetail() {
                         setSelectedImage(i);
                         setShowVideo(false);
                       }}
-                      className={`w-11 h-11 xs:w-12 xs:h-12 sm:w-13 sm:h-13 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-white dark:bg-card p-0.5 hover:scale-105 ${
+                      className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-white dark:bg-card p-1 hover:scale-105 ${
                         selectedImage === i && !showVideo
                           ? 'border-orange-500 ring-2 ring-orange-500/30 shadow-md scale-105'
-                          : 'border-border/60 hover:border-orange-500/50 opacity-80 hover:opacity-100'
+                          : 'border-border/70 hover:border-orange-500/50 opacity-80 hover:opacity-100'
                       }`}
                     >
                       <img
@@ -1500,12 +1500,12 @@ export default function ProductDetail() {
                   {product.video_url && (
                     <button
                       onClick={() => setShowVideo(true)}
-                      className={`w-11 h-11 xs:w-12 xs:h-12 sm:w-13 sm:h-13 rounded-xl overflow-hidden border-2 transition-all flex items-center justify-center bg-muted flex-shrink-0 relative hover:scale-105 ${
-                        showVideo ? 'border-orange-500 ring-2 ring-orange-500/30 shadow-md scale-105' : 'border-border/60 hover:border-orange-500/50 opacity-80 hover:opacity-100'
+                      className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl overflow-hidden border-2 transition-all flex items-center justify-center bg-muted flex-shrink-0 relative hover:scale-105 ${
+                        showVideo ? 'border-orange-500 ring-2 ring-orange-500/30 shadow-md scale-105' : 'border-border/70 hover:border-orange-500/50 opacity-80 hover:opacity-100'
                       }`}
                     >
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-                        <Play className="h-4 w-4 sm:h-5 sm:w-5 text-white fill-white" />
+                        <Play className="h-4 w-4 sm:h-6 sm:w-6 text-white fill-white" />
                       </div>
                       {getYouTubeEmbedUrl(product.video_url) ? (
                         <img
@@ -1698,18 +1698,40 @@ export default function ProductDetail() {
 
 
                 {/* Product Action Buttons (Desktop Only - Mobile uses sticky bottom bar) */}
-                <div className="hidden md:flex gap-2 sm:gap-3 w-full">
-                  <Button size="lg" variant="outline" className="flex-1 h-12 sm:h-14 text-sm sm:text-base md:text-lg border-2 border-primary/30 hover:border-primary hover:bg-primary/5 rounded-xl font-bold" onClick={handleAddToCart} disabled={addingToCart}>
-                    {addingToCart ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <ShoppingCart className="h-5 w-5 mr-2" />}
+                <div className="hidden md:flex items-center gap-3 w-full max-w-full">
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="flex-1 h-12 sm:h-14 text-sm sm:text-base font-bold border-2 border-primary/30 hover:border-primary hover:bg-primary/5 rounded-2xl shadow-xs transition-all active:scale-[0.98]" 
+                    onClick={handleAddToCart} 
+                    disabled={addingToCart}
+                  >
+                    {addingToCart ? <Loader2 className="h-5 w-5 mr-2 animate-spin shrink-0" /> : <ShoppingCart className="h-5 w-5 mr-2 shrink-0" />}
                     Add to Cart
                   </Button>
-                  <Button size="lg" className="flex-1 h-12 sm:h-14 text-sm sm:text-base md:text-lg font-bold" onClick={handleBuyNow} disabled={buyingNow}>
-                    {buyingNow ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Zap className="h-5 w-5 mr-2" />}
+                  <Button 
+                    size="lg" 
+                    className="flex-1 h-12 sm:h-14 text-sm sm:text-base font-bold bg-orange-600 hover:bg-orange-500 text-white rounded-2xl shadow-md shadow-orange-600/25 transition-all active:scale-[0.98]" 
+                    onClick={handleBuyNow} 
+                    disabled={buyingNow}
+                  >
+                    {buyingNow ? <Loader2 className="h-5 w-5 mr-2 animate-spin shrink-0" /> : <Zap className="h-5 w-5 mr-2 shrink-0" />}
                     Buy Now
                   </Button>
-                  <Button size="lg" variant={inWishlist ? "default" : "outline"} className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl shrink-0" onClick={handleWishlistToggle} aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}>
-                    <Heart className={`h-5 w-5 sm:h-6 sm:w-6 ${inWishlist ? "fill-current" : ""}`} />
-                  </Button>
+                  <button
+                    type="button"
+                    onClick={handleWishlistToggle}
+                    className={cn(
+                      "h-12 w-12 sm:h-14 sm:w-14 rounded-2xl border-2 shrink-0 flex items-center justify-center transition-all duration-200 shadow-xs active:scale-95 cursor-pointer",
+                      inWishlist
+                        ? "bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-600 shadow-rose-500/20"
+                        : "bg-card border-border hover:border-rose-400 hover:text-rose-600 text-muted-foreground hover:bg-rose-50/40 dark:hover:bg-rose-950/20"
+                    )}
+                    aria-label={inWishlist ? "Wishlist থেকে সরান" : "Wishlist-এ যোগ করুন"}
+                    title={inWishlist ? "Wishlist থেকে সরান" : "Wishlist-এ যোগ করুন"}
+                  >
+                    <Heart className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-transform duration-200", inWishlist ? "fill-current text-rose-600 scale-110" : "hover:scale-110")} />
+                  </button>
                 </div>
               </div>
 
