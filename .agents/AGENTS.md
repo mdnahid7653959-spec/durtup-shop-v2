@@ -1,3 +1,3 @@
 # Project Specific Rules
 
-- **Git Push Policy**: Do NOT run `git push` automatically. Only commit and push when the user explicitly instructs to do so.
+- **Git Push Policy**: Automatically commit and push to GitHub whenever updates or bug fixes are completed so changes go live immediately.
