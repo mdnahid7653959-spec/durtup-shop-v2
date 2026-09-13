@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback,
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { findMohasagorProductSync } from "@/utils/mohasagorCache";
 import { supabase } from "@/lib/firebaseAdapter";
 import { getSmartProductImage } from "@/utils/productImageHelper";
