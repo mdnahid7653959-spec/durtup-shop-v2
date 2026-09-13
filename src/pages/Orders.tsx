@@ -23,6 +23,7 @@ import { Footer } from "@/components/layout/Footer";
 import { supabase } from "@/lib/firebaseAdapter";
 import { db } from "@/integrations/firebase/client";
 import { collection, getDocs, onSnapshot, doc, deleteDoc } from "firebase/firestore";
+import { isMockOrder, purgeMockOrdersFromStorage } from "@/utils/orderValidation";
 
 interface Order {
   id: string;
@@ -146,7 +147,7 @@ export default function Orders() {
             if (data.status) existing.status = status;
             if (data.payment_status) existing.payment_status = paymentStatus;
             if (total > 0) existing.total = total;
-          } else if (isUserMatch && total > 0) {
+          } else if (isUserMatch && total > 0 && !isMockOrder(data) && !isMockOrder({ id: pid, ...data })) {
             // Only add new entry if user strictly matches and total > 0 (prevents 0-taka ghost duplicates)
             orderMap.set(orderNum || pid, {
               id: pid,
@@ -164,12 +165,13 @@ export default function Orders() {
     }
 
     // 3. Merge latest statuses from LocalStorage (enterprise_admin_orders & local_orders)
+    purgeMockOrdersFromStorage();
     try {
       const adminOrdersRaw = localStorage.getItem("enterprise_admin_orders") || localStorage.getItem("local_orders");
       if (adminOrdersRaw) {
         const adminOrders = JSON.parse(adminOrdersRaw);
         if (Array.isArray(adminOrders)) {
-          adminOrders.forEach((ao: any) => {
+          adminOrders.filter((ao: any) => !isMockOrder(ao)).forEach((ao: any) => {
             for (const [k, v] of orderMap.entries()) {
               if (v.id === ao.id || v.order_number === ao.order_number || v.order_number === ao.id || k === ao.id || k === ao.order_number) {
                 if (ao.status) v.status = ao.status.toLowerCase();
@@ -186,7 +188,7 @@ export default function Orders() {
 
     // 4. Filter out any zero-taka ghost duplicates and sort by date
     const list = Array.from(orderMap.values())
-      .filter((o) => o.total > 0 || o.id)
+      .filter((o) => (o.total > 0 || o.id) && !isMockOrder(o))
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     setOrders(list);

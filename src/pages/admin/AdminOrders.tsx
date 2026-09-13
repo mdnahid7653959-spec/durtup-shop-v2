@@ -30,6 +30,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { SupplierManager } from "@/services/suppliers/supplierManager";
 import { SupplierFulfillmentGroup } from "@/services/suppliers/supplierTypes";
 import { EcomsellerEngine } from "@/services/suppliers/ecomsellerEngine";
+import { isMockOrder, purgeMockOrdersFromStorage } from "@/utils/orderValidation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -178,6 +179,9 @@ export default function AdminOrders() {
   const [shippingLabelOpen, setShippingLabelOpen] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
 
+  // Bulk selection state
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+
   // Ecomseller BD & Multi-Supplier Fulfillment State
   const [ecomsellerModalOpen, setEcomsellerModalOpen] = useState(false);
   const [selectedFulfillmentGroup, setSelectedFulfillmentGroup] = useState<SupplierFulfillmentGroup | null>(null);
@@ -211,33 +215,8 @@ export default function AdminOrders() {
       console.warn("Profiles map fetch error:", e);
     }
 
-    const isMockOrder = (o: any) => {
-      if (!o) return true;
-      const num = (o.order_number || o.orderNumber || o.id || "").toString();
-      const name = (o.shipping_address?.full_name || o.shipping_address?.name || o.customer_name || "").toString();
-      const phone = (o.shipping_address?.phone || o.customer_phone || "").toString();
-      if (num === "ORD-2026-1001" || num === "ORD-2026-1002" || o.id === "ord-1001" || o.id === "ord-1002") {
-        return true;
-      }
-      if ((name.includes("Rahim Ahmed") && phone.includes("01711223344")) || (name.includes("Fatema Tuz Zohra") && phone.includes("01899887766"))) {
-        return true;
-      }
-      return false;
-    };
-
     // Purge mock orders from local caches if present
-    try {
-      ["enterprise_admin_orders", "local_orders"].forEach((key) => {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          const list = JSON.parse(raw);
-          if (Array.isArray(list)) {
-            const cleaned = list.filter((item: any) => !isMockOrder(item));
-            localStorage.setItem(key, JSON.stringify(cleaned));
-          }
-        }
-      });
-    } catch {}
+    purgeMockOrdersFromStorage();
 
     // 1. Direct DB query first
     try {
@@ -611,6 +590,78 @@ export default function AdminOrders() {
     }
   };
 
+  const toggleSelectAll = () => {
+    if (selectedOrderIds.size === filteredOrders.length && filteredOrders.length > 0) {
+      setSelectedOrderIds(new Set());
+    } else {
+      setSelectedOrderIds(new Set(filteredOrders.map(o => o.id)));
+    }
+  };
+
+  const toggleSelectOrder = (id: string) => {
+    setSelectedOrderIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedOrderIds.size === 0) return;
+    if (!window.confirm(`Are you sure you want to permanently delete ${selectedOrderIds.size} selected order(s)?`)) {
+      return;
+    }
+
+    const toDelete = Array.from(selectedOrderIds);
+    setOrders(prev => prev.filter(o => !selectedOrderIds.has(o.id)));
+    setSelectedOrderIds(new Set());
+
+    for (const id of toDelete) {
+      try {
+        await deleteDoc(doc(db, "orders", id));
+        await supabase.from("orders").delete().eq("id", id);
+      } catch {}
+    }
+
+    try {
+      const removeMatching = (storageKey: string) => {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            const filtered = list.filter((o: any) => !toDelete.includes(o.id) && !toDelete.includes(o.order_number));
+            localStorage.setItem(storageKey, JSON.stringify(filtered));
+          }
+        }
+      };
+      removeMatching("enterprise_admin_orders");
+      removeMatching("local_orders");
+    } catch {}
+
+    toast({ title: "Orders deleted", description: `${toDelete.length} order(s) removed successfully` });
+    invalidateOrders();
+  };
+
+  const handleClearAllTestOrders = async () => {
+    if (!window.confirm("Are you sure you want to clear all fake/test orders? This will immediately purge test orders from the database and cache.")) {
+      return;
+    }
+
+    try {
+      localStorage.removeItem("enterprise_admin_orders");
+      localStorage.removeItem("local_orders");
+      purgeMockOrdersFromStorage();
+      setOrders(prev => prev.filter(o => !isMockOrder(o)));
+      setSelectedOrderIds(new Set());
+      toast({ title: "Fake Orders Cleared", description: "All test orders have been purged successfully" });
+      invalidateOrders();
+      await fetchOrders();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message || "Failed to clear fake orders" });
+    }
+  };
+
   const handleSaveCourierTracking = async () => {
     if (!selectedOrder) return;
     setSavingCourier(true);
@@ -894,6 +945,27 @@ export default function AdminOrders() {
             <p className="text-muted-foreground">Manage customer orders, status timelines, dynamic invoices & courier shipping</p>
           </div>
           <div className="flex items-center gap-2.5 flex-wrap">
+            {selectedOrderIds.size > 0 && (
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={handleDeleteSelected}
+                className="font-semibold shadow-sm flex items-center gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Selected ({selectedOrderIds.size})
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleClearAllTestOrders}
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:hover:bg-red-950/50 flex items-center gap-1.5 font-medium"
+              title="Purge all fake & test orders from the database and cache"
+            >
+              <Trash2 className="h-4 w-4" />
+              Clear Fake Orders
+            </Button>
             <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
               <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
               Sync Orders
@@ -983,6 +1055,15 @@ export default function AdminOrders() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <input
+                    type="checkbox"
+                    checked={filteredOrders.length > 0 && selectedOrderIds.size === filteredOrders.length}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer accent-primary"
+                    aria-label="Select all orders"
+                  />
+                </TableHead>
                 <TableHead>Order</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Date</TableHead>
@@ -995,7 +1076,7 @@ export default function AdminOrders() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <div className="flex items-center justify-center gap-2">
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                       Loading orders...
@@ -1004,7 +1085,7 @@ export default function AdminOrders() {
                 </TableRow>
               ) : filteredOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No orders found
                   </TableCell>
                 </TableRow>
@@ -1014,6 +1095,16 @@ export default function AdminOrders() {
                   const searchTarget = cust.phone || cust.email || (cust.user_id && cust.user_id !== "guest" ? cust.user_id : "") || cust.name;
                   return (
                     <TableRow key={order.id} className="hover:bg-muted/40 transition-colors">
+                      <TableCell className="w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedOrderIds.has(order.id)}
+                          onChange={() => toggleSelectOrder(order.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer accent-primary"
+                          aria-label={`Select order ${order.order_number}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium font-mono text-foreground">#{order.order_number}</p>

@@ -23,6 +23,7 @@ import { useAdminCacheInvalidation } from "@/hooks/useRealtimeSync";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow, format } from "date-fns";
 import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+import { isMockOrder } from "@/utils/orderValidation";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
@@ -235,17 +236,19 @@ export default function AdminDashboard() {
         const oSnap = await getDocs(collection(db, "orders"));
         oSnap.forEach((d) => {
           const data = d.data();
-          allOrders.push({
-            id: d.id,
-            order_number: data.order_number || data.orderNumber || d.id,
-            total: Number(data.total || 0),
-            subtotal: Number(data.subtotal || data.total || 0),
-            discount_amount: Number(data.discount_amount || data.discount || 0),
-            shipping_cost: Number(data.shipping_cost || 0),
-            status: data.status || "pending",
-            created_at: data.created_at || data.createdAt || new Date().toISOString(),
-            items: data.items || [],
-          });
+          if (!isMockOrder(data) && !isMockOrder({ id: d.id, ...data })) {
+            allOrders.push({
+              id: d.id,
+              order_number: data.order_number || data.orderNumber || d.id,
+              total: Number(data.total || 0),
+              subtotal: Number(data.subtotal || data.total || 0),
+              discount_amount: Number(data.discount_amount || data.discount || 0),
+              shipping_cost: Number(data.shipping_cost || 0),
+              status: data.status || "pending",
+              created_at: data.created_at || data.createdAt || new Date().toISOString(),
+              items: data.items || [],
+            });
+          }
         });
       } catch (e) {
         console.warn("Firestore orders fetch in dashboard:", e);
@@ -256,17 +259,19 @@ export default function AdminDashboard() {
           const { data: dbOrders } = await supabase.from("orders").select("*");
           if (dbOrders) {
             dbOrders.forEach((o: any) => {
-              allOrders.push({
-                id: o.id,
-                order_number: o.order_number || o.id,
-                total: Number(o.total || 0),
-                subtotal: Number(o.subtotal || o.total || 0),
-                discount_amount: Number(o.discount_amount || 0),
-                shipping_cost: Number(o.shipping_cost || 0),
-                status: o.status || "pending",
-                created_at: o.created_at || new Date().toISOString(),
-                items: [],
-              });
+              if (!isMockOrder(o)) {
+                allOrders.push({
+                  id: o.id,
+                  order_number: o.order_number || o.id,
+                  total: Number(o.total || 0),
+                  subtotal: Number(o.subtotal || o.total || 0),
+                  discount_amount: Number(o.discount_amount || 0),
+                  shipping_cost: Number(o.shipping_cost || 0),
+                  status: o.status || "pending",
+                  created_at: o.created_at || new Date().toISOString(),
+                  items: [],
+                });
+              }
             });
           }
         } catch (e) {}
