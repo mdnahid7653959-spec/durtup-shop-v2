@@ -169,9 +169,6 @@ export default function Cart() {
                             e.stopPropagation();
                             removeItem(item.id || item.product_id);
                           }}
-                          onTouchEnd={(e) => {
-                            e.stopPropagation();
-                          }}
                           className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors touch-manipulation active:scale-90"
                           title="Remove item"
                           aria-label="Remove item"

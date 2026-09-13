@@ -163,6 +163,31 @@ function InlineStoreBar({ sellerId, onContactSeller, contactingSeller }: {
   );
 }
 
+// Helper to extract clean deduplication key from image URL
+// (handles proxy wrappers like wsrv.nl, CDN signed tokens, and query strings)
+export const extractImageDedupeKey = (url: string): string => {
+  if (!url || typeof url !== "string") return "";
+  try {
+    let target = url.trim();
+    if (target.includes("wsrv.nl/?url=") || target.includes("wsrv.nl?url=")) {
+      const match = target.match(/[?&]url=([^&]+)/);
+      if (match) {
+        target = decodeURIComponent(match[1]);
+      }
+    }
+    const clean = decodeURIComponent(target).split("?")[0].split("#")[0].trim();
+    const parts = clean.split("/").filter(Boolean);
+    if (parts.length >= 2) {
+      return parts.slice(-2).join("/").toLowerCase();
+    } else if (parts.length === 1) {
+      return parts[0].toLowerCase();
+    }
+    return clean.toLowerCase();
+  } catch {
+    return url.toLowerCase().split("?")[0];
+  }
+};
+
 // Helper to map images from Mohasagor API
 const mapSupplierImages = (raw: any): ProductImage[] => {
   const product_images: ProductImage[] = [];
@@ -184,8 +209,7 @@ const mapSupplierImages = (raw: any): ProductImage[] => {
     if (!u) return;
 
     // Normalize and extract filename to prevent duplicates with proxy prefixes or query strings
-    const filenameMatch = u.match(/\/([^\/?#]+\.(?:jpg|jpeg|png|webp|gif|svg))/i);
-    const key = filenameMatch ? filenameMatch[1].toLowerCase() : u.toLowerCase().replace(/^https?:\/\//, "").split("?")[0];
+    const key = extractImageDedupeKey(u);
 
     if (!addedKeys.has(key)) {
       addedKeys.add(key);
@@ -402,8 +426,7 @@ export default function ProductDetail() {
   const images: string[] = [];
   for (const u of rawResolved) {
     if (!u) continue;
-    const filenameMatch = u.match(/\/([^\/?#]+\.(?:jpg|jpeg|png|webp|gif|svg))/i);
-    const key = filenameMatch ? filenameMatch[1].toLowerCase() : u.toLowerCase().replace(/^https?:\/\//, "").split("?")[0];
+    const key = extractImageDedupeKey(u);
     if (!seenImgKeys.has(key)) {
       seenImgKeys.add(key);
       images.push(u);
@@ -554,7 +577,7 @@ export default function ProductDetail() {
         try {
           const { EcomsellerEngine } = await import("@/services/suppliers/ecomsellerEngine");
           const ecomProducts = await EcomsellerEngine.getCachedEcomsellerProducts();
-          const foundEcom = ecomProducts.find((p: any) => 
+          let foundEcom = ecomProducts.find((p: any) => 
             p.slug === targetLower || 
             p.id === targetLower || 
             p.id === `ecom-${cleanId}` ||
@@ -564,14 +587,59 @@ export default function ProductDetail() {
             p.sku?.toLowerCase() === `ecom-${cleanId}`
           );
 
+          // If not in cached list, try live detail fetch from Ecomseller API directly
+          if (!foundEcom) {
+            try {
+              const liveDetail = await EcomsellerEngine.fetchProductDetail(targetSlug || cleanId);
+              if (liveDetail && liveDetail.name) {
+                const { CategoryMappingService } = await import("@/services/suppliers/categoryMappingService");
+                const mappedCategory = CategoryMappingService.resolveCategory(liveDetail.categorySlug || "", liveDetail.category || "");
+                const pricingConfig = EcomsellerEngine.getPricingConfig();
+                const priceInfo = EcomsellerEngine.calculatePrice(liveDetail.price, mappedCategory.slug, liveDetail.id, pricingConfig);
+
+                foundEcom = {
+                  id: `ecom-${liveDetail.id}`,
+                  name: liveDetail.name,
+                  slug: liveDetail.slug || targetSlug,
+                  description: liveDetail.description || liveDetail.name,
+                  regular_price: priceInfo.regularStrikethroughPrice,
+                  discount_price: priceInfo.finalSellingPrice,
+                  price: priceInfo.finalSellingPrice,
+                  stock_quantity: liveDetail.stock || 25,
+                  is_featured: false,
+                  category_id: mappedCategory.id,
+                  category: mappedCategory.name,
+                  images: Array.isArray(liveDetail.images) && liveDetail.images.length > 0 ? liveDetail.images : [],
+                  image: Array.isArray(liveDetail.images) && liveDetail.images.length > 0 ? liveDetail.images[0] : "",
+                  supplier_sku: liveDetail.code,
+                  seller_id: "Ecomseller BD"
+                };
+              }
+            } catch (liveErr) {
+              console.warn("Live Ecomseller detail fetch warning:", liveErr);
+            }
+          }
+
           if (foundEcom) {
             let fullDesc = foundEcom.description;
-            if (!fullDesc || fullDesc.length < 50) {
+            let fullImages = Array.isArray(foundEcom.images) && foundEcom.images.length > 0 ? [...foundEcom.images] : [];
+            try {
               const detail = await EcomsellerEngine.fetchProductDetail(foundEcom.slug || targetSlug);
-              if (detail?.description) fullDesc = detail.description;
+              if (detail) {
+                if (detail.description) fullDesc = detail.description;
+                if (Array.isArray(detail.images) && detail.images.length > 0) {
+                  detail.images.forEach((u: string) => {
+                    if (u && !fullImages.includes(u)) fullImages.push(u);
+                  });
+                }
+              }
+            } catch {}
+
+            if (fullImages.length === 0 && foundEcom.image) {
+              fullImages = [foundEcom.image];
             }
 
-            const imgList: ProductImage[] = (foundEcom.images && foundEcom.images.length > 0 ? foundEcom.images : [foundEcom.image]).map((imgUrl: string, idx: number) => ({
+            const imgList: ProductImage[] = fullImages.map((imgUrl: string, idx: number) => ({
               id: `ecom-img-${idx}`,
               image_url: imgUrl,
               is_primary: idx === 0,
@@ -599,7 +667,7 @@ export default function ProductDetail() {
               product_images: imgList,
               product_variants: [],
               category_id: foundEcom.category_id || foundEcom.category || null,
-              seller_id: "Durtup Express"
+              seller_id: "Ecomseller BD"
             };
 
             applyLoadedProduct(formatted);

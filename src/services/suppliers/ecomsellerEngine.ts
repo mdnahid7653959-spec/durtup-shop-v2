@@ -241,6 +241,12 @@ export class EcomsellerEngine {
         brand: "Generic",
         image: p.image || (Array.isArray(p.images) && p.images[0]) || "",
         images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : []),
+        product_images: (Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : [])).map((imgUrl: string, idx: number) => ({
+          id: `ecom-img-${idx}`,
+          image_url: imgUrl,
+          is_primary: idx === 0,
+          sort_order: idx
+        })),
         is_featured: Boolean(p.featured),
         rating: 4.8,
         reviews: 15 + (seedNum % 30),

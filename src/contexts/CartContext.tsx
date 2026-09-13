@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "@/integrations/firebase/client";
+import { auth, db } from "@/integrations/firebase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { findMohasagorProductSync } from "@/utils/mohasagorCache";
@@ -69,92 +69,101 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
+  const syncCartToFirebase = useCallback(async (newItems: CartItem[]) => {
+    setLocalCart(newItems);
+    const currentUserId = auth.currentUser?.uid || (user as any)?.uid || user?.id;
+    if (currentUserId) {
+      try {
+        await setDoc(doc(db, "carts", currentUserId), {
+          items: newItems,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.error("Firestore cart sync error:", e);
+      }
+    }
+  }, [user, setLocalCart]);
+
   const fetchCart = useCallback(async () => {
     try {
       let rawItems: any[] = [];
       const localCart = getLocalCart();
+      const currentUserId = auth.currentUser?.uid || (user as any)?.uid || user?.id;
 
-      if (user) {
-        const userId = (user as any).uid || user.id;
-        const cartRef = doc(db, "carts", userId);
+      if (currentUserId) {
+        const cartRef = doc(db, "carts", currentUserId);
         const cartSnap = await getDoc(cartRef);
-        let firestoreItems: any[] = [];
         if (cartSnap.exists()) {
-          firestoreItems = cartSnap.data().items || [];
+          // Firestore is authoritative when user is logged in
+          rawItems = cartSnap.data().items || [];
+          setLocalCart(rawItems);
+        } else {
+          // First time user signs in: save local guest cart to Firestore once
+          if (Array.isArray(localCart) && localCart.length > 0) {
+            rawItems = localCart;
+            await setDoc(cartRef, { items: localCart, updatedAt: new Date().toISOString() }, { merge: true });
+          } else {
+            rawItems = [];
+            setLocalCart([]);
+          }
         }
-
-        // Merge local guest cart items with firestore cart so items are NEVER lost
-        const merged = [...firestoreItems];
-        if (Array.isArray(localCart) && localCart.length > 0) {
-          localCart.forEach((localItem: any) => {
-            const exists = merged.some(f => 
-              (f.product_id === localItem.product_id || f.id === localItem.id) &&
-              (f.variant_name === localItem.variant_name || f.variant_id === localItem.variant_id)
-            );
-            if (!exists) {
-              merged.push(localItem);
-            }
-          });
-          // Update Firestore with merged cart
-          setDoc(cartRef, { items: merged, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
-        }
-        rawItems = merged.length > 0 ? merged : localCart;
       } else {
         rawItems = localCart;
       }
 
       if (!rawItems || rawItems.length === 0) {
         setItems([]);
+        setLocalCart([]);
         return;
       }
 
       const formatted: CartItem[] = rawItems.map((item: any) => {
         const matched = item.product ? null : findMohasagorProductSync(item.product_id || item.id);
-          const prodData = item.product || (matched ? {
-            id: matched.id,
-            name: matched.name,
-            slug: matched.slug,
-            regular_price: matched.originalPrice || matched.price,
-            discount_price: matched.price,
-            stock_quantity: 50
-          } : {
-            id: item.product_id || item.id || "item",
-            name: item.name || "Product",
-            slug: `product-${item.product_id || item.id}`,
-            regular_price: item.price || 100,
-            discount_price: null,
-            stock_quantity: 50
-          });
-
-          // Resolve variant text
-          let variantName = item.variant_name || null;
-          if (!variantName && item.selected_variants) {
-            variantName = Object.entries(item.selected_variants).map(([k, v]) => `${k}: ${v}`).join(", ");
-          } else if (!variantName && item.variant_id) {
-            try {
-              const parsed = JSON.parse(item.variant_id);
-              if (typeof parsed === "object") {
-                variantName = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(", ");
-              }
-            } catch {}
-          }
-
-          return {
-            id: item.id || `cart-${item.product_id || item.id}`,
-            product_id: item.product_id || item.id,
-            quantity: item.quantity || 1,
-            variant_id: item.variant_id || null,
-            selected_variants: item.selected_variants || null,
-            color: item.color || item.selected_variants?.Color || item.selected_variants?.color || null,
-            size: item.size || item.selected_variants?.Size || item.selected_variants?.size || null,
-            variant_name: variantName,
-            product: prodData,
-            image: item.image || matched?.image || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400"
-          };
+        const prodData = item.product || (matched ? {
+          id: matched.id,
+          name: matched.name,
+          slug: matched.slug,
+          regular_price: matched.originalPrice || matched.price,
+          discount_price: matched.price,
+          stock_quantity: 50
+        } : {
+          id: item.product_id || item.id || "item",
+          name: item.name || "Product",
+          slug: `product-${item.product_id || item.id}`,
+          regular_price: item.price || 100,
+          discount_price: null,
+          stock_quantity: 50
         });
 
-        setItems(formatted);
-        setLocalCart(formatted);
+        // Resolve variant text
+        let variantName = item.variant_name || null;
+        if (!variantName && item.selected_variants) {
+          variantName = Object.entries(item.selected_variants).map(([k, v]) => `${k}: ${v}`).join(", ");
+        } else if (!variantName && item.variant_id) {
+          try {
+            const parsed = JSON.parse(item.variant_id);
+            if (typeof parsed === "object") {
+              variantName = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(", ");
+            }
+          } catch {}
+        }
+
+        return {
+          id: item.id || `cart-${item.product_id || item.id}`,
+          product_id: item.product_id || item.id,
+          quantity: item.quantity || 1,
+          variant_id: item.variant_id || null,
+          selected_variants: item.selected_variants || null,
+          color: item.color || item.selected_variants?.Color || item.selected_variants?.color || null,
+          size: item.size || item.selected_variants?.Size || item.selected_variants?.size || null,
+          variant_name: variantName,
+          product: prodData,
+          image: item.image || matched?.image || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400"
+        };
+      });
+
+      setItems(formatted);
+      setLocalCart(formatted);
     } catch (err) {
       console.error("Failed to load cart:", err);
     } finally {
@@ -165,21 +174,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchCart();
   }, [fetchCart]);
-
-  const syncCartToFirebase = async (newItems: CartItem[]) => {
-    setLocalCart(newItems);
-    if (user) {
-      const userId = (user as any).uid || user.id;
-      try {
-        await setDoc(doc(db, "carts", userId), {
-          items: newItems,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      } catch (e) {
-        console.error("Firestore cart sync error:", e);
-      }
-    }
-  };
 
   const addToCart = useCallback(async (productOrId: any, quantity: number = 1, variants?: Record<string, string>) => {
     const isObject = typeof productOrId === "object" && productOrId !== null;
@@ -195,12 +189,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const color = variants?.Color || variants?.color || (isObject ? productOrId.color : null);
     const size = variants?.Size || variants?.size || (isObject ? productOrId.size : null);
 
+    let updated: CartItem[] = [];
     setItems((prev) => {
       const existingIdx = prev.findIndex(item => 
         (item.product_id === productId || item.id === productId) && 
         (JSON.stringify(item.selected_variants || {}) === JSON.stringify(variants || {}) || item.variant_name === variantName)
       );
-      let updated: CartItem[];
 
       if (existingIdx > -1) {
         updated = prev.map((item, idx) => 
@@ -235,37 +229,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
         };
         updated = [...prev, newItem];
       }
-
-      syncCartToFirebase(updated);
       return updated;
     });
+
+    await syncCartToFirebase(updated);
 
     toast({
       title: "Added to cart!",
       description: variantName ? `Selected: ${variantName}` : "Item has been added to your shopping cart."
     });
-  }, [user, toast]);
-
-  const updateQuantity = useCallback(async (itemId: string, quantity: number) => {
-    if (quantity <= 0) {
-      await removeItem(itemId);
-      return;
-    }
-
-    setItems((prev) => {
-      const updated = prev.map(item => (item.id === itemId || item.product_id === itemId) ? { ...item, quantity } : item);
-      syncCartToFirebase(updated);
-      return updated;
-    });
-  }, []);
+  }, [syncCartToFirebase, toast]);
 
   const removeItem = useCallback(async (targetId: string) => {
     if (!targetId) return;
     const targetStr = String(targetId).toLowerCase().trim();
     const cleanTarget = targetStr.replace(/^cart-/, "").replace(/^product-/, "");
 
+    let updated: CartItem[] = [];
     setItems((prev) => {
-      const updated = prev.filter((item) => {
+      updated = prev.filter((item) => {
         const id = String(item.id || "").toLowerCase().trim();
         const pId = String(item.product_id || "").toLowerCase().trim();
         const prodId = String(item.product?.id || "").toLowerCase().trim();
@@ -283,21 +265,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         return !isMatch;
       });
-
-      syncCartToFirebase(updated);
       return updated;
     });
+
+    await syncCartToFirebase(updated);
 
     toast({
       title: "Item removed",
       description: "Item removed from your cart."
     });
-  }, [toast]);
+  }, [syncCartToFirebase, toast]);
+
+  const updateQuantity = useCallback(async (itemId: string, quantity: number) => {
+    if (quantity <= 0) {
+      await removeItem(itemId);
+      return;
+    }
+
+    let updated: CartItem[] = [];
+    setItems((prev) => {
+      updated = prev.map(item => (item.id === itemId || item.product_id === itemId) ? { ...item, quantity } : item);
+      return updated;
+    });
+    await syncCartToFirebase(updated);
+  }, [removeItem, syncCartToFirebase]);
 
   const clearCart = useCallback(async () => {
     setItems([]);
-    syncCartToFirebase([]);
-  }, []);
+    await syncCartToFirebase([]);
+  }, [syncCartToFirebase]);
 
   const itemCount = useMemo(() => {
     return items.reduce((acc, item) => acc + item.quantity, 0);

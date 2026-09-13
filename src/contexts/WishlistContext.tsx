@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "@/integrations/firebase/client";
+import { auth, db } from "@/integrations/firebase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { findMohasagorProductSync } from "@/utils/mohasagorCache";
@@ -136,19 +136,45 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(wishlist));
   }, []);
 
+  const syncWishlistToFirebase = useCallback(async (newItems: WishlistItem[]) => {
+    const rawIds = newItems.map(i => i.product_id);
+    setLocalWishlist(rawIds);
+    const currentUserId = auth.currentUser?.uid || (user as any)?.uid || user?.id;
+    if (currentUserId) {
+      try {
+        await setDoc(doc(db, "wishlists", currentUserId), {
+          items: newItems,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.error("Wishlist Firestore sync error:", e);
+      }
+    }
+  }, [user, setLocalWishlist]);
+
   const fetchWishlist = useCallback(async () => {
     setLoading(true);
     try {
       let rawItems: any[] = [];
+      const currentUserId = auth.currentUser?.uid || (user as any)?.uid || user?.id;
 
-      if (user) {
+      if (currentUserId) {
         try {
-          const ref = doc(db, "wishlists", user.uid);
+          const ref = doc(db, "wishlists", currentUserId);
           const snap = await getDoc(ref);
           if (snap.exists()) {
             rawItems = snap.data().items || [];
+            // Keep local storage in sync with Firestore
+            setLocalWishlist(rawItems.map((i: any) => typeof i === 'string' ? i : (i.product_id || i.id)));
           } else {
-            rawItems = getLocalWishlist();
+            const localWishlist = getLocalWishlist();
+            if (Array.isArray(localWishlist) && localWishlist.length > 0) {
+              rawItems = localWishlist;
+              await setDoc(ref, { items: localWishlist, updatedAt: new Date().toISOString() }, { merge: true });
+            } else {
+              rawItems = [];
+              setLocalWishlist([]);
+            }
           }
         } catch {
           rawItems = getLocalWishlist();
@@ -159,6 +185,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
       if (!rawItems || rawItems.length === 0) {
         setItems([]);
+        setLocalWishlist([]);
         setLoading(false);
         return;
       }
@@ -184,31 +211,17 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       );
 
       setItems(formatted);
+      setLocalWishlist(formatted.map(i => i.product_id));
     } catch (err) {
       console.error("Failed to fetch wishlist:", err);
     } finally {
       setLoading(false);
     }
-  }, [user, getLocalWishlist]);
+  }, [user, getLocalWishlist, setLocalWishlist]);
 
   useEffect(() => {
     fetchWishlist();
   }, [fetchWishlist]);
-
-  const syncWishlistToFirebase = async (newItems: WishlistItem[]) => {
-    const rawIds = newItems.map(i => i.product_id);
-    setLocalWishlist(rawIds);
-    if (user) {
-      try {
-        await setDoc(doc(db, "wishlists", user.uid), {
-          items: newItems,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      } catch (e) {
-        console.error("Wishlist Firestore sync error:", e);
-      }
-    }
-  };
 
   const isInWishlist = useCallback((productId: string) => {
     if (!productId) return false;
@@ -240,38 +253,42 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       image: info.image,
     };
 
+    let updated: WishlistItem[] = [];
     setItems(prev => {
-      const updated = [...prev, newItem];
-      syncWishlistToFirebase(updated);
+      updated = [...prev, newItem];
       return updated;
     });
+
+    await syncWishlistToFirebase(updated);
 
     toast({
       title: "Added to wishlist",
       description: "Item saved to your wishlist."
     });
-  }, [isInWishlist, toast]);
+  }, [isInWishlist, syncWishlistToFirebase, toast]);
 
   const removeFromWishlist = useCallback(async (productId: string) => {
     if (!productId) return;
     const target = String(productId).replace(/^wish-/, "").replace(/^product-/, "").toLowerCase().trim();
 
+    let updated: WishlistItem[] = [];
     setItems(prev => {
-      const updated = prev.filter(item => {
+      updated = prev.filter(item => {
         const pid = String(item.product_id || "").replace(/^wish-/, "").replace(/^product-/, "").toLowerCase().trim();
         const id = String(item.id || "").replace(/^wish-/, "").replace(/^product-/, "").toLowerCase().trim();
         const prodId = String(item.product?.id || "").replace(/^wish-/, "").replace(/^product-/, "").toLowerCase().trim();
         return pid !== target && id !== target && prodId !== target;
       });
-      syncWishlistToFirebase(updated);
       return updated;
     });
+
+    await syncWishlistToFirebase(updated);
 
     toast({
       title: "Removed from wishlist",
       description: "Item removed from your wishlist."
     });
-  }, [toast]);
+  }, [syncWishlistToFirebase, toast]);
 
   const toggleWishlist = useCallback(async (productId: string) => {
     if (isInWishlist(productId)) {
