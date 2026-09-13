@@ -79,8 +79,13 @@ const GENERIC_GADGET_FALLBACKS = [
  */
 export function optimizeImageUrl(url?: string, width: number = 1000, quality: number = 88): string {
   if (!url || typeof url !== "string") return "";
-  const trimmed = url.trim();
+  let trimmed = url.trim();
   if (!trimmed) return "";
+
+  // Upgrade known low-res 225px supplier thumbnail to crystal-clear HD studio image
+  if (trimmed.includes("f985ea3b-c93c-46a3-9b7e-42fab826c073")) {
+    trimmed = trimmed.replace("f985ea3b-c93c-46a3-9b7e-42fab826c073", "3c162314-d0fa-4080-b66c-301aaa1f2706");
+  }
 
   if (trimmed.startsWith("data:") || trimmed.startsWith("blob:") || trimmed.includes(".svg")) {
     return trimmed;

@@ -195,7 +195,10 @@ const mapSupplierImages = (raw: any): ProductImage[] => {
   
   const resolveUrl = (url: any): string => {
     if (!url || typeof url !== "string") return "";
-    const trimmed = url.trim();
+    let trimmed = url.trim();
+    if (trimmed.includes("f985ea3b-c93c-46a3-9b7e-42fab826c073")) {
+      trimmed = trimmed.replace("f985ea3b-c93c-46a3-9b7e-42fab826c073", "3c162314-d0fa-4080-b66c-301aaa1f2706");
+    }
     if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
       return trimmed;
     }
@@ -381,8 +384,11 @@ export default function ProductDetail() {
     if (!img) return getSmartProductImage(product?.name || "", "", product?.category_id || "");
     const url = typeof img === "string" ? img : img.image_url || img.url || img.product_image;
     if (!url || typeof url !== "string") return getSmartProductImage(product?.name || "", "", product?.category_id || "");
-    const trimmed = url.trim();
+    let trimmed = url.trim();
     if (!trimmed) return getSmartProductImage(product?.name || "", "", product?.category_id || "");
+    if (trimmed.includes("f985ea3b-c93c-46a3-9b7e-42fab826c073")) {
+      trimmed = trimmed.replace("f985ea3b-c93c-46a3-9b7e-42fab826c073", "3c162314-d0fa-4080-b66c-301aaa1f2706");
+    }
     let fullUrl = trimmed;
     if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://") && !trimmed.startsWith("data:") && !trimmed.startsWith("blob:")) {
       if (trimmed.startsWith("//")) fullUrl = `https:${trimmed}`;
@@ -1311,16 +1317,16 @@ export default function ProductDetail() {
       <MobileProductTopBar />
 
       <main className="flex-1 pb-40 md:pb-8 w-full max-w-full overflow-hidden">
-        <div className="container py-3 sm:py-6 w-full max-w-full">
-          <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 xl:gap-12 w-full max-w-full min-w-0 items-start">
+        <div className="container px-0 sm:px-4 md:px-6 py-0 sm:py-6 w-full max-w-full">
+          <div className="grid lg:grid-cols-2 gap-4 sm:gap-8 lg:gap-10 xl:gap-12 w-full max-w-full min-w-0 items-start">
             {/* Product Images Section */}
             <div className="w-full max-w-full min-w-0 lg:sticky lg:top-24">
               {/* Main Image with clean, perfect-fit presentation */}
-              <div className="flex justify-center mb-3 sm:mb-4 w-full max-w-full">
-                <div className="relative w-full max-w-[340px] xs:max-w-[380px] sm:max-w-[440px] md:max-w-[480px] lg:max-w-[520px] xl:max-w-[560px]">
+              <div className="flex justify-center mb-2 sm:mb-4 w-full max-w-full">
+                <div className="relative w-full sm:max-w-[480px] md:max-w-[520px] lg:max-w-[540px] xl:max-w-[580px]">
                   <div
                     ref={imageContainerRef}
-                    className="relative aspect-square w-full rounded-2xl overflow-hidden bg-white dark:bg-card border border-border/80 shadow-sm cursor-zoom-in group flex items-center justify-center p-2.5 sm:p-4 lg:p-5"
+                    className="relative aspect-square w-full sm:rounded-2xl overflow-hidden bg-white dark:bg-card border-b sm:border border-border/70 sm:shadow-sm cursor-zoom-in group flex items-center justify-center p-1 sm:p-4"
                     onClick={() => !showVideo && setLightboxOpen(true)}
                     onMouseMove={(e) => {
                       if (showVideo) return;
@@ -1471,9 +1477,9 @@ export default function ProductDetail() {
                 </div>
               </div>
 
-              {/* Thumbnail strip - perfectly aligned under the image */}
+              {/* Thumbnail strip - full-width scroll on mobile, perfectly aligned on desktop */}
               {((product as any)?.video_url ? images.length + 1 : images.length) > 1 && (
-                <div className="flex gap-2 sm:gap-2.5 justify-center overflow-x-auto py-2 px-1 scrollbar-hide w-full max-w-[340px] xs:max-w-[380px] sm:max-w-[440px] md:max-w-[480px] lg:max-w-[520px] xl:max-w-[560px] mx-auto">
+                <div className="flex gap-2 sm:gap-2.5 justify-start sm:justify-center overflow-x-auto py-2.5 px-3 sm:px-1 scrollbar-hide w-full sm:max-w-[480px] md:max-w-[520px] lg:max-w-[540px] xl:max-w-[580px] mx-auto">
                   {images.map((img, i) => (
                     <button
                       key={i}
@@ -1524,7 +1530,7 @@ export default function ProductDetail() {
 
 
             {/* Product Info */}
-            <div className="w-full max-w-full min-w-0 space-y-5 sm:space-y-6">
+            <div className="w-full max-w-full min-w-0 space-y-5 sm:space-y-6 px-4 sm:px-0">
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-3">
                   {product.is_featured && (

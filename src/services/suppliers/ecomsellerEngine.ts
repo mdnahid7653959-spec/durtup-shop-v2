@@ -95,7 +95,7 @@ const CATALOG_SERVER_FN = "2a45d9b79d4ba9547992f1eac18039c2bae0ddf7df7670a8638b3
 const DETAIL_SERVER_FN = "007261ee9d86e87592cfcd5491f56565cca84574c79db98974ab1951a1437f9d";
 const ECOMSELLER_BASE = "https://ecomsellerbd.com";
 
-const CACHE_KEY_CATALOG = "ecomseller_catalog_cache_v2";
+const CACHE_KEY_CATALOG = "ecomseller_catalog_cache_v5";
 const CACHE_KEY_PRICING = "durtup_supplier_pricing_config_v2";
 
 export class EcomsellerEngine {
@@ -216,6 +216,18 @@ export class EcomsellerEngine {
       const sellPrice = priceInfo.finalSellingPrice;
       const hasDiscount = regPrice && regPrice > sellPrice;
 
+      const sanitizeImg = (u: any): string => {
+        if (!u || typeof u !== "string") return "";
+        let trimmed = u.trim();
+        if (trimmed.includes("f985ea3b-c93c-46a3-9b7e-42fab826c073")) {
+          trimmed = trimmed.replace("f985ea3b-c93c-46a3-9b7e-42fab826c073", "3c162314-d0fa-4080-b66c-301aaa1f2706");
+        }
+        return trimmed;
+      };
+
+      const rawImgs = Array.isArray(p.images) && p.images.length > 0 ? p.images.map(sanitizeImg).filter(Boolean) : (p.image ? [sanitizeImg(p.image)] : []);
+      const primaryImg = sanitizeImg(p.image) || rawImgs[0] || "";
+
       return {
         id: `ecom-${p.id}`,
         name: p.name,
@@ -239,9 +251,9 @@ export class EcomsellerEngine {
         category_id: mappedCategory.id,
         category_slug: mappedCategory.slug,
         brand: "Generic",
-        image: p.image || (Array.isArray(p.images) && p.images[0]) || "",
-        images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : []),
-        product_images: (Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : [])).map((imgUrl: string, idx: number) => ({
+        image: primaryImg,
+        images: rawImgs,
+        product_images: rawImgs.map((imgUrl: string, idx: number) => ({
           id: `ecom-img-${idx}`,
           image_url: imgUrl,
           is_primary: idx === 0,
