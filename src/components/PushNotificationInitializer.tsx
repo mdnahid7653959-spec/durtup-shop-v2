@@ -1,24 +1,11 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { db } from '@/integrations/firebase/client';
 import { collection, query, orderBy, limit, onSnapshot, doc, setDoc } from 'firebase/firestore';
-import { sendBrowserNotification, playNewOrderSound } from '@/hooks/useAdminOrderNotifications';
-import { X, ExternalLink, Sparkles } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-
-interface BroadcastPayload {
-  id: string;
-  title: string;
-  message: string;
-  image_url?: string | null;
-  action_url?: string | null;
-}
+import { sendBrowserNotification, playNewOrderSound, unlockAudio } from '@/hooks/useAdminOrderNotifications';
+import { Capacitor } from '@capacitor/core';
 
 export const PushNotificationInitializer: React.FC = () => {
-  const navigate = useNavigate();
-  const [activeBroadcast, setActiveBroadcast] = useState<BroadcastPayload | null>(null);
-  const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // 1. Register Service Worker & Save Device Token to Firestore
+  // 1. Register Service Worker & Save Device Token to Firestore + Auto-request native permission on user gesture
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -59,9 +46,53 @@ export const PushNotificationInitializer: React.FC = () => {
     };
 
     registerDeviceToken();
+
+    // If native Capacitor app, register push notifications channel
+    if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('PushNotifications')) {
+      import('@capacitor/push-notifications').then(({ PushNotifications }) => {
+        PushNotifications.createChannel({
+          id: 'durtup_broadcasts',
+          name: 'Offers & Announcements',
+          description: 'Flash sales, mega offers and order notifications',
+          importance: 4,
+          visibility: 1,
+          sound: 'default',
+          vibration: true
+        }).catch(() => {});
+        PushNotifications.requestPermissions().then((perm) => {
+          if (perm.receive === 'granted') {
+            PushNotifications.register().catch(() => {});
+          }
+        }).catch(() => {});
+      }).catch(() => {});
+    }
+
+    // Auto request notification permission on first user click/touch so real native notifications are allowed
+    const requestNotificationPermissionOnInteraction = () => {
+      unlockAudio();
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().then((perm) => {
+          const deviceId = localStorage.getItem('durtup_device_id');
+          if (deviceId) {
+            setDoc(doc(db, 'push_tokens', deviceId), {
+              permission: perm,
+              updated_at: new Date().toISOString()
+            }, { merge: true }).catch(() => {});
+          }
+        }).catch(() => {});
+      }
+    };
+
+    window.addEventListener('click', requestNotificationPermissionOnInteraction, { once: true, passive: true });
+    window.addEventListener('touchstart', requestNotificationPermissionOnInteraction, { once: true, passive: true });
+
+    return () => {
+      window.removeEventListener('click', requestNotificationPermissionOnInteraction);
+      window.removeEventListener('touchstart', requestNotificationPermissionOnInteraction);
+    };
   }, []);
 
-  // 2. Real-time broadcast notification listener (User phone push notifications sent by Admin)
+  // 2. Real-time broadcast notification listener: delivers real OS / Browser push notifications
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -90,7 +121,7 @@ export const PushNotificationInitializer: React.FC = () => {
               // 🔊 1. Sound & Vibration
               playNewOrderSound();
 
-              // 📱 2. System Notification Shade (Android / Web)
+              // 📱 2. System Notification Shade (Native OS / Android / Web push notification)
               sendBrowserNotification(data.title || '🛍️ Durtup.shop Special Offer!', {
                 body: data.message || 'Check out the latest discounts and deals!',
                 product_image: data.image_url || data.image || '/icon-512.png',
@@ -100,21 +131,7 @@ export const PushNotificationInitializer: React.FC = () => {
                   campaign_id: campaignId
                 }
               });
-
-              // 💬 3. Floating Heads-Up Push Notification Card on Mobile/Screen
-              setActiveBroadcast({
-                id: campaignId,
-                title: data.title || '🛍️ Durtup.shop Special Offer!',
-                message: data.message || 'Check out the latest discounts and deals!',
-                image_url: data.image_url || data.image || null,
-                action_url: data.action_url || data.url || '/'
-              });
-
-              // Auto dismiss floating card after 12 seconds
-              if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-              dismissTimerRef.current = setTimeout(() => {
-                setActiveBroadcast(null);
-              }, 12000);
+              // Note: No in-app floating banner is displayed. Notifications come strictly as original device/system notifications.
             }
           }
         });
@@ -128,81 +145,8 @@ export const PushNotificationInitializer: React.FC = () => {
     }
   }, []);
 
-  const handleBroadcastClick = () => {
-    if (activeBroadcast?.action_url) {
-      const url = activeBroadcast.action_url;
-      setActiveBroadcast(null);
-      if (url.startsWith('http')) {
-        window.open(url, '_blank');
-      } else {
-        navigate(url);
-      }
-    } else {
-      setActiveBroadcast(null);
-    }
-  };
-
-  return (
-    <>
-      {/* 1. Interactive Floating Push Notification Alert (Heads-Up Banner for Phone & Web) */}
-      {activeBroadcast && (
-        <div className="fixed top-3 left-3 right-3 sm:left-auto sm:right-5 sm:w-[420px] z-[9999] animate-in slide-in-from-top-6 duration-300">
-          <div className="bg-card/95 backdrop-blur-md border-2 border-primary/40 rounded-2xl p-3.5 shadow-2xl shadow-primary/20 flex flex-col gap-2.5">
-            <div className="flex items-start gap-3">
-              {activeBroadcast.image_url ? (
-                <img
-                  src={activeBroadcast.image_url}
-                  alt=""
-                  className="w-14 h-14 rounded-xl object-cover border border-primary/20 shadow-sm shrink-0 bg-muted"
-                  onError={(e) => { (e.target as any).style.display = 'none'; }}
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shrink-0 shadow-md">
-                  <Sparkles className="w-6 h-6 animate-pulse" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary uppercase">
-                    🔔 New Offer
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">এখনই</span>
-                </div>
-                <h4 className="text-sm font-bold text-foreground leading-tight line-clamp-1">
-                  {activeBroadcast.title}
-                </h4>
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
-                  {activeBroadcast.message}
-                </p>
-              </div>
-              <button
-                onClick={() => setActiveBroadcast(null)}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted transition-colors cursor-pointer shrink-0"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 pt-1 border-t border-border/40">
-              <button
-                onClick={handleBroadcastClick}
-                className="flex-1 py-2 px-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold rounded-xl shadow-md flex items-center justify-center gap-1.5 active:scale-98 transition-all cursor-pointer"
-              >
-                <span>অফারটি দেখুন (View Deal)</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setActiveBroadcast(null)}
-                className="py-2 px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-colors cursor-pointer"
-              >
-                বাদ দিন
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
+  // No floating banner or in-app popup overlay is rendered on the screen
+  return null;
 };
 
 export default PushNotificationInitializer;

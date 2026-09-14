@@ -127,15 +127,15 @@ export async function sendBrowserNotification(
   }
 
   const img = options?.product_image || (options as any)?.image || "/durtup-logo.png";
-  const targetUrl = (options as any)?.data?.url || "/admin/orders";
+  const targetUrl = (options as any)?.data?.url || (options?.order_id ? "/admin/orders" : "/");
 
   const notificationOpts: NotificationOptions = {
-    body: options?.body || "New order received on Durtup.shop",
+    body: options?.body || (options?.order_id ? "New order received on Durtup.shop" : "New update from Durtup.shop"),
     icon: img,
     badge: "/favicon-32x32.png",
     image: img, // Displays large product preview in Android notification shade
     vibrate: [400, 150, 400, 150, 400, 150, 800],
-    tag: (options as any)?.tag || `durtup-order-${Date.now()}`,
+    tag: (options as any)?.tag || (options?.order_id ? `durtup-order-${Date.now()}` : `durtup-notif-${Date.now()}`),
     requireInteraction: true,
     silent: false,
     data: {
