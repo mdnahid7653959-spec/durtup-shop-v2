@@ -11,12 +11,15 @@ import {
   Share2,
   AlertCircle,
   CheckCircle2,
+  CheckCircle,
   Smartphone,
-  Info
+  Info,
+  Copy,
+  Check
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { db } from "@/integrations/firebase/client";
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -69,8 +72,131 @@ export default function Wallet() {
   const [accountNumber, setAccountNumber] = useState<string>("");
   const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
 
-  // Top Up Dialog
+  // Top Up Modal State (Exact bKash payment method as Checkout)
   const [topUpModalOpen, setTopUpModalOpen] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState<string>("500");
+  const [bkashSenderNumber, setBkashSenderNumber] = useState<string>("");
+  const [bkashTrxId, setBkashTrxId] = useState<string>("");
+  const [copiedNumber, setCopiedNumber] = useState(false);
+  const [submittingTopUp, setSubmittingTopUp] = useState(false);
+
+  const handleCopyNumber = (num: string = "01885985097") => {
+    navigator.clipboard.writeText(num);
+    setCopiedNumber(true);
+    toast({
+      title: "নাম্বার কপি হয়েছে! 📋",
+      description: `${num} ক্লিপবোর্ডে কপি করা হয়েছে।`,
+    });
+    setTimeout(() => setCopiedNumber(false), 2500);
+  };
+
+  const handleTopUpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    const amountNum = Number(topUpAmount);
+    if (!amountNum || amountNum < 50) {
+      toast({
+        variant: "destructive",
+        title: "ভুল টপ-আপ পরিমাণ",
+        description: "সর্বনিম্ন টপ-আপ পরিমাণ ৳৫০",
+      });
+      return;
+    }
+
+    const cleanSender = bkashSenderNumber.replace(/\D/g, "");
+    if (cleanSender.length < 11) {
+      toast({
+        variant: "destructive",
+        title: "ভুল বিকাশ নম্বর",
+        description: "১১ ডিজিটের সঠিক বিকাশ মোবাইল নম্বর প্রদান করুন।",
+      });
+      return;
+    }
+
+    if (!bkashTrxId.trim()) {
+      toast({
+        variant: "destructive",
+        title: "TrxID আবশ্যক",
+        description: "আপনার বিকাশ লেনদেনের ট্রানজেকশন আইডি (TrxID) প্রদান করুন।",
+      });
+      return;
+    }
+
+    try {
+      setSubmittingTopUp(true);
+      const topupId = `topup-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const nowIso = new Date().toISOString();
+      const userName = profile?.full_name || profile?.name || user.displayName || "Customer";
+      const userEmail = profile?.email || user.email || "";
+
+      // 1. Save to wallet_topups collection
+      await setDoc(doc(db, "wallet_topups", topupId), {
+        id: topupId,
+        userId: user.id,
+        user_id: user.id,
+        userName,
+        userEmail,
+        userPhone: cleanSender,
+        amount: amountNum,
+        method: "bkash",
+        senderNumber: cleanSender,
+        trxId: bkashTrxId.trim().toUpperCase(),
+        status: "pending",
+        createdAt: nowIso,
+        created_at: nowIso,
+      });
+
+      // 2. Add pending transaction to wallet_transactions
+      await setDoc(doc(db, "wallet_transactions", topupId), {
+        id: topupId,
+        userId: user.id,
+        user_id: user.id,
+        amount: amountNum,
+        type: "credit",
+        direction: "credit",
+        category: "top_up",
+        description: `bKash Top-up (Sender: ${cleanSender}, TrxID: ${bkashTrxId.trim().toUpperCase()})`,
+        status: "pending",
+        created_at: nowIso,
+        createdAt: nowIso,
+      });
+
+      // 3. Send admin notification
+      await setDoc(doc(db, "admin_notifications", `notif-${topupId}`), {
+        id: `notif-${topupId}`,
+        type: "wallet_topup",
+        title: `💰 New Wallet Top-Up (৳${amountNum})!`,
+        message: `${userName} sent ৳${amountNum} via bKash (Sender: ${cleanSender}, TrxID: ${bkashTrxId.trim().toUpperCase()})`,
+        total_amount: amountNum,
+        payment_method: "bkash",
+        customer_name: userName,
+        customer_phone: cleanSender,
+        customer_email: userEmail,
+        read: false,
+        created_at: nowIso,
+      });
+
+      toast({
+        title: "টপ-আপ অনুরোধ সফল হয়েছে! 🎉",
+        description: `৳${amountNum} টপ-আপের TrxID (${bkashTrxId.trim().toUpperCase()}) সফলভাবে জমা হয়েছে। ভেরিফাই করে ওয়ালেটে ব্যালেন্স যুক্ত করা হবে।`,
+      });
+
+      setTopUpModalOpen(false);
+      setBkashSenderNumber("");
+      setBkashTrxId("");
+      fetchWalletData();
+    } catch (err: any) {
+      console.error("Top up error:", err);
+      toast({
+        variant: "destructive",
+        title: "টপ-আপ ত্রুটি",
+        description: err.message || "Failed to submit top-up request",
+      });
+    } finally {
+      setSubmittingTopUp(false);
+    }
+  };
 
   const fetchWalletData = async () => {
     if (!user) return;
@@ -549,32 +675,184 @@ export default function Wallet() {
         </DialogContent>
       </Dialog>
 
-      {/* Top Up Dialog */}
+      {/* Top Up Dialog with Exact Same bKash UI as Checkout */}
       <Dialog open={topUpModalOpen} onOpenChange={setTopUpModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-4 sm:p-6">
+          <DialogHeader className="pb-1">
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
               <Plus className="h-5 w-5 text-primary" />
-              ওয়ালেট টপ-আপ
+              ওয়ালেট টপ-আপ (Add Money)
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Durtup ওয়ালেটে টাকা যোগ করুন
+              বিকাশের মাধ্যমে আপনার Durtup ওয়ালেটে টাকা যোগ করুন
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 py-2 text-sm text-muted-foreground">
-            <p className="leading-relaxed">
-              আপনার ওয়ালেটে টাকা যোগ করতে অথবা রেফারেল প্রোগ্রাম ছাড়া সরাসরি টপ-আপ করতে আমাদের হটলাইনে যোগাযোগ করুন অথবা bKash মার্চেন্ট নাম্বারে পেমেন্ট করুন।
-            </p>
-            <div className="p-3 bg-muted rounded-xl text-xs space-y-1 text-foreground">
-              <p className="font-bold">হেল্পলাইন / হোয়াটসঅ্যাপ সাপোর্টে যোগাযোগ করুন:</p>
-              <p className="font-mono text-primary font-bold">+880 1806-487557</p>
+
+          <form onSubmit={handleTopUpSubmit} className="space-y-4 pt-1">
+            {/* Amount Selection */}
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-foreground flex items-center justify-between">
+                <span>টাকার পরিমাণ নির্বাচন করুন</span>
+                <span className="text-[11px] text-muted-foreground">সর্বনিম্ন: ৳৫০</span>
+              </Label>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {["100", "200", "500", "1000", "2000", "5000"].map((preset) => (
+                  <Button
+                    key={preset}
+                    type="button"
+                    variant={topUpAmount === preset ? "default" : "outline"}
+                    onClick={() => setTopUpAmount(preset)}
+                    className={cn(
+                      "h-9 text-xs font-bold rounded-xl transition-all",
+                      topUpAmount === preset ? "bg-primary text-primary-foreground shadow-sm" : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    ৳{Number(preset).toLocaleString()}
+                  </Button>
+                ))}
+              </div>
+              <div className="relative pt-1">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-primary text-sm pt-1">৳</span>
+                <Input
+                  type="number"
+                  min="50"
+                  max="50000"
+                  value={topUpAmount}
+                  onChange={(e) => setTopUpAmount(e.target.value)}
+                  placeholder="অন্য পরিমাণ লিখুন (যেমন: 500)"
+                  className="pl-8 rounded-xl h-11 text-base font-bold"
+                  required
+                />
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setTopUpModalOpen(false)} className="rounded-xl font-bold">
-              ঠিক আছে
-            </Button>
-          </DialogFooter>
+
+            {/* bKash Payment Method Box (Exact same styling as Checkout) */}
+            <div className="space-y-3 pt-1">
+              <Label className="text-xs font-bold text-foreground">পেমেন্ট মেথড</Label>
+              
+              {/* bKash Selector Card */}
+              <div className="flex items-center gap-3 p-3 sm:p-4 border-2 rounded-xl w-full min-w-0 border-[#E2136E] bg-[#E2136E]/5 shadow-sm ring-1 ring-[#E2136E]/20">
+                <div className="w-8 h-8 rounded-lg bg-[#E2136E] text-white flex items-center justify-center font-black text-[11px] shadow-sm shrink-0">
+                  bKash
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="font-bold text-sm text-foreground block">bKash (বিকাশ)</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">Send Money / Make payment via bKash</p>
+                </div>
+                <CheckCircle2 className="h-5 w-5 text-[#E2136E] shrink-0 ml-auto" />
+              </div>
+
+              {/* bKash Payment Details Box */}
+              <div className="p-3.5 sm:p-5 rounded-xl border-2 border-[#E2136E]/30 bg-gradient-to-br from-[#E2136E]/10 via-background to-muted/20 space-y-3.5 animate-in fade-in zoom-in-95 duration-200 w-full min-w-0 overflow-hidden">
+                {/* bKash Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-[#E2136E]/20 flex-wrap gap-2 min-w-0 w-full">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-[#E2136E] text-white flex items-center justify-center font-black text-xs shadow-sm shrink-0">
+                      bKash
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-sm text-foreground truncate">bKash Payment Details</h4>
+                      <p className="text-[11px] text-muted-foreground truncate">Personal / Merchant Account</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-[#E2136E] hover:bg-[#E2136E] text-white text-[10px] font-bold px-2 py-0.5 shrink-0">
+                    Send Money
+                  </Badge>
+                </div>
+
+                {/* Instructions & Number */}
+                <div className="p-3 rounded-xl bg-[#E2136E]/10 border border-[#E2136E]/20 space-y-2.5 overflow-hidden w-full min-w-0">
+                  <div className="flex items-center justify-between flex-wrap gap-2 w-full">
+                    <div className="space-y-0.5 min-w-0">
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">bKash Number</span>
+                      <span className="text-lg sm:text-xl font-black text-[#E2136E] tracking-wider block select-all">01885985097</span>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCopyNumber("01885985097")}
+                      className="h-8 px-2.5 sm:px-3 text-xs font-semibold border-[#E2136E]/30 text-[#E2136E] hover:bg-[#E2136E]/10 flex items-center gap-1.5 shrink-0"
+                    >
+                      {copiedNumber ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedNumber ? "Copied!" : "Copy Number"}
+                    </Button>
+                  </div>
+
+                  <div className="pt-1 text-xs text-foreground/80 space-y-1.5 break-words">
+                    <p className="flex items-start gap-1.5 font-medium">
+                      <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
+                      <span>বিকাশ অ্যাপে গিয়ে <strong>Send Money</strong> করুন।</span>
+                    </p>
+                    <p className="flex items-start gap-1.5 font-medium">
+                      <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
+                      <span>টাকার পরিমাণ: <strong className="text-[#E2136E]">৳{Number(topUpAmount || 0).toLocaleString()}</strong></span>
+                    </p>
+                    <p className="flex items-start gap-1.5 font-medium">
+                      <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0 mt-0.5">3</span>
+                      <span>পেমেন্ট সম্পন্ন করে নিচের ঘরে আপনার বিকাশ নাম্বার ও TrxID দিন।</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Inputs for verification */}
+                <div className="grid sm:grid-cols-2 gap-3 pt-1 w-full min-w-0">
+                  <div className="space-y-1.5 min-w-0">
+                    <Label htmlFor="topupBkashNumber" className="text-xs font-bold text-foreground">
+                      Sender bKash Number (আপনার বিকাশ নাম্বার) *
+                    </Label>
+                    <Input
+                      id="topupBkashNumber"
+                      placeholder="e.g. 01XXXXXXXXX"
+                      value={bkashSenderNumber}
+                      onChange={(e) => setBkashSenderNumber(e.target.value)}
+                      className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E] w-full"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 min-w-0">
+                    <Label htmlFor="topupBkashTrxId" className="text-xs font-bold text-foreground">
+                      Transaction ID (TrxID / ট্রানজেকশন আইডি) *
+                    </Label>
+                    <Input
+                      id="topupBkashTrxId"
+                      placeholder="e.g. 9M7A8X9K2"
+                      value={bkashTrxId}
+                      onChange={(e) => setBkashTrxId(e.target.value.toUpperCase())}
+                      className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E] uppercase font-mono w-full"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-3 gap-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setTopUpModalOpen(false)}
+                className="rounded-xl"
+              >
+                বাতিল
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={submittingTopUp || !topUpAmount || Number(topUpAmount) < 50 || !bkashSenderNumber || !bkashTrxId}
+                className="rounded-xl font-bold bg-[#E2136E] hover:bg-[#E2136E]/90 text-white shadow-md"
+              >
+                {submittingTopUp ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    যাচাই করা হচ্ছে...
+                  </>
+                ) : (
+                  `৳${Number(topUpAmount || 0).toLocaleString()} টপ-আপ নিশ্চিত করুন`
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

@@ -20,9 +20,10 @@ import {
   ShieldCheck,
   Save,
   Loader2,
-  Eye,
-  RotateCcw,
-  Smartphone
+  Eye, 
+  RotateCcw, 
+  Smartphone,
+  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,6 +110,21 @@ interface WithdrawalItem {
   userEmail?: string;
 }
 
+interface TopUpItem {
+  id: string;
+  userId: string;
+  amount: number;
+  method: string;
+  senderNumber: string;
+  trxId: string;
+  status: string;
+  adminNote?: string;
+  createdAt: string;
+  processedAt?: string;
+  userName?: string;
+  userEmail?: string;
+}
+
 export default function AdminReferrals() {
   const { admin } = useAdminAuth();
   const { toast } = useToast();
@@ -120,6 +136,8 @@ export default function AdminReferrals() {
   // Data State
   const [referrals, setReferrals] = useState<ReferralItem[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalItem[]>([]);
+  const [topups, setTopups] = useState<TopUpItem[]>([]);
+  const [processingTopupId, setProcessingTopupId] = useState<string | null>(null);
   const [settings, setSettings] = useState<ReferralSettings>({
     enabled: true,
     referrerReward: 50,
@@ -225,6 +243,37 @@ export default function AdminReferrals() {
       } catch (e) {
         console.warn("Withdrawals collection read error:", e);
       }
+
+      // 4. Fetch Top-Up Requests
+      try {
+        const topSnap = await getDocs(collection(db, "wallet_topups"));
+        const topList: TopUpItem[] = [];
+        topSnap.forEach((d) => {
+          const data = d.data();
+          const uId = data.userId || data.user_id;
+          const uProf = uId ? profileMap.get(uId) : null;
+
+          topList.push({
+            id: d.id,
+            userId: uId,
+            amount: Number(data.amount || 0),
+            method: data.method || "bkash",
+            senderNumber: data.senderNumber || data.sender_number || "",
+            trxId: data.trxId || data.trx_id || "",
+            status: data.status || "pending",
+            adminNote: data.adminNote || data.admin_note,
+            createdAt: data.createdAt || data.created_at || new Date().toISOString(),
+            processedAt: data.processedAt || data.processed_at,
+            userName: data.userName || uProf?.full_name || uProf?.name || "Customer",
+            userEmail: data.userEmail || uProf?.email,
+          });
+        });
+
+        topList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setTopups(topList);
+      } catch (e) {
+        console.warn("Wallet topups collection read error:", e);
+      }
     } catch (err: any) {
       toast({
         variant: "destructive",
@@ -251,6 +300,75 @@ export default function AdminReferrals() {
   const pendingWithdrawalsCount = withdrawals.filter(w => w.status === "pending").length;
   const pendingWithdrawalsAmount = withdrawals.filter(w => w.status === "pending").reduce((sum, w) => sum + w.amount, 0);
   const paidWithdrawalsAmount = withdrawals.filter(w => w.status === "paid" || w.status === "approved").reduce((sum, w) => sum + w.amount, 0);
+
+  const pendingTopupsCount = topups.filter(t => t.status === "pending").length;
+  const pendingTopupsAmount = topups.filter(t => t.status === "pending").reduce((sum, t) => sum + t.amount, 0);
+
+  // Handlers for Top-Ups
+  const handleApproveTopup = async (t: TopUpItem) => {
+    try {
+      setProcessingTopupId(t.id);
+      const res = await manualAdjustment(
+        t.userId,
+        "credit",
+        t.amount,
+        `bKash Top-up approved (TrxID: ${t.trxId})`,
+        admin?.displayName || "Admin"
+      );
+
+      if (res?.success) {
+        const nowIso = new Date().toISOString();
+        await setDoc(doc(db, "wallet_topups", t.id), {
+          status: "approved",
+          processedAt: nowIso,
+          processedBy: admin?.displayName || "Admin"
+        }, { merge: true });
+
+        await setDoc(doc(db, "wallet_transactions", t.id), {
+          status: "completed"
+        }, { merge: true });
+
+        toast({
+          title: "টপ-আপ অনুমোদিত ও ব্যালেন্স যুক্ত হয়েছে! 🎉",
+          description: `৳${t.amount} কাস্টমারের ওয়ালেটে যুক্ত করা হয়েছে।`,
+        });
+        fetchData();
+      } else {
+        throw new Error(res?.error || "Failed to credit balance");
+      }
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "ত্রুটি", description: err.message });
+    } finally {
+      setProcessingTopupId(null);
+    }
+  };
+
+  const handleRejectTopup = async (t: TopUpItem) => {
+    if (!window.confirm(`Are you sure you want to reject Top-up request for ৳${t.amount} (TrxID: ${t.trxId})?`)) return;
+    try {
+      setProcessingTopupId(t.id);
+      const nowIso = new Date().toISOString();
+      await setDoc(doc(db, "wallet_topups", t.id), {
+        status: "rejected",
+        processedAt: nowIso,
+        processedBy: admin?.displayName || "Admin"
+      }, { merge: true });
+
+      await setDoc(doc(db, "wallet_transactions", t.id), {
+        status: "cancelled"
+      }, { merge: true });
+
+      toast({
+        title: "টপ-আপ বাতিল করা হয়েছে",
+        description: `TrxID ${t.trxId} এর টপ-আপ অনুরোধ বাতিল করা হয়েছে।`,
+      });
+      fetchData();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "ত্রুটি", description: err.message });
+    } finally {
+      setProcessingTopupId(null);
+    }
+  };
 
   // Handlers for Withdrawals
   const handleApproveWithdrawal = async (w: WithdrawalItem) => {
@@ -359,6 +477,16 @@ export default function AdminReferrals() {
     return matchesSearch && matchesStatus;
   });
 
+  const filteredTopups = topups.filter((t) => {
+    const matchesSearch = 
+      (t.senderNumber && t.senderNumber.includes(searchQuery)) ||
+      (t.trxId && t.trxId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (t.userName && t.userName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (t.userEmail && t.userEmail.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <AdminLayout title="Referrals & Rewards Management">
       <div className="space-y-6 pb-12">
@@ -389,7 +517,7 @@ export default function AdminReferrals() {
         </div>
 
         {/* Metrics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
           <Card className="rounded-2xl border shadow-sm bg-card">
             <CardContent className="p-4 space-y-1">
               <span className="text-xs font-semibold text-muted-foreground">Unique Referrers</span>
@@ -437,21 +565,38 @@ export default function AdminReferrals() {
               <p className="text-[10px] text-muted-foreground">{pendingWithdrawalsCount} টি পেন্ডিং রিকোয়েস্ট</p>
             </CardContent>
           </Card>
+
+          <Card className="rounded-2xl border shadow-sm bg-gradient-to-br from-pink-500/10 to-pink-500/5 border-pink-500/20">
+            <CardContent className="p-4 space-y-1">
+              <span className="text-xs font-semibold text-[#E2136E]">Pending Top-Ups</span>
+              <p className="text-2xl font-black text-[#E2136E]">৳{pendingTopupsAmount.toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground">{pendingTopupsCount} টি টপ-আপ রিকোয়েস্ট</p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Tabs Control */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="bg-muted p-1 rounded-xl">
+          <TabsList className="bg-muted p-1 rounded-xl flex-wrap">
             <TabsTrigger value="referrals" className="rounded-lg font-bold gap-2 text-xs sm:text-sm">
               <Share2 className="h-4 w-4" />
               Referrals List ({referrals.length})
             </TabsTrigger>
             <TabsTrigger value="withdrawals" className="rounded-lg font-bold gap-2 text-xs sm:text-sm relative">
               <Wallet className="h-4 w-4" />
-              Withdrawal Requests
+              Withdrawals
               {pendingWithdrawalsCount > 0 && (
                 <span className="ml-1 px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[10px] font-black">
                   {pendingWithdrawalsCount}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="topups" className="rounded-lg font-bold gap-2 text-xs sm:text-sm relative">
+              <Plus className="h-4 w-4" />
+              Top-Up Requests
+              {pendingTopupsCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 bg-[#E2136E] text-white rounded-full text-[10px] font-black">
+                  {pendingTopupsCount}
                 </span>
               )}
             </TabsTrigger>
@@ -686,7 +831,134 @@ export default function AdminReferrals() {
             </Card>
           </TabsContent>
 
-          {/* TAB 3: REFERRAL SETTINGS */}
+          {/* TAB: TOP-UP REQUESTS */}
+          <TabsContent value="topups" className="space-y-4">
+            {/* Filter & Search Bar */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="বিকাশ নম্বর, TrxID বা গ্রাহকের নাম দিয়ে খুঁজুন..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-10 rounded-xl"
+                />
+              </div>
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-48 h-10 rounded-xl">
+                  <SelectValue placeholder="Status Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Top-Ups Table */}
+            <Card className="rounded-2xl border shadow-sm overflow-hidden bg-card">
+              <Table>
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead className="font-bold text-xs">Customer</TableHead>
+                    <TableHead className="font-bold text-xs">Amount</TableHead>
+                    <TableHead className="font-bold text-xs">Method</TableHead>
+                    <TableHead className="font-bold text-xs">Sender Number</TableHead>
+                    <TableHead className="font-bold text-xs">TrxID</TableHead>
+                    <TableHead className="font-bold text-xs">Status</TableHead>
+                    <TableHead className="font-bold text-xs">Date</TableHead>
+                    <TableHead className="font-bold text-xs text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-12">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredTopups.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
+                        কোনো টপ-আপ অনুরোধ পাওয়া যায়নি।
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredTopups.map((t) => (
+                      <TableRow key={t.id} className="hover:bg-muted/30">
+                        <TableCell className="text-xs">
+                          <p className="font-bold text-foreground">{t.userName}</p>
+                          <p className="text-[10px] text-muted-foreground">{t.userEmail || t.userId}</p>
+                        </TableCell>
+                        <TableCell className="font-black text-sm text-foreground">
+                          ৳{t.amount.toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-[#E2136E] text-white font-bold uppercase text-[10px]">
+                            {t.method}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono font-bold text-xs">
+                          {t.senderNumber}
+                        </TableCell>
+                        <TableCell className="font-mono font-bold text-xs text-[#E2136E]">
+                          {t.trxId}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={
+                              t.status === "approved"
+                                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 text-[10px] font-bold"
+                                : t.status === "pending"
+                                ? "bg-amber-500/10 text-amber-700 border-amber-500/30 text-[10px] font-bold"
+                                : "bg-red-500/10 text-red-700 border-red-500/30 text-[10px] font-bold"
+                            }
+                          >
+                            {t.status.toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Date(t.createdAt).toLocaleDateString("en-BD", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </TableCell>
+                        <TableCell className="text-right space-x-1.5">
+                          {t.status === "pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                disabled={processingTopupId === t.id}
+                                onClick={() => handleApproveTopup(t)}
+                                className="h-8 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                              >
+                                {processingTopupId === t.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  `Approve & Credit ৳${t.amount}`
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={processingTopupId === t.id}
+                                onClick={() => handleRejectTopup(t)}
+                                className="h-8 text-xs font-bold rounded-lg text-red-600 border-red-500/30 hover:bg-red-500/10"
+                              >
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
+          </TabsContent>
+
+          {/* TAB 4: REFERRAL SETTINGS */}
           <TabsContent value="settings" className="space-y-4">
             <Card className="rounded-2xl border shadow-sm bg-card max-w-2xl">
               <CardHeader className="border-b bg-muted/20">
