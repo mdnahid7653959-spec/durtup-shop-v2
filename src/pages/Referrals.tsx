@@ -235,27 +235,14 @@ export default function Referrals() {
       <main className="flex-1 pb-20 pt-4 sm:pt-6">
         <div className="container max-w-4xl px-4 sm:px-6 space-y-6">
 
-          {/* Hero Banner */}
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary via-primary/95 to-amber-700 text-primary-foreground p-6 sm:p-10 shadow-xl border border-primary/20">
-            <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
-
-            <div className="relative z-10 max-w-2xl space-y-3 sm:space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-xs font-semibold tracking-wide border border-white/20">
-                <Gift className="h-3.5 w-3.5 text-amber-300" />
-                <span>Durtup Refer & Earn প্রোগ্রাম</span>
-              </div>
-
-              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight">
-                বন্ধুকে Durtup-এ আনুন, <br className="hidden sm:inline" />
-                <span className="text-amber-300">দুজনেই লাভবান হন!</span>
-              </h1>
-
-              <p className="text-sm sm:text-base text-primary-foreground/85 leading-relaxed">
-                আপনার রেফারেল লিংক ব্যবহার করে বন্ধু প্রথম অর্ডারে পাবেন <strong>৳{settings?.newCustomerDiscount || 30} ছাড়</strong>, 
-                এবং অর্ডার সফলভাবে ডেলিভারি হলেই আপনার ওয়ালেটে জমা হবে <strong>৳{settings?.referrerReward || 50} রিওয়ার্ড</strong>।
-              </p>
-            </div>
+          {/* Hero Banner Image */}
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl border border-primary/20 bg-gradient-to-r from-orange-500 to-amber-600">
+            <img 
+              src="/referral-banner.png" 
+              alt="Durtup Refer & Earn" 
+              className="w-full h-auto object-cover rounded-2xl sm:rounded-3xl select-none block"
+              loading="eager"
+            />
           </div>
 
           {/* Referral Link & Share Box */}
