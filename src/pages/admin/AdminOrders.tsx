@@ -31,6 +31,7 @@ import { SupplierManager } from "@/services/suppliers/supplierManager";
 import { SupplierFulfillmentGroup } from "@/services/suppliers/supplierTypes";
 import { EcomsellerEngine } from "@/services/suppliers/ecomsellerEngine";
 import { isMockOrder, purgeMockOrdersFromStorage } from "@/utils/orderValidation";
+import { processOrderReferralReward } from "@/services/referralService";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -480,6 +481,18 @@ export default function AdminOrders() {
       } catch {
         await adminDb.insert("order_timelines", timelineRecord).catch(() => {});
       }
+
+      // 5. Trigger trusted server-side referral reward evaluation
+      processOrderReferralReward(targetOrder?.id || id, newStatus).then((res) => {
+        if (res?.rewardIssued) {
+          toast({
+            title: "🎉 Referral Reward Issued",
+            description: `৳${res.rewardAmount} credited to referrer wallet.`
+          });
+        }
+      }).catch((e) => {
+        console.warn("Referral reward execution notice:", e);
+      });
 
       toast({ title: "Order status updated", description: `Changed status to ${newStatus}` });
       invalidateOrders();

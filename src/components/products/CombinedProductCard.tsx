@@ -60,8 +60,13 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
     e.preventDefault();
     e.stopPropagation();
 
-    await handleAddToCart(e);
-    navigate("/checkout");
+    try {
+      await handleAddToCart(e);
+      navigate("/checkout");
+    } catch (err) {
+      console.error("CombinedProductCard handleBuyNow error:", err);
+      navigate("/checkout");
+    }
   };
 
   const toggleWishlist = (e: React.MouseEvent) => {

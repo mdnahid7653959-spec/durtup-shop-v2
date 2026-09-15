@@ -48,6 +48,39 @@ function sigmaDevApiPlugin() {
             return;
           }
         }
+
+        if (req.url && req.url.startsWith("/api/referral")) {
+          if (req.method === "OPTIONS") {
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+            res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            res.statusCode = 200;
+            return res.end();
+          }
+
+          if (req.method === "POST") {
+            let bodyStr = "";
+            req.on("data", (chunk: any) => { bodyStr += chunk; });
+            req.on("end", async () => {
+              try {
+                const body = bodyStr ? JSON.parse(bodyStr) : {};
+                const { handleReferralDevRequest } = await server.ssrLoadModule("./src/server/referralDevApi.ts");
+                const response = await handleReferralDevRequest(body.action, body.payload);
+                res.setHeader("Content-Type", "application/json");
+                res.setHeader("Access-Control-Allow-Origin", "*");
+                res.statusCode = 200;
+                return res.end(JSON.stringify(response));
+              } catch (err: any) {
+                console.error("[Referral Dev API Error]:", err);
+                res.statusCode = 500;
+                res.setHeader("Content-Type", "application/json");
+                return res.end(JSON.stringify({ error: err.message || "Dev API error" }));
+              }
+            });
+            return;
+          }
+        }
+
         next();
       });
     }

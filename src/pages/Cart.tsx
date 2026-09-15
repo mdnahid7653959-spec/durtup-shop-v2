@@ -109,20 +109,29 @@ export default function Cart() {
             <div className="lg:col-span-2 space-y-3 sm:space-y-4">
               {/* Regular Cart Items */}
               {regularItems.map(item => {
-                const price = item.product.discount_price || item.product.regular_price;
+                const prod = item.product || (item as any);
+                const price = prod?.discount_price || prod?.regular_price || prod?.price || (item as any)?.price || 0;
+                const prodName = prod?.name || (item as any)?.name || "Product";
+                const prodSlug = prod?.slug || (item as any)?.slug || prod?.id || item.product_id || item.id;
+                const prodImage = item.image || prod?.image_url || prod?.thumbnail || prod?.images?.[0] || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=200&h=200&fit=crop";
+                const maxStock = prod?.stock_quantity ?? 999;
+
                 return (
                   <div key={item.id} className="flex gap-3 sm:gap-4 p-3 sm:p-4 bg-card rounded-xl border">
                     <img
-                      src={item.image || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=200&h=200&fit=crop"}
-                      alt={item.product.name}
+                      src={prodImage}
+                      alt={prodName}
                       className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg"
+                      onError={(e) => {
+                        e.currentTarget.src = "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=200&h=200&fit=crop";
+                      }}
                     />
                     <div className="flex-1 min-w-0">
                       <Link 
-                        to={`/product/${item.product.slug}`}
+                        to={`/product/${prodSlug}`}
                         className="font-medium text-sm sm:text-base text-foreground hover:text-primary line-clamp-2"
                       >
-                        {item.product.name}
+                        {prodName}
                       </Link>
                       {item.variant_name && (
                         <div className="mt-1">
@@ -132,7 +141,7 @@ export default function Cart() {
                         </div>
                       )}
                       <p className="text-lg sm:text-xl font-bold text-primary mt-1">
-                        ৳{price.toLocaleString()}
+                        ৳{Number(price).toLocaleString()}
                       </p>
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center border rounded-lg overflow-hidden">
@@ -157,7 +166,7 @@ export default function Cart() {
                               updateQuantity(item.id, item.quantity + 1);
                             }}
                             className="p-2 sm:p-2.5 hover:bg-muted transition-colors touch-manipulation active:bg-muted/70"
-                            disabled={item.quantity >= item.product.stock_quantity}
+                            disabled={item.quantity >= maxStock}
                           >
                             <Plus className="h-4 w-4" />
                           </button>

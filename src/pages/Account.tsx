@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { User, Mail, Phone, MapPin, Lock, Camera, Save, Eye, EyeOff, Store, Clock, CheckCircle, ShieldCheck, Download, Smartphone, Sparkles, LogOut } from "lucide-react";
+import { User, Mail, Phone, MapPin, Lock, Camera, Save, Eye, EyeOff, Store, Clock, CheckCircle, ShieldCheck, Download, Smartphone, Sparkles, LogOut, Wallet, Share2, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -251,6 +251,33 @@ export default function Account() {
               <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>লগআউট (Logout)</span>
             </Button>
+          </div>
+
+          {/* Quick Account Navigation Cards */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <Link to="/referrals">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/15 via-primary/10 to-primary/5 border border-amber-500/20 hover:border-amber-500/40 transition-all shadow-xs flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <Share2 className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-xs sm:text-sm text-foreground truncate">Refer & Earn</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">প্রতি রেফারেলে ৳৫০ বোনাস</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link to="/wallet">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-emerald-500/10 to-transparent border border-emerald-500/20 hover:border-emerald-500/40 transition-all shadow-xs flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-xs sm:text-sm text-foreground truncate">My Wallet</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">ব্যালেন্স ও ক্যাশআউট</p>
+                </div>
+              </div>
+            </Link>
           </div>
 
           <Tabs defaultValue="profile" className="space-y-4 sm:space-y-6">

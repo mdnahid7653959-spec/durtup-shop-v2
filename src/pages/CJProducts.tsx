@@ -9,6 +9,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { supabase } from "@/lib/firebaseAdapter";
 import { ChevronRight, Globe, Loader2, RefreshCw, ShoppingCart, Zap } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
+import { useCJCart } from "@/hooks/useCJCart";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -119,41 +120,41 @@ export default function CJProducts() {
 
   const hasMore = pagination ? currentPage < pagination.totalPages : false;
 
+  const { addToCart: addToCJCart } = useCJCart();
+
   // Add to CJ cart
   const addToCart = (product: CJProduct, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    const bdtPrice = Math.round(product.price * USD_TO_BDT * PROFIT_MARGIN);
-    const cartItem = {
-      id: product.id,
-      name: product.name,
-      price: bdtPrice,
-      image: product.image,
-      quantity: 1,
-      sku: product.sku,
-      isCJ: true
-    };
-
-    const existingCart = JSON.parse(localStorage.getItem("cj_cart") || "[]");
-    const existingIndex = existingCart.findIndex((item: any) => item.id === product.id);
-    
-    if (existingIndex >= 0) {
-      existingCart[existingIndex].quantity += 1;
-    } else {
-      existingCart.push(cartItem);
+    try {
+      const bdtPrice = Math.round(product.price * USD_TO_BDT * PROFIT_MARGIN);
+      addToCJCart({
+        id: product.id,
+        name: product.name,
+        price: bdtPrice,
+        image: product.image,
+        variant: null,
+        variantId: null,
+        isCJProduct: true
+      }, 1);
+    } catch (err) {
+      console.error("Failed to add CJ product to cart:", err);
+      toast.error("Could not add item to cart. Please try again.");
     }
-    
-    localStorage.setItem("cj_cart", JSON.stringify(existingCart));
-    toast.success("Added to cart!");
   };
 
   // Buy now
   const buyNow = (product: CJProduct, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product, e);
-    navigate("/checkout");
+    try {
+      addToCart(product, e);
+      navigate("/checkout");
+    } catch (err) {
+      console.error("Failed buy now for CJ product:", err);
+      navigate("/checkout");
+    }
   };
 
   return (

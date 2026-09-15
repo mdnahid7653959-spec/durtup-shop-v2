@@ -152,12 +152,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { registerUserLocally } = await import("@/integrations/firebase/client");
       registerUserLocally(newProf);
 
-      // 2. Background non-blocking updates (displayName + Firestore)
+      // 2. Background non-blocking updates (displayName + Firestore + Referral code)
       updateProfile(firebaseUser, { displayName: fullName }).catch(() => {});
       setDoc(doc(db, "profiles", firebaseUser.uid), {
         ...newProf,
         created_at: new Date().toISOString()
-      }, { merge: true }).catch((err) => {
+      }, { merge: true }).then(async () => {
+        const { ensureUserReferralProfile } = await import("@/services/referralService");
+        ensureUserReferralProfile(firebaseUser.uid, email, fullName).catch(() => {});
+      }).catch((err) => {
         console.warn("Background profile doc create notice:", err);
       });
     }

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { CreditCard, Truck, Shield, ArrowLeft, Loader2, ChevronDown, ChevronUp, CheckCircle, Globe, Tag, X, MapPin, Phone, User as UserIcon, Plus, Edit3, CheckCircle2, Home, Banknote, Smartphone, ArrowRight, Copy, PackageCheck, ShoppingBag } from "lucide-react";
+import { CreditCard, Truck, Shield, ArrowLeft, Loader2, ChevronDown, ChevronUp, CheckCircle, Globe, Tag, X, MapPin, Phone, User as UserIcon, Plus, Edit3, CheckCircle2, Home, Banknote, Smartphone, ArrowRight, Copy, PackageCheck, ShoppingBag, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { sendTelegramOrderNotification } from "@/utils/telegramNotifier";
 import { sendOrderSuccessPushNotification, requestNotificationPermission } from "@/services/notificationService";
 import { trackPurchase } from "@/components/FacebookPixel";
+import { checkFirstOrderDiscountEligibility, DiscountEligibilityResult } from "@/services/referralService";
 
 
 interface AppliedCoupon {
@@ -185,7 +186,19 @@ export default function Checkout() {
     return Math.min(discount, subtotal); // Can't discount more than subtotal
   }, [appliedCoupon, subtotal]);
 
-  const total = subtotal + shipping + tax - couponDiscount;
+  // Referral first-order discount eligibility check
+  const [referralEligibility, setReferralEligibility] = useState<DiscountEligibilityResult | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    checkFirstOrderDiscountEligibility(user?.id || null, subtotal).then(res => {
+      if (isMounted) setReferralEligibility(res);
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, [user?.id, subtotal]);
+
+  const referralDiscount = referralEligibility?.eligible ? referralEligibility.discountAmount : 0;
+  const total = Math.max(0, subtotal + shipping + tax - couponDiscount - referralDiscount);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setShippingInfo(prev => ({
@@ -381,7 +394,10 @@ export default function Checkout() {
         subtotal,
         shipping_cost: shipping,
         tax_amount: tax,
-        discount_amount: couponDiscount,
+        discount_amount: couponDiscount + referralDiscount,
+        referral_code: referralEligibility?.referralCode || null,
+        referrer_id: referralEligibility?.referrerId || null,
+        referral_discount: referralDiscount,
         total,
         status: "pending",
         payment_status: paymentMethod === "cod" ? "pending" : "pending",
@@ -437,7 +453,15 @@ export default function Checkout() {
           subtotal,
           shipping_cost: shipping,
           tax_amount: tax,
-          discount_amount: couponDiscount,
+          discount_amount: couponDiscount + referralDiscount,
+          coupon_discount: couponDiscount,
+          referral_discount: referralDiscount,
+          referral_code: referralEligibility?.referralCode || null,
+          referralCode: referralEligibility?.referralCode || null,
+          referrer_id: referralEligibility?.referrerId || null,
+          referrerId: referralEligibility?.referrerId || null,
+          referral_id: (referralEligibility?.referrerId || referralEligibility?.referralCode) ? `ref-${orderId}` : null,
+          referralId: (referralEligibility?.referrerId || referralEligibility?.referralCode) ? `ref-${orderId}` : null,
           total,
           status: "pending",
           payment_status: paymentMethod === "cod" ? "pending" : "pending",
@@ -485,6 +509,28 @@ export default function Checkout() {
         };
         
         await setDoc(doc(db, "orders", orderId), firestoreOrderDoc, { merge: true }).catch(() => {});
+
+        // If referral attribution exists, create/record in referrals collection
+        if (referralEligibility?.referrerId || referralEligibility?.referralCode) {
+          const refId = `ref-${orderId}`;
+          const refDoc = {
+            id: refId,
+            referralCode: referralEligibility.referralCode || "",
+            referrerId: referralEligibility.referrerId || null,
+            referredUserId: effectiveUserId,
+            orderId: orderId,
+            orderNumber: orderNumber,
+            orderAmount: subtotal,
+            rewardAmount: 50,
+            newCustomerDiscount: referralDiscount,
+            status: "pending",
+            qualified: subtotal >= 500,
+            rewarded: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          setDoc(doc(db, "referrals", refId), refDoc, { merge: true }).catch((e) => console.warn("Referral doc sync notice:", e));
+        }
 
         // Emit real-time Admin Notification with Product Photo for instant push alerts & sound
         const adminNotificationDoc = {
@@ -998,6 +1044,15 @@ export default function Checkout() {
                     <div className="flex justify-between text-success">
                       <span>Coupon Discount ({appliedCoupon?.code})</span>
                       <span>-৳{couponDiscount.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {referralDiscount > 0 && (
+                    <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+                      <span className="flex items-center gap-1">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Referral Reward Applied
+                      </span>
+                      <span>-৳{referralDiscount.toLocaleString()}</span>
                     </div>
                   )}
                 </div>
@@ -1514,6 +1569,15 @@ export default function Checkout() {
                         <div className="flex justify-between text-success font-medium">
                           <span>Discount ({appliedCoupon?.code})</span>
                           <span>-৳{couponDiscount.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {referralDiscount > 0 && (
+                        <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+                          <span className="flex items-center gap-1">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Referral Reward Applied
+                          </span>
+                          <span>-৳{referralDiscount.toLocaleString()}</span>
                         </div>
                       )}
                     </div>

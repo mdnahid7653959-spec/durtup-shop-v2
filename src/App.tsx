@@ -19,6 +19,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { NativeAppProvider } from "@/components/NativeAppProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RoutePrefetcher } from "@/components/RoutePrefetcher";
+import { ReferralTracker } from "@/components/ReferralTracker";
 
 // Eager load - Only critical landing page for instant first paint
 import Index from "./pages/Index";
@@ -68,6 +69,7 @@ const AdminFinance = lazy(() => import("./pages/admin/AdminFinance"));
 const AdminStaff = lazy(() => import("./pages/admin/AdminStaff"));
 const AdminSellerSupport = lazy(() => import("./pages/admin/AdminSellerSupport"));
 const AdminWallet = lazy(() => import("./pages/admin/AdminWallet"));
+const AdminReferrals = lazy(() => import("./pages/admin/AdminReferrals"));
 const AdminVisualEditor = lazy(() => import("./pages/admin/AdminVisualEditor"));
 
 // Enterprise Suite
@@ -96,6 +98,7 @@ const Orders = lazy(() => import("./pages/Orders"));
 const OrderDetail = lazy(() => import("./pages/OrderDetail"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const Wallet = lazy(() => import("./pages/Wallet"));
+const Referrals = lazy(() => import("./pages/Referrals"));
 const MyVouchers = lazy(() => import("./pages/MyVouchers"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const PaymentCallback = lazy(() => import("./pages/PaymentCallback"));
@@ -181,6 +184,7 @@ const App = () => (
                       <WishlistProvider>
                         <FacebookPixel />
                         <RoutePrefetcher />
+                        <ReferralTracker />
                         <Suspense fallback={null}>
                           {typeof window !== "undefined" && (
                             window.location.pathname.startsWith("/admin") ||
@@ -229,6 +233,8 @@ const App = () => (
                               <Route path="/orders/:id" element={<OrderDetail />} />
                               <Route path="/wishlist" element={<Wishlist />} />
                               <Route path="/wallet" element={<Wallet />} />
+                              <Route path="/referrals" element={<Referrals />} />
+                              <Route path="/refer" element={<Referrals />} />
                               <Route path="/vouchers" element={<MyVouchers />} />
                               <Route path="/notifications" element={<Notifications />} />
                               
@@ -309,6 +315,7 @@ const App = () => (
                               <Route path="/admin/payments" element={<AdminProtectedRoute><AdminPayments /></AdminProtectedRoute>} />
                               <Route path="/admin/finance" element={<AdminProtectedRoute><AdminFinance /></AdminProtectedRoute>} />
                               <Route path="/admin/wallet" element={<AdminProtectedRoute><AdminWallet /></AdminProtectedRoute>} />
+                              <Route path="/admin/referrals" element={<AdminProtectedRoute><AdminReferrals /></AdminProtectedRoute>} />
                               <Route path="/admin/users" element={<AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
                               <Route path="/admin/customers" element={<Navigate to="/admin/users" replace />} />
                               <Route path="/admin/sellers" element={<AdminProtectedRoute><AdminSellers /></AdminProtectedRoute>} />

@@ -23,23 +23,25 @@ export default function Wishlist() {
   );
 
   const handleAddToCart = async (item: any) => {
-    setAddingId(item.product_id);
+    const id = item.product?.id || item.product_id;
+    setAddingId(id);
     try {
       const price = item.product?.discount_price || item.product?.regular_price || 0;
       await addToCart(
         {
-          id: item.product?.id || item.product_id,
+          id: id,
           name: item.product?.name || "Product",
-          slug: item.product?.slug || `product-${item.product_id}`,
+          slug: item.product?.slug || `product-${id}`,
           price: price,
           originalPrice: item.product?.regular_price,
-          image: item.image,
+          image: item.image || item.product?.image_url || item.product?.thumbnail,
           stock: item.product?.stock_quantity ?? 50,
         },
         1
       );
       toast.success("Added to cart!");
     } catch (err: any) {
+      console.error("Error adding wishlist item to cart:", err);
       toast.error(err.message || "Could not add to cart");
     } finally {
       setAddingId(null);
@@ -47,8 +49,29 @@ export default function Wishlist() {
   };
 
   const handleOrderNow = async (item: any) => {
-    await handleAddToCart(item);
-    navigate("/checkout");
+    const id = item.product?.id || item.product_id;
+    setAddingId(id);
+    try {
+      const price = item.product?.discount_price || item.product?.regular_price || 0;
+      await addToCart(
+        {
+          id: id,
+          name: item.product?.name || "Product",
+          slug: item.product?.slug || `product-${id}`,
+          price: price,
+          originalPrice: item.product?.regular_price,
+          image: item.image || item.product?.image_url || item.product?.thumbnail,
+          stock: item.product?.stock_quantity ?? 50,
+        },
+        1
+      );
+      navigate("/checkout");
+    } catch (err: any) {
+      console.error("Error ordering wishlist item:", err);
+      navigate("/checkout");
+    } finally {
+      setAddingId(null);
+    }
   };
 
   return (
