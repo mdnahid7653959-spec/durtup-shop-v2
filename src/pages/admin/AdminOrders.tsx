@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   ExternalLink,
   Edit,
-  Trash2
+  Trash2,
+  Layers
 } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
@@ -68,6 +69,7 @@ import {
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
