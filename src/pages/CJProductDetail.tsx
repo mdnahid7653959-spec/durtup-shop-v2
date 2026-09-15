@@ -138,19 +138,23 @@ export default function CJProductDetail() {
     if (!product) return;
     
     setAddingToCart(true);
-    
-    const cjProduct = {
-      id: `cj_${product.id}`,
-      name: product.nameEn || product.name,
-      price: convertToBDT(selectedVariant?.variantSellPrice || product.price),
-      image: selectedVariant?.variantImage || product.images[0] || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=200&h=200&fit=crop",
-      variant: selectedVariant?.variantNameEn || selectedVariant?.variantName || null,
-      variantId: selectedVariant?.variantId || null,
-      isCJProduct: true as const,
-    };
+    try {
+      const cjProduct = {
+        id: `cj_${product.id}`,
+        name: product.nameEn || product.name,
+        price: convertToBDT(selectedVariant?.variantSellPrice || product.price),
+        image: selectedVariant?.variantImage || product.images[0] || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=200&h=200&fit=crop",
+        variant: selectedVariant?.variantNameEn || selectedVariant?.variantName || null,
+        variantId: selectedVariant?.variantId || null,
+        isCJProduct: true as const,
+      };
 
-    addToCJCart(cjProduct, quantity);
-    setAddingToCart(false);
+      addToCJCart(cjProduct, quantity);
+    } catch (err) {
+      console.error("CJProductDetail handleAddToCart error:", err);
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   const { user: authUser } = useAuth();
@@ -162,21 +166,25 @@ export default function CJProductDetail() {
     const prodImg = selectedVariant?.variantImage || product.images[0] || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=200&h=200&fit=crop";
 
     setBuyingNow(true);
-    
-    const cjProduct = {
-      id: `cj_${product.id}`,
-      name: product.nameEn || product.name,
-      price: prodPrice,
-      image: prodImg,
-      variant: selectedVariant?.variantNameEn || selectedVariant?.variantName || null,
-      variantId: selectedVariant?.variantId || null,
-      isCJProduct: true as const,
-    };
+    try {
+      const cjProduct = {
+        id: `cj_${product.id}`,
+        name: product.nameEn || product.name,
+        price: prodPrice,
+        image: prodImg,
+        variant: selectedVariant?.variantNameEn || selectedVariant?.variantName || null,
+        variantId: selectedVariant?.variantId || null,
+        isCJProduct: true as const,
+      };
 
-    addToCJCart(cjProduct, quantity);
-    setBuyingNow(false);
-
-    navigate("/checkout");
+      addToCJCart(cjProduct, quantity);
+      navigate("/checkout");
+    } catch (err) {
+      console.error("CJProductDetail handleBuyNow error:", err);
+      navigate("/checkout");
+    } finally {
+      setBuyingNow(false);
+    }
   };
 
   const handleShare = async () => {

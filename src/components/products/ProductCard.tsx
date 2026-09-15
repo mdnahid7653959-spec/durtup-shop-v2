@@ -40,14 +40,21 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    await addToCart(product.id, 1);
+    try {
+      await addToCart(product, 1);
+    } catch (err) {
+      console.error("ProductCard handleAddToCart error:", err);
+    }
   };
 
   const handleBuyNow = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    await addToCart(product.id, 1);
+    try {
+      await addToCart(product, 1);
+    } catch (err) {
+      console.error("ProductCard handleBuyNow error:", err);
+    }
     navigate("/checkout");
   };
 

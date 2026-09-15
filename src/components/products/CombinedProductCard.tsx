@@ -4,6 +4,7 @@ import { Star, ShoppingCart, Heart, Zap, Truck, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
+import { useCJCart } from "@/hooks/useCJCart";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
   const displayImage = getSmartProductImage(product.name, product.image, (product as any).category || "");
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { addToCart: addToCJCart } = useCJCart();
   const { items: wishlistItems, addToWishlist, removeFromWishlist } = useWishlist();
   const { user } = useAuth();
 
@@ -27,43 +29,38 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
     : 0;
 
   const productLink = product.source === 'cj' 
-    ? `/product/cj/${product.cjProductId}`
-    : `/product/${product.slug}`;
+    ? `/product/cj/${product.cjProductId || product.id}`
+    : `/product/${product.slug || product.id}`;
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (product.source === 'cj') {
-      // Handle CJ product add to cart via localStorage
-      const existingCart = JSON.parse(localStorage.getItem("cart") || "[]");
-      const existingItem = existingCart.find((item: any) => item.id === product.id);
-      
-      if (existingItem) {
-        existingItem.quantity += 1;
-      } else {
-        existingCart.push({
-          id: product.id,
+    try {
+      if (product.source === 'cj') {
+        const cjProduct = {
+          id: `cj_${product.id}`,
           name: product.name,
           price: product.price,
-          image: product.image,
-          quantity: 1,
-          source: 'cj',
-          cjProductId: product.cjProductId,
-        });
+          image: displayImage || product.image,
+          variant: null,
+          variantId: null,
+          isCJProduct: true as const,
+        };
+        addToCJCart(cjProduct, 1);
+      } else {
+        await addToCart(product, 1);
       }
-      localStorage.setItem("cart", JSON.stringify(existingCart));
-      window.dispatchEvent(new Event("cart-updated"));
-    } else {
-      addToCart(product.id, 1);
+    } catch (err) {
+      console.error("CombinedProductCard handleAddToCart error:", err);
     }
   };
 
-  const handleBuyNow = (e: React.MouseEvent) => {
+  const handleBuyNow = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    handleAddToCart(e);
+    await handleAddToCart(e);
     navigate("/checkout");
   };
 

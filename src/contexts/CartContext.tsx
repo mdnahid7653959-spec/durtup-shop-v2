@@ -176,69 +176,96 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [fetchCart]);
 
   const addToCart = useCallback(async (productOrId: any, quantity: number = 1, variants?: Record<string, string>) => {
-    const isObject = typeof productOrId === "object" && productOrId !== null;
-    const productId = String(isObject ? (productOrId.id || productOrId.product_id) : productOrId);
+    try {
+      const isObject = typeof productOrId === "object" && productOrId !== null;
+      const productId = String(isObject ? (productOrId.id || productOrId.product_id) : productOrId);
 
-    const catalog = await getCachedMohasagorProducts();
-    const targetProd = catalog.find(p => p.id === productId) || (isObject ? productOrId : null);
+      // Fast synchronous lookup
+      const syncMatch = findMohasagorProductSync(productId);
+      const targetProd = isObject ? productOrId : syncMatch;
 
-    const variantKey = variants && Object.keys(variants).length > 0 ? JSON.stringify(variants) : "";
-    const variantName = variants && Object.keys(variants).length > 0 
-      ? Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(", ")
-      : (isObject ? productOrId.variant_name || null : null);
-    const color = variants?.Color || variants?.color || (isObject ? productOrId.color : null);
-    const size = variants?.Size || variants?.size || (isObject ? productOrId.size : null);
+      const variantKey = variants && Object.keys(variants).length > 0 ? JSON.stringify(variants) : "";
+      const variantName = variants && Object.keys(variants).length > 0 
+        ? Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(", ")
+        : (isObject ? productOrId.variant_name || null : null);
+      const color = variants?.Color || variants?.color || (isObject ? (productOrId.color || productOrId.selected_variants?.Color || productOrId.selected_variants?.color) : null);
+      const size = variants?.Size || variants?.size || (isObject ? (productOrId.size || productOrId.selected_variants?.Size || productOrId.selected_variants?.size) : null);
 
-    let updated: CartItem[] = [];
-    setItems((prev) => {
-      const existingIdx = prev.findIndex(item => 
-        (item.product_id === productId || item.id === productId) && 
-        (JSON.stringify(item.selected_variants || {}) === JSON.stringify(variants || {}) || item.variant_name === variantName)
-      );
+      // Determine price accurately
+      let regularPrice = 100;
+      let discountPrice: number | null = null;
 
-      if (existingIdx > -1) {
-        updated = prev.map((item, idx) => 
-          idx === existingIdx ? { ...item, quantity: item.quantity + quantity } : item
-        );
-      } else {
-        const newItem: CartItem = {
-          id: `cart-${productId}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          product_id: productId,
-          quantity,
-          variant_id: variantKey || null,
-          selected_variants: variants || undefined,
-          color,
-          size,
-          variant_name: variantName,
-          product: targetProd ? {
-            id: targetProd.id,
-            name: targetProd.name,
-            slug: targetProd.slug || `product-${targetProd.id}`,
-            regular_price: targetProd.originalPrice || targetProd.regular_price || targetProd.price,
-            discount_price: targetProd.discount_price || targetProd.price,
-            stock_quantity: targetProd.stock_quantity ?? targetProd.stock ?? 50
-          } : {
-            id: productId,
-            name: isObject ? (productOrId.name || "Product") : "Product",
-            slug: isObject ? (productOrId.slug || `product-${productId}`) : `product-${productId}`,
-            regular_price: isObject ? (productOrId.price || 100) : 100,
-            discount_price: null,
-            stock_quantity: 50
-          },
-          image: (isObject && productOrId.image) ? productOrId.image : (targetProd?.image || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400")
-        };
-        updated = [...prev, newItem];
+      if (targetProd) {
+        const rawReg = Number(targetProd.regular_price || targetProd.originalPrice || targetProd.price || 0);
+        const rawDisc = targetProd.discount_price !== undefined && targetProd.discount_price !== null 
+          ? Number(targetProd.discount_price) 
+          : (targetProd.price ? Number(targetProd.price) : null);
+
+        if (rawDisc !== null && rawDisc > 0 && rawReg > rawDisc) {
+          regularPrice = rawReg;
+          discountPrice = rawDisc;
+        } else if (rawDisc !== null && rawDisc > 0) {
+          regularPrice = rawDisc;
+          discountPrice = rawDisc;
+        } else if (rawReg > 0) {
+          regularPrice = rawReg;
+          discountPrice = rawReg;
+        }
       }
-      return updated;
-    });
 
-    await syncCartToFirebase(updated);
+      // Determine image
+      const prodImg = (isObject && (productOrId.image || productOrId.product_images?.[0]?.image_url || productOrId.images?.[0])) 
+        ? (productOrId.image || productOrId.product_images?.[0]?.image_url || productOrId.images?.[0]) 
+        : (targetProd?.image || targetProd?.product_images?.[0]?.image_url || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400");
 
-    toast({
-      title: "Added to cart!",
-      description: variantName ? `Selected: ${variantName}` : "Item has been added to your shopping cart."
-    });
-  }, [syncCartToFirebase, toast]);
+      let updated: CartItem[] = [];
+      setItems((prev) => {
+        const existingIdx = prev.findIndex(item => 
+          (item.product_id === productId || item.id === productId) && 
+          (JSON.stringify(item.selected_variants || {}) === JSON.stringify(variants || {}) || item.variant_name === variantName)
+        );
+
+        if (existingIdx > -1) {
+          updated = prev.map((item, idx) => 
+            idx === existingIdx ? { ...item, quantity: item.quantity + quantity } : item
+          );
+        } else {
+          const newItem: CartItem = {
+            id: `cart-${productId}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            product_id: productId,
+            quantity,
+            variant_id: variantKey || null,
+            selected_variants: variants || undefined,
+            color,
+            size,
+            variant_name: variantName,
+            product: {
+              id: productId,
+              name: targetProd ? (targetProd.name || targetProd.title || "Product") : (isObject ? (productOrId.name || "Product") : "Product"),
+              slug: targetProd ? (targetProd.slug || `product-${productId}`) : (isObject ? (productOrId.slug || `product-${productId}`) : `product-${productId}`),
+              regular_price: regularPrice,
+              discount_price: discountPrice,
+              stock_quantity: targetProd?.stock_quantity ?? targetProd?.stock ?? 50
+            },
+            image: prodImg
+          };
+          updated = [...prev, newItem];
+        }
+        return updated;
+      });
+
+      // Synchronize immediately to localStorage and trigger background Firebase sync
+      setLocalCart(updated);
+      syncCartToFirebase(updated).catch(() => {});
+
+      toast({
+        title: "Added to cart!",
+        description: variantName ? `Selected: ${variantName}` : "Item has been added to your shopping cart."
+      });
+    } catch (err) {
+      console.error("addToCart unexpected error:", err);
+    }
+  }, [setLocalCart, syncCartToFirebase, toast]);
 
   const removeItem = useCallback(async (targetId: string) => {
     if (!targetId) return;

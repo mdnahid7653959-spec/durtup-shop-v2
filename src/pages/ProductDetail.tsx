@@ -991,53 +991,72 @@ export default function ProductDetail() {
   const handleAddToCart = async () => {
     if (!product) return;
     
-    // Check if there are variants and they haven't all been selected
+    // Auto-select first variant for any unselected attributes if variants exist
+    let currentVariants = { ...selectedVariants };
     if (product.product_variants && product.product_variants.length > 0) {
-       // Group variants by attribute to check if all attributes have a selection
-       const attributes = Array.from(new Set(product.product_variants.map(v => v.attribute)));
-       const unselected = attributes.filter(attr => !selectedVariants[attr]);
-       if (unselected.length > 0) {
-         variantSelectorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-         toast({
-           title: "Selection Required",
-           description: `Please select: ${unselected.join(", ")}`,
-           variant: "destructive"
-         });
-         return;
-       }
+      const attributes = Array.from(new Set(product.product_variants.map(v => v.attribute)));
+      let changed = false;
+      attributes.forEach(attr => {
+        if (!currentVariants[attr]) {
+          const attrVariants = product.product_variants!.filter(v => v.attribute === attr).map(v => v.variant);
+          const sorted = sortVariantValues(attr, attrVariants);
+          if (sorted.length > 0) {
+            currentVariants[attr] = sorted[0];
+            changed = true;
+          }
+        }
+      });
+      if (changed) {
+        setSelectedVariants(currentVariants);
+      }
     }
 
     setAddingToCart(true);
-    await addToCart(product.id, quantity, selectedVariants);
-    setAddingToCart(false);
-
     try {
-      const pPrice = (product.discount_price || product.regular_price || 0) * quantity;
-      trackAddToCart(product.id, product.name, pPrice, "BDT");
-    } catch {}
+      await addToCart(product, quantity, currentVariants);
+      try {
+        const pPrice = (product.discount_price || product.regular_price || 0) * quantity;
+        trackAddToCart(product.id, product.name, pPrice, "BDT");
+      } catch {}
+    } catch (err) {
+      console.error("handleAddToCart error:", err);
+    } finally {
+      setAddingToCart(false);
+    }
   };
+
   const handleBuyNow = async () => {
     if (!product) return;
     
+    let currentVariants = { ...selectedVariants };
     if (product.product_variants && product.product_variants.length > 0) {
-       const attributes = Array.from(new Set(product.product_variants.map(v => v.attribute)));
-       const unselected = attributes.filter(attr => !selectedVariants[attr]);
-       if (unselected.length > 0) {
-         variantSelectorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-         toast({
-           title: "Selection Required",
-           description: `Please select: ${unselected.join(", ")}`,
-           variant: "destructive"
-         });
-         return;
-       }
+      const attributes = Array.from(new Set(product.product_variants.map(v => v.attribute)));
+      let changed = false;
+      attributes.forEach(attr => {
+        if (!currentVariants[attr]) {
+          const attrVariants = product.product_variants!.filter(v => v.attribute === attr).map(v => v.variant);
+          const sorted = sortVariantValues(attr, attrVariants);
+          if (sorted.length > 0) {
+            currentVariants[attr] = sorted[0];
+            changed = true;
+          }
+        }
+      });
+      if (changed) {
+        setSelectedVariants(currentVariants);
+      }
     }
 
     setBuyingNow(true);
-    await addToCart(product.id, quantity, selectedVariants);
-    setBuyingNow(false);
-
-    navigate("/checkout");
+    try {
+      await addToCart(product, quantity, currentVariants);
+      navigate("/checkout");
+    } catch (err) {
+      console.error("handleBuyNow error:", err);
+      navigate("/checkout");
+    } finally {
+      setBuyingNow(false);
+    }
   };
   const handleWishlistToggle = () => {
     if (!product) return;
