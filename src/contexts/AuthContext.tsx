@@ -38,15 +38,34 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const profileCache = new Map<string, Profile>();
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<FirebaseUser | null>(() => auth.currentUser);
+  const [user, setUser] = useState<FirebaseUser | null>(() => {
+    if (auth.currentUser) return auth.currentUser;
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("durtup_active_user");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && (parsed.uid || parsed.id)) {
+            return parsed as any;
+          }
+        }
+      } catch {}
+    }
+    return null;
+  });
+
   const [profile, setProfile] = useState<Profile | null>(() => {
-    if (typeof window === "undefined" || !auth.currentUser?.uid) return null;
+    if (typeof window === "undefined") return null;
     try {
-      const raw = localStorage.getItem("durtup_profile_" + auth.currentUser.uid);
-      return raw ? JSON.parse(raw) : null;
+      const activeUid = auth.currentUser?.uid || JSON.parse(localStorage.getItem("durtup_active_user") || "{}")?.uid;
+      if (activeUid) {
+        const raw = localStorage.getItem("durtup_profile_" + activeUid);
+        return raw ? JSON.parse(raw) : null;
+      }
     } catch {
       return null;
     }
+    return null;
   });
   const [loading, setLoading] = useState(false);
 
@@ -112,10 +131,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (firebaseUser) {
         const userWithId = Object.assign(firebaseUser, { id: firebaseUser.uid });
         setUser(userWithId as any);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("durtup_active_user", JSON.stringify({
+              id: firebaseUser.uid,
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL
+            }));
+          } catch {}
+        }
         fetchProfile(firebaseUser.uid, firebaseUser);
       } else {
         setUser(null);
         setProfile(null);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.removeItem("durtup_active_user");
+          } catch {}
+        }
       }
       setLoading(false);
     });
@@ -145,6 +180,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (typeof window !== "undefined") {
         try {
+          localStorage.setItem("durtup_active_user", JSON.stringify({
+            id: firebaseUser.uid,
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: fullName,
+            photoURL: null
+          }));
           localStorage.setItem("durtup_profile_" + firebaseUser.uid, JSON.stringify(newProf));
         } catch (e) {}
       }
@@ -171,22 +213,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (cred.user) {
       const userWithId = Object.assign(cred.user, { id: cred.user.uid });
       setUser(userWithId as any);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("durtup_active_user", JSON.stringify({
+            id: cred.user.uid,
+            uid: cred.user.uid,
+            email: cred.user.email,
+            displayName: cred.user.displayName,
+            photoURL: cred.user.photoURL
+          }));
+        } catch {}
+      }
       fetchProfile(cred.user.uid, cred.user);
     }
   }, [fetchProfile]);
 
   const signOut = useCallback(async () => {
-    const uid = auth.currentUser?.uid;
-    if (uid && typeof window !== "undefined") {
+    const uid = auth.currentUser?.uid || (user as any)?.uid || (user as any)?.id;
+    if (typeof window !== "undefined") {
       try {
-        localStorage.removeItem("durtup_profile_" + uid);
+        if (uid) localStorage.removeItem("durtup_profile_" + uid);
+        localStorage.removeItem("durtup_active_user");
       } catch (e) {}
     }
     await firebaseSignOut(auth);
     setUser(null);
     setProfile(null);
     profileCache.clear();
-  }, []);
+  }, [user]);
 
   const userWithId = useMemo(() => {
     if (!user) return null;

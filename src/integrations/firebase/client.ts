@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 
@@ -19,6 +19,13 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const db = getFirestore(app);
+
+// Enforce permanent local browser persistence across all devices, sessions, and reboots
+if (typeof window !== "undefined") {
+  setPersistence(auth, browserLocalPersistence).catch((err) => {
+    console.warn("Failed setting browser local auth persistence:", err);
+  });
+}
 
 // Google Auth Setup
 export const googleProvider = new GoogleAuthProvider();
