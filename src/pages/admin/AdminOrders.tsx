@@ -24,7 +24,7 @@ import {
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
 import { db } from "@/integrations/firebase/client";
-import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { SupplierManager } from "@/services/suppliers/supplierManager";
@@ -102,6 +102,10 @@ interface Order {
   customer_name?: string;
   customer_phone?: string;
   customer_email?: string;
+  items?: any[];
+  product_name?: string;
+  product_image?: string;
+  total_items?: number;
 }
 
 interface OrderItem {
@@ -219,110 +223,144 @@ export default function AdminOrders() {
     // Purge mock orders from local caches if present
     purgeMockOrdersFromStorage();
 
-    // 1. Direct DB query first
+    const ordersMap = new Map<string, Order>();
+
+    // 1. Direct Firestore collection fetch
+    try {
+      const snap = await getDocs(collection(db, "orders"));
+      snap.forEach((d) => {
+        const data = d.data();
+        if (!isMockOrder(data) && !isMockOrder({ id: d.id, ...data })) {
+          const item: Order = {
+            id: d.id,
+            order_number: data.order_number || data.orderNumber || d.id,
+            user_id: data.user_id || data.userId || "guest",
+            status: (data.status || "pending").toLowerCase(),
+            payment_status: (data.payment_status || data.paymentStatus || "pending").toLowerCase(),
+            payment_method: data.payment_method || data.paymentMethod || "cod",
+            subtotal: Number(data.subtotal || 0),
+            shipping_cost: Number(data.shipping_cost || data.shippingCost || 0),
+            discount_amount: Number(data.discount_amount || data.discountAmount || 0),
+            tax_amount: Number(data.tax_amount || 0),
+            total: Number(data.total || data.totalAmount || 0),
+            notes: data.notes || null,
+            shipping_address: data.shipping_address || data.shippingAddress || {},
+            billing_address: data.billing_address || data.billingAddress || {},
+            courier_name: data.courier_name || null,
+            tracking_number: data.tracking_number || null,
+            created_at: data.created_at || data.createdAt || new Date().toISOString(),
+            updated_at: data.updated_at || data.updatedAt || null,
+            customer_name: data.shipping_address?.firstName
+              ? `${data.shipping_address.firstName} ${data.shipping_address.lastName || ""}`.trim()
+              : data.shipping_address?.name || data.customer_name || undefined,
+            customer_phone: data.shipping_address?.phone || data.customer_phone || undefined,
+            customer_email: data.shipping_address?.email || data.customer_email || undefined,
+            items: data.items || [],
+            product_name: data.product_name,
+            product_image: data.product_image,
+            total_items: data.total_items,
+          };
+          const key = item.order_number || item.id;
+          ordersMap.set(key, item);
+        }
+      });
+    } catch (fsErr) {
+      console.warn("Firestore orders fetch warning:", fsErr);
+    }
+
+    // 2. Direct DB query from Supabase
     try {
       const { data: dbOrders, error: dbErr } = await supabase
         .from("orders")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(200);
 
       if (!dbErr && dbOrders && dbOrders.length > 0) {
-        const validOrders = (dbOrders as Order[]).filter((o) => !isMockOrder(o));
-        if (validOrders.length > 0) {
-          setOrders(validOrders);
-          setLoading(false);
-          return;
-        }
+        (dbOrders as any[]).forEach((o) => {
+          if (!isMockOrder(o)) {
+            const key = o.order_number || o.id;
+            const existing = ordersMap.get(key);
+            const item: Order = {
+              id: o.id,
+              order_number: o.order_number || o.id,
+              user_id: o.user_id || "guest",
+              status: (o.status || existing?.status || "pending").toLowerCase(),
+              payment_status: (o.payment_status || existing?.payment_status || "pending").toLowerCase(),
+              payment_method: o.payment_method || existing?.payment_method || "cod",
+              subtotal: Number(o.subtotal || existing?.subtotal || 0),
+              shipping_cost: Number(o.shipping_cost || existing?.shipping_cost || 0),
+              discount_amount: Number(o.discount_amount || existing?.discount_amount || 0),
+              tax_amount: Number(o.tax_amount || 0),
+              total: Number(o.total || existing?.total || 0),
+              notes: o.notes || existing?.notes || null,
+              shipping_address: o.shipping_address || existing?.shipping_address || {},
+              billing_address: o.billing_address || existing?.billing_address || {},
+              courier_name: o.courier_name || existing?.courier_name || null,
+              tracking_number: o.tracking_number || existing?.tracking_number || null,
+              created_at: o.created_at || existing?.created_at || new Date().toISOString(),
+              updated_at: o.updated_at || existing?.updated_at || null,
+              customer_name: existing?.customer_name || o.customer_name || (o.shipping_address?.firstName ? `${o.shipping_address.firstName} ${o.shipping_address.lastName || ""}`.trim() : o.shipping_address?.name),
+              customer_phone: existing?.customer_phone || o.customer_phone || o.shipping_address?.phone,
+              customer_email: existing?.customer_email || o.customer_email || o.shipping_address?.email,
+              items: existing?.items || o.items || [],
+              product_name: existing?.product_name || o.product_name,
+              product_image: existing?.product_image || o.product_image,
+              total_items: existing?.total_items || o.total_items,
+            };
+            ordersMap.set(key, item);
+          }
+        });
       }
     } catch (dbErr) {
       console.warn("Direct fetch orders error:", dbErr);
     }
 
-    // 2. Try edge function if available
-    if (admin?.id) {
-      try {
-        const { data } = await supabase.functions.invoke("admin-orders", {
-          body: { action: "list", adminId: admin.id, data: { limit: 100 } }
-        });
-        if (data?.orders && Array.isArray(data.orders) && data.orders.length > 0) {
-          const validOrders = (data.orders as Order[]).filter((o) => !isMockOrder(o));
-          if (validOrders.length > 0) {
-            setOrders(validOrders);
-            setLoading(false);
-            return;
-          }
-        }
-      } catch (efErr) {
-        console.warn("Edge function fetch orders error:", efErr);
-      }
-    }
-
-    // 3. Fallback: Firestore 'orders' collection
-    try {
-      const snap = await getDocs(collection(db, "orders"));
-      const list: any[] = [];
-      snap.forEach((d) => {
-        const data = d.data();
-        const item = {
-          id: d.id,
-          order_number: data.order_number || data.orderNumber || d.id,
-          user_id: data.user_id || data.userId || "guest",
-          status: data.status || "pending",
-          payment_status: data.payment_status || data.paymentStatus || "pending",
-          payment_method: data.payment_method || data.paymentMethod || "cod",
-          subtotal: Number(data.subtotal || 0),
-          shipping_cost: Number(data.shipping_cost || data.shippingCost || 0),
-          discount_amount: Number(data.discount_amount || data.discountAmount || 0),
-          tax_amount: Number(data.tax_amount || 0),
-          total: Number(data.total || 0),
-          notes: data.notes || null,
-          shipping_address: data.shipping_address || data.shippingAddress || {},
-          billing_address: data.billing_address || data.billingAddress || {},
-          created_at: data.created_at || data.createdAt || new Date().toISOString(),
-          updated_at: data.updated_at || data.updatedAt || null,
-        };
-        if (!isMockOrder(item)) {
-          list.push(item);
-        }
-      });
-      if (list.length > 0) {
-        setOrders(list as Order[]);
-        setLoading(false);
-        return;
-      }
-    } catch (fsErr) {
-      console.warn("Firestore orders fetch warning:", fsErr);
-    }
-
-    // 4. Fallback: LocalStorage Cache
+    // 3. Fallback: LocalStorage Cache
     try {
       const raw = localStorage.getItem("enterprise_admin_orders") || localStorage.getItem("local_orders");
       if (raw) {
         const list = JSON.parse(raw);
-        if (Array.isArray(list) && list.length > 0) {
-          const validOrders = (list as Order[]).filter((o) => !isMockOrder(o));
-          if (validOrders.length > 0) {
-            setOrders(validOrders);
-            setLoading(false);
-            return;
-          }
+        if (Array.isArray(list)) {
+          list.forEach((o: any) => {
+            if (!isMockOrder(o)) {
+              const key = o.order_number || o.id;
+              if (!ordersMap.has(key)) {
+                ordersMap.set(key, o);
+              }
+            }
+          });
         }
       }
     } catch (lsErr) {
       console.warn("Local storage orders fetch warning:", lsErr);
     }
 
-    // If no real orders exist, show clean empty state
-    setOrders([]);
+    const mergedOrders = Array.from(ordersMap.values()).sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime() || 0;
+      const dateB = new Date(b.created_at).getTime() || 0;
+      return dateB - dateA;
+    });
+
+    setOrders(mergedOrders);
     setLoading(false);
   };
-
 
   useEffect(() => {
     fetchOrders();
 
-    // Real-time subscription
+    // 1. Real-time Firestore onSnapshot listener
+    const unsubFirestore = onSnapshot(
+      collection(db, "orders"),
+      () => {
+        fetchOrders();
+      },
+      (err) => {
+        console.warn("Admin orders Firestore realtime listener error:", err);
+      }
+    );
+
+    // 2. Real-time Supabase postgres_changes
     const channel = supabase
       .channel("admin-orders-realtime")
       .on(
@@ -334,8 +372,31 @@ export default function AdminOrders() {
       )
       .subscribe();
 
+    // 3. Cross-tab and BroadcastChannel listeners for instant sync
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel("durtup_admin_order_notifications");
+        bc.onmessage = () => {
+          fetchOrders();
+        };
+      }
+    } catch {}
+
+    const onSync = () => fetchOrders();
+    window.addEventListener("durtup_new_order", onSync);
+    window.addEventListener("storage", onSync);
+    window.addEventListener("focus", onSync);
+    document.addEventListener("visibilitychange", onSync);
+
     return () => {
+      unsubFirestore();
       supabase.removeChannel(channel);
+      if (bc) bc.close();
+      window.removeEventListener("durtup_new_order", onSync);
+      window.removeEventListener("storage", onSync);
+      window.removeEventListener("focus", onSync);
+      document.removeEventListener("visibilitychange", onSync);
     };
   }, []);
 
@@ -783,18 +844,33 @@ export default function AdminOrders() {
         }
       }
 
-      if (!fetchedOrderDetails) {
+      if (!fetchedOrderDetails || orderItems.length === 0) {
         // Direct query fallback for items
         const { data: directItems } = await supabase
           .from("order_items")
           .select("*")
           .eq("order_id", order.id);
         
-        const items = directItems || [];
+        let items = (directItems && directItems.length > 0) ? directItems : [];
+
+        // Fallback: check order.items or fetch directly from Firestore doc
+        if (items.length === 0) {
+          if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+            items = order.items;
+          } else {
+            try {
+              const fsDoc = await getDoc(doc(db, "orders", order.id));
+              if (fsDoc.exists() && fsDoc.data()?.items && Array.isArray(fsDoc.data()?.items)) {
+                items = fsDoc.data()!.items;
+              }
+            } catch {}
+          }
+        }
+        
         const itemsWithDetails = await Promise.all(
           items.map(async (item: any) => {
             let product_image = item.product_image || item.image || null;
-            let product_category = null;
+            let product_category = item.product_category || item.category || null;
 
             if (!product_image && item.product_id) {
               const { data: images } = await supabase
@@ -808,7 +884,7 @@ export default function AdminOrders() {
               }
             }
 
-            if (item.product_id) {
+            if (item.product_id && !product_category) {
               try {
                 const { data: product } = await supabase
                   .from("products_public")
@@ -827,7 +903,18 @@ export default function AdminOrders() {
               } catch {}
             }
 
-            return { ...item, product_image, product_category };
+            return {
+              id: item.id || String(Math.random()),
+              product_name: item.product_name || item.name || item.title || "Product",
+              variant_name: item.variant_name || item.variant || null,
+              quantity: Number(item.quantity || 1),
+              price: Number(item.price || 0),
+              total: Number(item.total || (Number(item.price || 0) * Number(item.quantity || 1))),
+              product_id: item.product_id || null,
+              product_image: product_image || "/durtup-logo.png",
+              product_category,
+              sku: item.sku || null
+            };
           })
         );
         setOrderItems(itemsWithDetails);
@@ -855,9 +942,15 @@ export default function AdminOrders() {
 
   // Filter orders
   const filteredOrders = orders.filter((order) => {
+    const cust = resolveCustomer(order);
+    const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
-      order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (order.tracking_number && order.tracking_number.toLowerCase().includes(searchQuery.toLowerCase()));
+      !q ||
+      order.order_number.toLowerCase().includes(q) ||
+      (order.tracking_number && order.tracking_number.toLowerCase().includes(q)) ||
+      (cust.name && cust.name.toLowerCase().includes(q)) ||
+      (cust.phone && cust.phone.toLowerCase().includes(q)) ||
+      (cust.email && cust.email.toLowerCase().includes(q));
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -875,11 +968,11 @@ export default function AdminOrders() {
     if (!address) return "No address provided";
     if (typeof address === "string") return address;
     const parts = [
-      address.name || address.firstName,
+      address.name || address.fullName || (address.firstName ? `${address.firstName} ${address.lastName || ''}`.trim() : null),
       address.street || address.address || address.address_line1,
       address.city,
       address.state,
-      address.zip || address.postal_code,
+      address.zip || address.postal_code || address.zipCode,
       address.country,
     ].filter(Boolean);
     const addressText = parts.join(", ") || "No address provided";
@@ -888,13 +981,20 @@ export default function AdminOrders() {
   };
 
   const resolveCustomer = (order: Order) => {
+    const fallbackName = order.shipping_address?.full_name || 
+      order.shipping_address?.name || 
+      order.shipping_address?.fullName ||
+      (order.shipping_address?.firstName ? `${order.shipping_address.firstName} ${order.shipping_address.lastName || ''}`.trim() : null) || 
+      order.customer_name || 
+      "Customer";
+
     // 1. Try match by user_id
     if (order.user_id && profilesMap[order.user_id]) {
       const p = profilesMap[order.user_id];
       return {
         id: p.id || order.user_id,
         user_id: p.user_id || order.user_id,
-        name: p.full_name || order.shipping_address?.name || order.customer_name || "Customer",
+        name: p.full_name || fallbackName,
         phone: p.phone || order.shipping_address?.phone || order.customer_phone || null,
         email: p.email || order.shipping_address?.email || order.customer_email || null,
         avatar_url: p.avatar_url || null,
@@ -910,7 +1010,7 @@ export default function AdminOrders() {
       return {
         id: p.id || order.user_id || "guest",
         user_id: p.user_id || order.user_id || "guest",
-        name: p.full_name || order.shipping_address?.name || order.customer_name || "Customer",
+        name: p.full_name || fallbackName,
         phone: p.phone || order.shipping_address?.phone || order.customer_phone || null,
         email: p.email || email,
         avatar_url: p.avatar_url || null,
@@ -926,7 +1026,7 @@ export default function AdminOrders() {
       return {
         id: p.id || order.user_id || "guest",
         user_id: p.user_id || order.user_id || "guest",
-        name: p.full_name || order.shipping_address?.name || order.customer_name || "Customer",
+        name: p.full_name || fallbackName,
         phone: p.phone || phone,
         email: p.email || email || null,
         avatar_url: p.avatar_url || null,
@@ -936,11 +1036,10 @@ export default function AdminOrders() {
     }
 
     // 4. Default from shipping address / order details
-    const name = order.shipping_address?.full_name || order.shipping_address?.name || order.customer_name || "Customer";
     return {
       id: order.user_id || "guest",
       user_id: order.user_id || "guest",
-      name: name,
+      name: fallbackName,
       phone: phone || null,
       email: email || null,
       avatar_url: null,
