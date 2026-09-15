@@ -6,7 +6,8 @@ import {
   Menu, 
   ShoppingCart, 
   MessageCircle, 
-  LogOut
+  LogOut,
+  ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -32,7 +33,6 @@ export function Header() {
   const isHomePage = location.pathname === "/";
   const isCheckoutPage = location.pathname.toLowerCase() === "/checkout" || location.pathname.toLowerCase().startsWith("/checkout");
   const isMessagesPage = location.pathname.toLowerCase() === "/messages" || location.pathname.toLowerCase().startsWith("/messages");
-  const hideSearch = isCheckoutPage || isMessagesPage;
 
   const { user, profile, signOut } = useAuth();
   const { itemCount: cartCount } = useCart();
@@ -92,15 +92,33 @@ export function Header() {
       <div className="px-3 sm:px-4 py-2 max-w-7xl mx-auto">
         <div className="flex items-center justify-between gap-3 sm:gap-6">
           
-          {/* Left: Hamburger & Logo */}
+          {/* Left: Back button on subpages / Hamburger on Home, and Logo */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <Link 
-              to="/categories" 
-              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-xl transition-all flex items-center justify-center text-slate-800 dark:text-slate-100"
-              aria-label="Categories Menu"
-            >
-              <Menu className="h-6 w-6" />
-            </Link>
+            {!isHomePage ? (
+              <button 
+                onClick={() => {
+                  if (window.history.length > 1) {
+                    navigate(-1);
+                  } else {
+                    navigate("/");
+                  }
+                }}
+                className="p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-90 rounded-xl transition-all flex items-center justify-center text-slate-800 dark:text-slate-100 hover:text-orange-600 group"
+                aria-label="Back"
+                title="Go Back"
+              >
+                <ArrowLeft className="h-6 w-6 group-hover:-translate-x-0.5 transition-transform" />
+              </button>
+            ) : (
+              <Link 
+                to="/categories" 
+                className="p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-xl transition-all flex items-center justify-center text-slate-800 dark:text-slate-100 hover:text-orange-600"
+                aria-label="Categories Menu"
+                title="All Categories"
+              >
+                <Menu className="h-6 w-6" />
+              </Link>
+            )}
 
             <Link to="/" className="flex flex-col items-start justify-center group select-none py-0.5">
               <div className="flex items-baseline tracking-tight font-black leading-none">
@@ -115,16 +133,18 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Center: Search Bar (Desktop) */}
-          {isCheckoutPage ? (
+          {/* Center: Search Bar (Desktop - ONLY on Home Page) */}
+          {isHomePage ? (
+            <div className="flex-1 max-w-2xl mx-2 hidden md:block">
+              <SmartSearchBar variant="desktop" />
+            </div>
+          ) : isCheckoutPage ? (
             <div className="flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm bg-slate-100/80 dark:bg-slate-800/80 px-4 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>100% Secure Checkout</span>
             </div>
           ) : (
-            <div className="flex-1 max-w-2xl mx-2 hidden md:block">
-              <SmartSearchBar variant="desktop" />
-            </div>
+            <div className="flex-1" />
           )}
 
           {/* Right Action Icons (Wishlist, Messages, Cart, Account) */}
@@ -204,8 +224,8 @@ export function Header() {
 
         </div>
 
-        {/* Search Bar (Mobile View) */}
-        {!hideSearch && (
+        {/* Search Bar (Mobile View - ONLY on Home Page) */}
+        {isHomePage && (
           <div className="mt-2 md:hidden">
             <SmartSearchBar variant="mobile" />
           </div>
