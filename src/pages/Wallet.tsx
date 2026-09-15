@@ -389,31 +389,27 @@ export default function Wallet() {
                 <WalletIcon className="h-32 w-32" />
               </div>
               <CardContent className="p-6 relative z-10 space-y-4">
-                <div>
-                  <p className="text-xs font-semibold text-primary-foreground/80 uppercase tracking-wider">
-                    Available Balance
-                  </p>
-                  <p className="text-3xl sm:text-4xl font-black tracking-tight mt-1">
-                    ৳{walletBalance.toLocaleString()}
-                  </p>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-primary-foreground/80 uppercase tracking-wider">
+                      Available Balance
+                    </p>
+                    <p className="text-3xl sm:text-4xl font-black tracking-tight mt-1">
+                      ৳{walletBalance.toLocaleString()}
+                    </p>
+                  </div>
+                  <Badge className="bg-white/20 hover:bg-white/25 text-white border-0 text-[11px] font-semibold px-2.5 py-1 rounded-lg backdrop-blur-xs">
+                    100% Safe & Secure
+                  </Badge>
                 </div>
 
-                <div className="flex flex-wrap gap-2.5 pt-2">
+                <div className="pt-2">
                   <Button 
-                    variant="secondary" 
                     onClick={() => setWithdrawModalOpen(true)}
-                    className="flex-1 min-w-[120px] rounded-xl font-bold gap-2 shadow-sm"
+                    className="w-full h-11 bg-white text-orange-600 hover:bg-white/95 hover:text-orange-700 active:scale-[0.99] rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-md transition-all border-0"
                   >
-                    <ArrowUpRight className="h-4 w-4" />
-                    Withdraw
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => setTopUpModalOpen(true)}
-                    className="rounded-xl font-bold bg-white/10 hover:bg-white/20 border-white/20 text-white gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Top Up
+                    <ArrowUpRight className="h-5 w-5 stroke-[2.5]" />
+                    <span>উত্তোলন করুন (Withdraw)</span>
                   </Button>
                 </div>
               </CardContent>
