@@ -29,9 +29,10 @@ export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const isHomePage = location.pathname === "/";
   const isCheckoutPage = location.pathname.toLowerCase() === "/checkout" || location.pathname.toLowerCase().startsWith("/checkout");
   const isMessagesPage = location.pathname.toLowerCase() === "/messages" || location.pathname.toLowerCase().startsWith("/messages");
-  const hideSearchAndCategories = isCheckoutPage || isMessagesPage;
+  const hideSearch = isCheckoutPage || isMessagesPage;
 
   const { user, profile, signOut } = useAuth();
   const { itemCount: cartCount } = useCart();
@@ -204,15 +205,15 @@ export function Header() {
         </div>
 
         {/* Search Bar (Mobile View) */}
-        {!hideSearchAndCategories && (
+        {!hideSearch && (
           <div className="mt-2 md:hidden">
             <SmartSearchBar variant="mobile" />
           </div>
         )}
       </div>
 
-      {/* 2. Fluid Slidable Category Pills Navigation */}
-      {!hideSearchAndCategories && (
+      {/* 2. Fluid Slidable Category Pills Navigation (Visible ONLY on Home Page) */}
+      {isHomePage && (
         <CategoryPillsNav />
       )}
 
