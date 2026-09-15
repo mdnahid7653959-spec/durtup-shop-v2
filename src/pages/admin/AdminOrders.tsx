@@ -940,30 +940,6 @@ export default function AdminOrders() {
     setLoadingDetails(false);
   };
 
-  // Filter orders
-  const filteredOrders = orders.filter((order) => {
-    const cust = resolveCustomer(order);
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      order.order_number.toLowerCase().includes(q) ||
-      (order.tracking_number && order.tracking_number.toLowerCase().includes(q)) ||
-      (cust.name && cust.name.toLowerCase().includes(q)) ||
-      (cust.phone && cust.phone.toLowerCase().includes(q)) ||
-      (cust.email && cust.email.toLowerCase().includes(q));
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  // Stats
-  const pendingCount = orders.filter((o) => o.status === "pending").length;
-  const processingCount = orders.filter((o) => o.status === "processing").length;
-  const shippedCount = orders.filter((o) => o.status === "shipped").length;
-  const deliveredCount = orders.filter((o) => o.status === "delivered").length;
-  const totalRevenue = orders
-    .filter((o) => o.payment_status === "paid")
-    .reduce((sum, o) => sum + o.total, 0);
-
   const formatAddress = (address: any) => {
     if (!address) return "No address provided";
     if (typeof address === "string") return address;
@@ -1047,6 +1023,30 @@ export default function AdminOrders() {
       isRegistered: !!(order.user_id && order.user_id !== "guest"),
     };
   };
+
+  // Filter orders
+  const filteredOrders = orders.filter((order) => {
+    const cust = resolveCustomer(order);
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      order.order_number.toLowerCase().includes(q) ||
+      (order.tracking_number && order.tracking_number.toLowerCase().includes(q)) ||
+      (cust.name && cust.name.toLowerCase().includes(q)) ||
+      (cust.phone && cust.phone.toLowerCase().includes(q)) ||
+      (cust.email && cust.email.toLowerCase().includes(q));
+    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Stats
+  const pendingCount = orders.filter((o) => o.status === "pending").length;
+  const processingCount = orders.filter((o) => o.status === "processing").length;
+  const shippedCount = orders.filter((o) => o.status === "shipped").length;
+  const deliveredCount = orders.filter((o) => o.status === "delivered").length;
+  const totalRevenue = orders
+    .filter((o) => o.payment_status === "paid")
+    .reduce((sum, o) => sum + o.total, 0);
 
   return (
     <AdminLayout title="Orders">
