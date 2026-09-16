@@ -190,9 +190,7 @@ const App = () => (
                         <Suspense fallback={null}>
                           {typeof window !== "undefined" && (
                             window.location.pathname.startsWith("/admin") ||
-                            window.location.pathname.startsWith("/staff") ||
-                            window.location.pathname.startsWith("/seller") ||
-                            Boolean(localStorage.getItem("megamart_admin_session") || localStorage.getItem("staff_token") || localStorage.getItem("durtup_admin_authenticated"))
+                            window.location.pathname.startsWith("/staff")
                           ) ? <GlobalAdminNotificationListener /> : null}
                         </Suspense>
                         <AppLayout>

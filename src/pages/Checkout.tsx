@@ -19,7 +19,6 @@ import { db } from "@/integrations/firebase/client";
 import { doc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { sendTelegramOrderNotification } from "@/utils/telegramNotifier";
-import { sendOrderSuccessPushNotification, requestNotificationPermission } from "@/services/notificationService";
 import { trackPurchase } from "@/components/FacebookPixel";
 import { checkFirstOrderDiscountEligibility, DiscountEligibilityResult } from "@/services/referralService";
 
@@ -557,23 +556,7 @@ export default function Checkout() {
           console.warn("admin_notification sync warning:", e);
         });
 
-        // 🚀 Instant Cross-Tab Broadcast to all open Admin tabs/windows
-        try {
-          const broadcastPayload = {
-            id: orderId,
-            ...adminNotificationDoc
-          };
-          if ("BroadcastChannel" in window) {
-            const bc = new BroadcastChannel("durtup_admin_order_notifications");
-            bc.postMessage({ type: "new_order", order: broadcastPayload });
-            bc.close();
-          }
-          window.dispatchEvent(new CustomEvent("durtup_new_order", { detail: broadcastPayload }));
-          localStorage.setItem("durtup_last_order_event", JSON.stringify({ ...broadcastPayload, timestamp: Date.now() }));
-        } catch (bcErr) {
-          console.warn("Cross-tab order broadcast notice:", bcErr);
-        }
-
+        // Sync order to local storage for instant state reflection
         try {
           const rawLocal = localStorage.getItem("enterprise_admin_orders") || localStorage.getItem("local_orders") || "[]";
           const localList = JSON.parse(rawLocal);
@@ -804,19 +787,6 @@ export default function Checkout() {
       // Clear both carts in background
       clearCart().catch(() => {});
       clearCJCart();
-
-      // Send instant native push notification + audio chime to phone/browser
-      sendOrderSuccessPushNotification({
-        orderNumber: orderNumber,
-        customerName: shippingInfo.firstName || "Customer",
-        productName: primaryProductName,
-        productImage: primaryProductImage,
-        totalAmount: total,
-        paymentMethod: paymentMethod,
-        orderId: orderId,
-      }).catch((err) => {
-        console.warn("Order push notification trigger error:", err);
-      });
 
       toast({ 
         title: "অর্ডার সফলভাবে সম্পন্ন হয়েছে! 🎉", 

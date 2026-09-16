@@ -67,28 +67,17 @@ export const PushNotificationInitializer: React.FC = () => {
       }).catch(() => {});
     }
 
-    // Auto request notification permission on first user click/touch so real native notifications are allowed
-    const requestNotificationPermissionOnInteraction = () => {
+    // Audio unlock on interaction without prompting push notifications
+    const handleFirstInteraction = () => {
       unlockAudio();
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission().then((perm) => {
-          const deviceId = localStorage.getItem('durtup_device_id');
-          if (deviceId) {
-            setDoc(doc(db, 'push_tokens', deviceId), {
-              permission: perm,
-              updated_at: new Date().toISOString()
-            }, { merge: true }).catch(() => {});
-          }
-        }).catch(() => {});
-      }
     };
 
-    window.addEventListener('click', requestNotificationPermissionOnInteraction, { once: true, passive: true });
-    window.addEventListener('touchstart', requestNotificationPermissionOnInteraction, { once: true, passive: true });
+    window.addEventListener('click', handleFirstInteraction, { once: true, passive: true });
+    window.addEventListener('touchstart', handleFirstInteraction, { once: true, passive: true });
 
     return () => {
-      window.removeEventListener('click', requestNotificationPermissionOnInteraction);
-      window.removeEventListener('touchstart', requestNotificationPermissionOnInteraction);
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('touchstart', handleFirstInteraction);
     };
   }, []);
 

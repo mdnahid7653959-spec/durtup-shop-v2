@@ -26,20 +26,7 @@ export const GlobalAdminNotificationListener: React.FC = () => {
   const isFirstLoad = useRef(true);
 
   const path = location.pathname.toLowerCase();
-  const isAdminPath = path.startsWith("/admin") || path.startsWith("/staff") || path.startsWith("/seller");
-  const isAdminAuthenticated = Boolean(
-    adminAuth?.isAuthenticated ||
-    staffCtx?.isStaff ||
-    auth?.profile?.role === "admin" ||
-    auth?.profile?.role === "staff" ||
-    (typeof window !== "undefined" && (
-      localStorage.getItem("megamart_admin_session") ||
-      localStorage.getItem("staff_token") ||
-      localStorage.getItem("durtup_admin_authenticated")
-    ))
-  );
-
-  const isEligibleAdmin = isAdminPath || isAdminAuthenticated;
+  const isEligibleAdmin = path.startsWith("/admin") || path.startsWith("/staff");
 
   // 1. Initialize Native High Priority Channel & Audio unlock
   useEffect(() => {

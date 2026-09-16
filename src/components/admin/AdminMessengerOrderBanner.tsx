@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { 
   ShoppingCart, 
   X, 
@@ -40,12 +40,18 @@ export const AdminMessengerOrderBanner: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Listen to order alert custom events and BroadcastChannel
+  const isAdminRoute = location.pathname.startsWith("/admin") || location.pathname.startsWith("/staff");
+
+  // Listen to order alert custom events and BroadcastChannel only if on admin/staff route
   useEffect(() => {
+    if (!isAdminRoute) return;
+
     const handleNewOrder = (order: MessengerOrderPayload) => {
       if (!order || !order.id) return;
+      if (!window.location.pathname.startsWith("/admin") && !window.location.pathname.startsWith("/staff")) return;
 
       // Play sound immediately unless muted
       if (!isMuted) {
@@ -123,7 +129,7 @@ export const AdminMessengerOrderBanner: React.FC = () => {
     }
   };
 
-  if (!currentOrder) return null;
+  if (!isAdminRoute || !currentOrder) return null;
 
   const orderNum = currentOrder.order_number || currentOrder.orderNumber || currentOrder.id.slice(0, 8);
   const customerName = currentOrder.customer_name || "New Customer";
