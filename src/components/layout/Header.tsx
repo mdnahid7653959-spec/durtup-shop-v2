@@ -86,14 +86,14 @@ export function Header() {
   return (
     <>
       {/* Main Header (Scrolls naturally with page content) */}
-      <header className="relative w-full max-w-[100vw] bg-white dark:bg-slate-900 shadow-xs border-b border-slate-100 dark:border-slate-800">
+      <header className="relative w-full max-w-full overflow-hidden bg-white dark:bg-slate-900 shadow-xs border-b border-slate-100 dark:border-slate-800">
 
       {/* 1. Main Header Row (Logo, Search, Actions) */}
-      <div className="px-3 sm:px-4 py-2 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between gap-3 sm:gap-6">
+      <div className="px-3 sm:px-4 py-2 max-w-7xl mx-auto w-full">
+        <div className="flex items-center justify-between gap-2 sm:gap-6 w-full">
           
           {/* Left: Back button on subpages / Hamburger on Home, and Logo */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {!isHomePage ? (
               <button 
                 onClick={() => {
@@ -103,11 +103,11 @@ export function Header() {
                     navigate("/");
                   }
                 }}
-                className="p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-90 rounded-xl transition-all flex items-center justify-center text-slate-800 dark:text-slate-100 hover:text-orange-600 group"
+                className="p-1 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-90 rounded-xl transition-all flex items-center justify-center text-slate-800 dark:text-slate-100 hover:text-orange-600 group"
                 aria-label="Back"
                 title="Go Back"
               >
-                <ArrowLeft className="h-6 w-6 group-hover:-translate-x-0.5 transition-transform" />
+                <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6 group-hover:-translate-x-0.5 transition-transform" />
               </button>
             ) : (
               <Link 
@@ -122,26 +122,32 @@ export function Header() {
 
             <Link to="/" className="flex flex-col items-start justify-center group select-none py-0.5">
               <div className="flex items-baseline tracking-tight font-black leading-none">
-                <span className="text-xl sm:text-2xl md:text-[26px] text-orange-600 font-extrabold tracking-tight">Durtup</span>
-                <span className="text-xs sm:text-sm md:text-base font-bold text-slate-800 dark:text-slate-200">.shop</span>
+                <span className="text-lg sm:text-2xl md:text-[26px] text-orange-600 font-extrabold tracking-tight">Durtup</span>
+                <span className="text-[11px] sm:text-sm md:text-base font-bold text-slate-800 dark:text-slate-200">.shop</span>
               </div>
               {/* Signature Orange Smile Curve */}
-              <svg viewBox="0 0 100 20" className="w-16 sm:w-20 md:w-24 h-2 -mt-0.5 text-orange-600 fill-none stroke-current stroke-[3]">
+              <svg viewBox="0 0 100 20" className="w-14 sm:w-20 md:w-24 h-2 -mt-0.5 text-orange-600 fill-none stroke-current stroke-[3]">
                 <path d="M 5,5 Q 50,18 95,5" strokeLinecap="round" />
                 <path d="M 85,2 L 95,5 L 90,11" strokeLinecap="round" strokeLinejoin="round" fill="currentColor" />
               </svg>
             </Link>
           </div>
 
-          {/* Center: Search Bar (Desktop - ONLY on Home Page) */}
+          {/* Center: Search Bar (Desktop - ONLY on Home Page) / Checkout Secure Badge */}
           {isHomePage ? (
             <div className="flex-1 max-w-2xl mx-2 hidden md:block">
               <SmartSearchBar variant="desktop" />
             </div>
           ) : isCheckoutPage ? (
-            <div className="flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm bg-slate-100/80 dark:bg-slate-800/80 px-4 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>100% Secure Checkout</span>
+            <div className="flex items-center justify-center shrink-0">
+              <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 whitespace-nowrap shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>100% Secure Checkout</span>
+              </div>
+              <div className="sm:hidden flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>100% Secure</span>
+              </div>
             </div>
           ) : (
             <div className="flex-1" />

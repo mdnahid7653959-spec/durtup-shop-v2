@@ -963,48 +963,88 @@ export default function Checkout() {
     );
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <SEOHead title="Secure Checkout" noindex={true} />
+    <div className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-primary/20">
+      <SEOHead title="Secure Checkout - Durtup.shop" noindex={true} />
       <Header />
-      <main className="flex-1 pb-32 md:pb-8 w-full overflow-x-hidden">
-        <div className="container px-3 sm:px-4 md:px-6 py-4 sm:py-8 max-w-6xl w-full min-w-0">
-          <Link to="/cart" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-4 sm:mb-6 text-sm font-medium">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Cart
-          </Link>
+      <main className="flex-1 pb-28 md:pb-12 w-full max-w-full overflow-x-hidden">
+        <div className="w-full max-w-4xl mx-auto px-3.5 sm:px-6 py-3 sm:py-6 min-w-0">
+          
+          {/* Top Breadcrumb Navigation */}
+          <div className="flex items-center justify-between gap-2 mb-3 sm:mb-5">
+            <Link 
+              to="/cart" 
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors py-1"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>কার্ট-এ ফিরে যান (Cart)</span>
+            </Link>
 
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-4 sm:mb-8">Checkout</h1>
+            {/* Step Indicators */}
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className={`px-2.5 py-0.5 rounded-full font-semibold transition-all ${
+                checkoutStep === "shipping" 
+                  ? "bg-primary text-primary-foreground shadow-xs" 
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                ১. ঠিকানা
+              </span>
+              <span className="text-muted-foreground">→</span>
+              <span className={`px-2.5 py-0.5 rounded-full font-semibold transition-all ${
+                checkoutStep === "payment" 
+                  ? "bg-primary text-primary-foreground shadow-xs" 
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                ২. পেমেন্ট
+              </span>
+            </div>
+          </div>
 
-          {/* Mobile Order Summary Toggle */}
+          <div className="flex items-center justify-between mb-3 sm:mb-5">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-foreground tracking-tight">
+              {checkoutStep === "shipping" ? "ডেলিভারি ঠিকানা ও অর্ডার" : "পেমেন্ট মেথড নির্বাচন"}
+            </h1>
+          </div>
+
+          {/* Mobile Order Summary Collapsible Toggle */}
           <div className="lg:hidden mb-4">
             <button
+              type="button"
               onClick={() => setShowOrderSummary(!showOrderSummary)}
-              className="w-full flex items-center justify-between p-4 bg-card border rounded-xl"
+              className="w-full flex items-center justify-between p-3.5 bg-card hover:bg-muted/30 border border-border/80 rounded-2xl shadow-xs transition-all text-left"
             >
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">Order Summary ({totalItems} items)</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <ShoppingBag className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-foreground block truncate">
+                    অর্ডার সারসংক্ষেপ ({totalItems}টি আইটেম)
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">বিস্তারিত দেখতে চাপুন</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-primary">৳{total.toLocaleString()}</span>
-                {showOrderSummary ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="font-extrabold text-base text-primary">৳{total.toLocaleString()}</span>
+                <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                  {showOrderSummary ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </div>
               </div>
             </button>
             
             {showOrderSummary && (
-              <div className="mt-2 p-4 bg-card border rounded-xl space-y-3">
+              <div className="mt-2.5 p-3.5 sm:p-4 bg-card border border-border/80 rounded-2xl shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
                 {/* Regular items */}
                 {regularItems.map(item => (
-                  <div key={item.id} className="flex gap-3">
+                  <div key={item.id} className="flex gap-3 items-center py-1">
                     <img
                       src={item.image}
                       alt={item.product.name}
-                      className="w-14 h-14 object-cover rounded-lg"
+                      className="w-12 h-12 object-cover rounded-xl border border-border/60 shrink-0"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium line-clamp-1">{item.product.name}</p>
-                      <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
-                      <p className="text-sm font-medium text-primary">
+                      <p className="text-xs font-semibold text-foreground truncate">{item.product.name}</p>
+                      <p className="text-[11px] text-muted-foreground">পরিমাণ: {item.quantity}</p>
+                      <p className="text-xs font-bold text-primary">
                         ৳{((item.product.discount_price || item.product.regular_price) * item.quantity).toLocaleString()}
                       </p>
                     </div>
@@ -1012,71 +1052,77 @@ export default function Checkout() {
                 ))}
                 {/* CJ items */}
                 {cjItems.map(item => (
-                  <div key={`${item.id}-${item.variantId}`} className="flex gap-3 relative">
-                    <Badge className="absolute -top-1 -right-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[10px] px-1.5 py-0.5">
-                      <Globe className="h-2.5 w-2.5" />
+                  <div key={`${item.id}-${item.variantId}`} className="flex gap-3 items-center relative py-1">
+                    <Badge className="absolute -top-1 -right-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[9px] px-1 py-0.5">
+                      <Globe className="h-2.5 w-2.5 mr-0.5" /> Global
                     </Badge>
                     <img
                       src={item.image}
                       alt={item.name}
-                      className="w-14 h-14 object-cover rounded-lg"
+                      className="w-12 h-12 object-cover rounded-xl border border-border/60 shrink-0"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium line-clamp-1">{item.name}</p>
+                      <p className="text-xs font-semibold text-foreground truncate">{item.name}</p>
                       {item.variant && <p className="text-[10px] text-muted-foreground">{item.variant}</p>}
-                      <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
-                      <p className="text-sm font-medium text-primary">
+                      <p className="text-[11px] text-muted-foreground">পরিমাণ: {item.quantity}</p>
+                      <p className="text-xs font-bold text-primary">
                         ৳{(item.price * item.quantity).toLocaleString()}
                       </p>
                     </div>
                   </div>
                 ))}
-                <div className="border-t pt-3 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>৳{subtotal.toLocaleString()}</span>
+                <div className="border-t border-border/60 pt-3 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>পণ্যের মূল্য (Subtotal):</span>
+                    <span className="font-semibold text-foreground">৳{subtotal.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shipping</span>
-                    <span>{shipping === 0 ? <span className="text-success">FREE</span> : `৳${shipping}`}</span>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>ডেলিভারি চার্জ (Shipping):</span>
+                    <span className="font-semibold text-foreground">
+                      {shipping === 0 ? <span className="text-emerald-600 font-bold">ফ্রি (FREE)</span> : `৳${shipping}`}
+                    </span>
                   </div>
                   {couponDiscount > 0 && (
-                    <div className="flex justify-between text-success">
-                      <span>Coupon Discount ({appliedCoupon?.code})</span>
+                    <div className="flex justify-between text-emerald-600 font-semibold">
+                      <span>কুপন ছাড় ({appliedCoupon?.code}):</span>
                       <span>-৳{couponDiscount.toLocaleString()}</span>
                     </div>
                   )}
                   {referralDiscount > 0 && (
-                    <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+                    <div className="flex justify-between text-emerald-600 font-semibold">
                       <span className="flex items-center gap-1">
-                        <Sparkles className="h-3.5 w-3.5" />
-                        Referral Reward Applied
+                        <Sparkles className="h-3 w-3" />
+                        রেফারেল বোনাস ছাড়:
                       </span>
                       <span>-৳{referralDiscount.toLocaleString()}</span>
                     </div>
                   )}
+                  <div className="flex justify-between text-sm font-black text-foreground pt-1.5 border-t border-border/60">
+                    <span>সর্বমোট (Total):</span>
+                    <span className="text-primary text-base">৳{total.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
           <form id="checkout-form" onSubmit={handleSubmit}>
-            <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
+            <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
               {/* Main Column */}
-              <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+              <div className="lg:col-span-2 space-y-4 sm:space-y-5">
 
                 {/* STEP 1: SHIPPING & COUPON (Initial View) */}
                 {checkoutStep === "shipping" && (
                   <>
-                    {/* Shipping Information */}
-                    <Card className="border shadow-sm overflow-hidden">
-                      <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    {/* Shipping / Delivery Information */}
+                    <Card className="border border-border/80 shadow-xs rounded-2xl overflow-hidden bg-card">
+                      <CardHeader className="p-3.5 sm:p-5 border-b border-border/60 bg-muted/20">
+                        <div className="flex items-center justify-between gap-2">
+                          <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-bold text-foreground">
+                            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                               <MapPin className="h-4 w-4" />
                             </div>
-                            Delivery Address
+                            ডেলিভারি ঠিকানা (Delivery Address)
                           </CardTitle>
 
                           {hasSavedAddress && !isEditingAddress && (
@@ -1085,30 +1131,31 @@ export default function Checkout() {
                               variant="outline"
                               size="sm"
                               onClick={() => setIsEditingAddress(true)}
-                              className="text-xs h-8 px-3 rounded-lg border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-1.5"
+                              className="text-xs h-7 sm:h-8 px-2.5 sm:px-3 rounded-lg border-primary/40 text-primary hover:bg-primary/10 flex items-center gap-1 font-semibold"
                             >
-                              <Edit3 className="h-3.5 w-3.5" /> Change / Add New Address
+                              <Edit3 className="h-3 w-3" />
+                              <span>পরিবর্তন করুন</span>
                             </Button>
                           )}
                         </div>
                       </CardHeader>
 
-                      <CardContent className="p-4 sm:p-6 space-y-4">
+                      <CardContent className="p-3.5 sm:p-5 space-y-3.5">
                         {hasSavedAddress && !isEditingAddress ? (
-                          /* Saved Address Card View */
-                          <div className="p-4 rounded-xl border-2 border-primary/40 bg-gradient-to-br from-primary/5 via-muted/20 to-background space-y-3 relative">
-                            <div className="flex items-center justify-between flex-wrap gap-2">
+                          /* Saved Address Sleek Card View */
+                          <div className="p-3.5 sm:p-4 rounded-xl border border-primary/30 bg-primary/[0.03] space-y-2.5 relative">
+                            <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-2">
-                                <span className="font-bold text-base text-foreground">
+                                <span className="font-bold text-sm sm:text-base text-foreground">
                                   {shippingInfo.firstName} {shippingInfo.lastName}
                                 </span>
-                                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] px-2 py-0.5 font-semibold gap-1">
-                                  <CheckCircle2 className="h-3 w-3" /> Default Address
+                                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] px-2 py-0.5 font-bold gap-1 rounded-full">
+                                  <CheckCircle2 className="h-3 w-3" /> সংরক্ষিত ঠিকানা
                                 </Badge>
                               </div>
                             </div>
 
-                            <div className="space-y-1.5 text-sm text-foreground/90">
+                            <div className="space-y-1 text-xs sm:text-sm text-foreground/80">
                               <div className="flex items-start gap-2">
                                 <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                                 <span className="leading-relaxed">
@@ -1116,18 +1163,18 @@ export default function Checkout() {
                                 </span>
                               </div>
 
-                              <div className="flex items-center gap-2 pt-1">
-                                <Phone className="h-4 w-4 text-primary shrink-0" />
-                                <span className="font-semibold text-foreground">{shippingInfo.phone}</span>
+                              <div className="flex items-center gap-2 pt-0.5">
+                                <Phone className="h-3.5 w-3.5 text-primary shrink-0" />
+                                <span className="font-bold text-foreground">{shippingInfo.phone}</span>
                                 {shippingInfo.email && (
-                                  <span className="text-muted-foreground text-xs ml-2">({shippingInfo.email})</span>
+                                  <span className="text-muted-foreground text-xs truncate">({shippingInfo.email})</span>
                                 )}
                               </div>
                             </div>
                           </div>
                         ) : (
                           /* Address Input Form */
-                          <div className="space-y-4">
+                          <div className="space-y-3.5">
                             {hasSavedAddress && (
                               <div className="flex justify-end">
                                 <Button
@@ -1137,54 +1184,40 @@ export default function Checkout() {
                                   onClick={() => setIsEditingAddress(false)}
                                   className="text-xs text-muted-foreground hover:text-foreground h-7"
                                 >
-                                  Cancel & Use Saved Address
+                                  সংরক্ষিত ঠিকানা ব্যবহার করুন
                                 </Button>
                               </div>
                             )}
 
-                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                              <div className="space-y-1.5">
-                                <Label htmlFor="firstName" className="text-xs sm:text-sm font-semibold">First Name *</Label>
+                            <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
+                              <div className="space-y-1">
+                                <Label htmlFor="firstName" className="text-xs font-semibold text-foreground">আপনার নাম (First Name) *</Label>
                                 <Input
                                   id="firstName"
                                   name="firstName"
                                   value={shippingInfo.firstName}
                                   onChange={handleInputChange}
-                                  placeholder="e.g. Nahid"
+                                  placeholder="যেমন: নাহিদ"
                                   required
-                                  className="h-11 text-sm"
+                                  className="h-10 text-xs sm:text-sm rounded-xl"
                                 />
                               </div>
-                              <div className="space-y-1.5">
-                                <Label htmlFor="lastName" className="text-xs sm:text-sm font-semibold">Last Name *</Label>
+                              <div className="space-y-1">
+                                <Label htmlFor="lastName" className="text-xs font-semibold text-foreground">পদবি (Last Name)</Label>
                                 <Input
                                   id="lastName"
                                   name="lastName"
                                   value={shippingInfo.lastName}
                                   onChange={handleInputChange}
-                                  placeholder="e.g. Islam"
-                                  required
-                                  className="h-11 text-sm"
+                                  placeholder="যেমন: ইসলাম"
+                                  className="h-10 text-xs sm:text-sm rounded-xl"
                                 />
                               </div>
                             </div>
 
-                            <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-                              <div className="space-y-1.5">
-                                <Label htmlFor="email" className="text-xs sm:text-sm font-semibold">Email Address *</Label>
-                                <Input
-                                  id="email"
-                                  name="email"
-                                  type="email"
-                                  value={shippingInfo.email}
-                                  onChange={handleInputChange}
-                                  placeholder="name@example.com"
-                                  required
-                                  className="h-11 text-sm"
-                                />
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label htmlFor="phone" className="text-xs sm:text-sm font-semibold">Phone Number (Mobile) *</Label>
+                            <div className="grid sm:grid-cols-2 gap-2.5 sm:gap-3.5">
+                              <div className="space-y-1">
+                                <Label htmlFor="phone" className="text-xs font-semibold text-foreground">মোবাইল নম্বর (Phone Number) *</Label>
                                 <Input
                                   id="phone"
                                   name="phone"
@@ -1193,65 +1226,77 @@ export default function Checkout() {
                                   onChange={handleInputChange}
                                   placeholder="01XXXXXXXXX"
                                   required
-                                  className="h-11 text-sm"
+                                  className="h-10 text-xs sm:text-sm rounded-xl font-medium"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label htmlFor="email" className="text-xs font-semibold text-foreground">ইমেইল এড্রেস (Email)</Label>
+                                <Input
+                                  id="email"
+                                  name="email"
+                                  type="email"
+                                  value={shippingInfo.email}
+                                  onChange={handleInputChange}
+                                  placeholder="name@example.com"
+                                  className="h-10 text-xs sm:text-sm rounded-xl"
                                 />
                               </div>
                             </div>
 
-                            <div className="space-y-1.5">
-                              <Label htmlFor="address" className="text-xs sm:text-sm font-semibold">Street Address / House / Road *</Label>
+                            <div className="space-y-1">
+                              <Label htmlFor="address" className="text-xs font-semibold text-foreground">সম্পূর্ণ ঠিকানা (বাসা/রোড/এলাকা) *</Label>
                               <Input
                                 id="address"
                                 name="address"
                                 value={shippingInfo.address}
                                 onChange={handleInputChange}
-                                placeholder="House #, Road #, Area / Landmark"
+                                placeholder="বাসা নং, রোড নং, এলাকা / ল্যান্ডমার্ক"
                                 required
-                                className="h-11 text-sm"
+                                className="h-10 text-xs sm:text-sm rounded-xl"
                               />
                             </div>
 
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                              <div className="space-y-1.5">
-                                <Label htmlFor="city" className="text-xs sm:text-sm font-semibold">City / District *</Label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5">
+                              <div className="space-y-1">
+                                <Label htmlFor="city" className="text-xs font-semibold text-foreground">জেলা / শহর (City) *</Label>
                                 <Input
                                   id="city"
                                   name="city"
                                   value={shippingInfo.city}
                                   onChange={handleInputChange}
-                                  placeholder="e.g. Dhaka"
+                                  placeholder="যেমন: ঢাকা"
                                   required
-                                  className="h-11 text-sm"
+                                  className="h-10 text-xs sm:text-sm rounded-xl"
                                 />
                               </div>
-                              <div className="space-y-1.5">
-                                <Label htmlFor="state" className="text-xs sm:text-sm font-semibold">State / Division</Label>
+                              <div className="space-y-1">
+                                <Label htmlFor="state" className="text-xs font-semibold text-foreground">বিভাগ (Division)</Label>
                                 <Input
                                   id="state"
                                   name="state"
                                   value={shippingInfo.state}
                                   onChange={handleInputChange}
-                                  placeholder="e.g. Dhaka"
-                                  className="h-11 text-sm"
+                                  placeholder="যেমন: ঢাকা"
+                                  className="h-10 text-xs sm:text-sm rounded-xl"
                                 />
                               </div>
-                              <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                                <Label htmlFor="zipCode" className="text-xs sm:text-sm font-semibold">Postal Code / Zip *</Label>
+                              <div className="space-y-1 col-span-2 sm:col-span-1">
+                                <Label htmlFor="zipCode" className="text-xs font-semibold text-foreground">পোস্ট কোড (Zip Code) *</Label>
                                 <Input
                                   id="zipCode"
                                   name="zipCode"
                                   value={shippingInfo.zipCode}
                                   onChange={handleInputChange}
-                                  placeholder="e.g. 1200"
+                                  placeholder="যেমন: 1200"
                                   required
-                                  className="h-11 text-sm"
+                                  className="h-10 text-xs sm:text-sm rounded-xl"
                                 />
                               </div>
                             </div>
 
                             <p className="text-[11px] text-muted-foreground flex items-center gap-1 pt-1">
-                              <CheckCircle className="h-3.5 w-3.5 text-primary" />
-                              This address and phone number will be automatically saved to your Account Settings for future orders.
+                              <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" />
+                              পরবর্তী অর্ডারের সুবিধার জন্য এই ঠিকানা স্বয়ংক্রিয়ভাবে সংরক্ষিত থাকবে।
                             </p>
                           </div>
                         )}
@@ -1259,49 +1304,49 @@ export default function Checkout() {
                     </Card>
 
                     {/* Coupon Code */}
-                    <Card className="border shadow-sm">
-                      <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
-                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <Card className="border border-border/80 shadow-xs rounded-2xl overflow-hidden bg-card">
+                      <CardHeader className="p-3.5 sm:p-5 border-b border-border/60 bg-muted/20">
+                        <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-bold text-foreground">
+                          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                             <Tag className="h-4 w-4" />
                           </div>
-                          Coupon Code
+                          কুপন কোড (Coupon Discount)
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="p-4 sm:p-6">
+                      <CardContent className="p-3.5 sm:p-5">
                         {appliedCoupon ? (
-                          <div className="flex items-center justify-between p-3 bg-success/10 border border-success/20 rounded-xl">
+                          <div className="flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
                             <div className="flex items-center gap-2">
-                              <CheckCircle className="h-5 w-5 text-success" />
+                              <CheckCircle className="h-4 w-4 text-emerald-600" />
                               <div>
-                                <p className="font-bold text-success text-sm">{appliedCoupon.code}</p>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="font-bold text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm">{appliedCoupon.code}</p>
+                                <p className="text-[11px] text-muted-foreground">
                                   {appliedCoupon.discount_type === "percentage" 
-                                    ? `${appliedCoupon.discount_value}% Discount Applied` 
-                                    : `৳${appliedCoupon.discount_value} Discount Applied`}
+                                    ? `${appliedCoupon.discount_value}% ছাড় সক্রিয় হয়েছে` 
+                                    : `৳${appliedCoupon.discount_value} ছাড় সক্রিয় হয়েছে`}
                                 </p>
                               </div>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={removeCoupon} className="h-8 w-8 p-0 rounded-full">
-                              <X className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" onClick={removeCoupon} className="h-7 w-7 p-0 rounded-full text-muted-foreground hover:text-destructive">
+                              <X className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         ) : (
                           <div className="flex gap-2">
                             <Input
-                              placeholder="Enter coupon code (e.g. DURTUP2026)"
+                              placeholder="কুপন কোড দিন (যেমন: DURTUP2026)"
                               value={couponCode}
                               onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                              className="h-11 flex-1 text-sm"
+                              className="h-10 flex-1 text-xs sm:text-sm rounded-xl font-mono uppercase"
                             />
                             <Button 
                               type="button" 
                               variant="outline" 
                               onClick={applyCoupon}
                               disabled={applyingCoupon}
-                              className="h-11 px-6 font-semibold"
+                              className="h-10 px-4 text-xs font-bold rounded-xl border-primary/40 text-primary hover:bg-primary/10"
                             >
-                              {applyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                              {applyingCoupon ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "প্রয়োগ করুন"}
                             </Button>
                           </div>
                         )}
@@ -1310,191 +1355,141 @@ export default function Checkout() {
                   </>
                 )}
 
-                {/* STEP 2: PAYMENT METHOD (Shows after clicking Place Order) */}
+                {/* STEP 2: PAYMENT METHOD */}
                 {checkoutStep === "payment" && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 w-full min-w-0">
-                    {/* Back Button & Address Preview */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-muted/40 border rounded-xl w-full min-w-0 overflow-hidden">
+                  <div className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-200 w-full min-w-0">
+                    {/* Back Button & Address Preview Banner */}
+                    <div className="flex items-center justify-between gap-2 p-3 bg-muted/40 border border-border/80 rounded-xl w-full min-w-0">
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => setCheckoutStep("shipping")}
-                        className="text-xs font-semibold text-primary hover:text-primary flex items-center gap-1.5 h-8 px-1 -ml-1 shrink-0"
+                        className="text-xs font-bold text-primary hover:text-primary flex items-center gap-1 h-7 px-2"
                       >
-                        <ArrowLeft className="h-4 w-4" /> Back to Delivery Details
+                        <ArrowLeft className="h-3.5 w-3.5" /> ঠিকানা পরিবর্তন
                       </Button>
-                      <div className="text-left sm:text-right text-xs text-muted-foreground truncate w-full sm:w-auto min-w-0">
-                        Deliver to: <span className="font-semibold text-foreground">{shippingInfo.firstName} {shippingInfo.lastName}</span> ({shippingInfo.phone})
+                      <div className="text-right text-xs text-muted-foreground truncate min-w-0">
+                        প্রাপক: <span className="font-bold text-foreground">{shippingInfo.firstName}</span> ({shippingInfo.phone})
                       </div>
                     </div>
 
                     {/* Payment Method Selection Card */}
-                    <Card className="border shadow-sm overflow-hidden w-full min-w-0">
-                      <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20 p-3 sm:p-6">
-                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                    <Card className="border border-border/80 shadow-xs rounded-2xl overflow-hidden bg-card w-full min-w-0">
+                      <CardHeader className="p-3.5 sm:p-5 border-b border-border/60 bg-muted/20">
+                        <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-bold text-foreground">
+                          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
                             <CreditCard className="h-4 w-4" />
                           </div>
-                          Select Payment Method
+                          পেমেন্ট মাধ্যম বেছে নিন
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="p-3 sm:p-6 space-y-3 w-full min-w-0">
+                      <CardContent className="p-3.5 sm:p-5 space-y-3 w-full min-w-0">
                         <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3 w-full min-w-0">
                           {/* Cash on Delivery (COD) */}
                           <div 
                             onClick={() => setPaymentMethod("cod")}
-                            className={`flex items-center gap-3 p-3 sm:p-4 border-2 rounded-xl cursor-pointer transition-all w-full min-w-0 ${
+                            className={`flex items-start gap-3 p-3.5 rounded-xl cursor-pointer transition-all border-2 w-full min-w-0 ${
                               paymentMethod === "cod" 
-                                ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                                ? "border-primary bg-primary/[0.04] shadow-xs" 
                                 : "border-border hover:border-primary/40 bg-card"
                             }`}
                           >
-                            <RadioGroupItem value="cod" id="page-cod" className="shrink-0" />
-                            <Label htmlFor="page-cod" className="flex-1 cursor-pointer min-w-0">
+                            <RadioGroupItem value="cod" id="page-cod" className="shrink-0 mt-0.5" />
+                            <Label htmlFor="page-cod" className="flex-1 cursor-pointer min-w-0 space-y-0.5">
                               <span className="font-bold text-sm text-foreground flex items-center flex-wrap gap-1.5">
-                                <span>Cash on Delivery (ক্যাশ অন ডেলিভারি - COD)</span>
-                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-1.5 h-4">
+                                <span>Cash on Delivery (ক্যাশ অন ডেলিভারি)</span>
+                                <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                   অগ্রিম টাকা নেই
                                 </Badge>
                               </span>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                পণ্য হাতে পেয়ে ডেলিভারি ম্যানের কাছে ক্যাশ টাকা দিয়ে রিসিভ করুন
+                              <p className="text-xs text-muted-foreground">
+                                পণ্য হাতে পেয়ে ডেলিভারি ম্যানের কাছে ক্যাশ টাকা দিয়ে রিসিভ করবেন।
                               </p>
                             </Label>
-                            {paymentMethod === "cod" && <CheckCircle className="h-5 w-5 text-primary shrink-0 ml-auto" />}
+                            {paymentMethod === "cod" && <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />}
                           </div>
 
-                          {/* COD Detailed Explanation Box */}
+                          {/* COD Info Guidance */}
                           {paymentMethod === "cod" && (
-                            <div className="p-4 sm:p-5 rounded-xl border border-primary/20 bg-primary/[0.03] space-y-3.5 animate-in fade-in zoom-in-95 duration-200 w-full min-w-0">
-                              <h4 className="text-sm font-semibold text-foreground border-b border-border/60 pb-2">
-                                ক্যাশ অন ডেলিভারি নির্দেশিকা:
-                              </h4>
-
-                              <div className="space-y-3 text-xs sm:text-sm">
-                                <div className="space-y-0.5">
-                                  <p className="font-semibold text-foreground">১. সম্পূর্ণ অগ্রিমবিহীন অর্ডার</p>
-                                  <p className="text-xs text-muted-foreground leading-relaxed">
-                                    অর্ডার কনফার্মেশনের জন্য কোনো প্রকার অগ্রিম পেমেন্টের প্রয়োজন নেই।
-                                  </p>
-                                </div>
-
-                                <div className="space-y-0.5">
-                                  <p className="font-semibold text-foreground">২. পণ্য বুঝে নিয়ে মূল্য পরিশোধ</p>
-                                  <p className="text-xs text-muted-foreground leading-relaxed">
-                                    ডেলিভারি প্রতিনিধির কাছ থেকে পার্সেলটি সরাসরি বুঝে নিয়ে ক্যাশ টাকা পরিশোধ করুন।
-                                  </p>
-                                </div>
-
-                                <div className="space-y-0.5">
-                                  <p className="font-semibold text-foreground">৩. ডেলিভারি নিশ্চয়তা কল</p>
-                                  <p className="text-xs text-muted-foreground leading-relaxed">
-                                    অর্ডারটি কনফার্ম করার পর ঠিকানা যাচাই ও দ্রুত ডেলিভারির জন্য আমাদের কাস্টমার প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।
-                                  </p>
-                                </div>
+                            <div className="p-3 sm:p-4 rounded-xl border border-primary/20 bg-primary/[0.03] space-y-2 animate-in fade-in duration-200 text-xs text-foreground/80">
+                              <div className="font-bold text-primary flex items-center gap-1.5">
+                                <Shield className="h-3.5 w-3.5" /> ১০০% নিরাপদ ক্যাশ অন ডেলিভারি
                               </div>
+                              <ul className="space-y-1 text-muted-foreground list-disc list-inside">
+                                <li>অর্ডারের জন্য কোনো অগ্রিম টাকা লাগবে না।</li>
+                                <li>ডেলিভারি ম্যানের সামনে পার্সেল চেক করে টাকা পরিশোধ করুন।</li>
+                                <li>ঠিকানা ও অর্ডার নিশ্চিত করতে আমাদের প্রতিনিধি কল করবেন।</li>
+                              </ul>
                             </div>
                           )}
 
-                          {/* bKash */}
+                          {/* bKash Option */}
                           <div 
                             onClick={() => setPaymentMethod("bkash")}
-                            className={`flex items-center gap-3 p-3 sm:p-4 border-2 rounded-xl cursor-pointer transition-all w-full min-w-0 ${
+                            className={`flex items-start gap-3 p-3.5 rounded-xl cursor-pointer transition-all border-2 w-full min-w-0 ${
                               paymentMethod === "bkash" 
-                                ? "border-[#E2136E] bg-[#E2136E]/5 shadow-sm ring-1 ring-[#E2136E]/20" 
+                                ? "border-[#E2136E] bg-[#E2136E]/[0.04] shadow-xs" 
                                 : "border-border hover:border-[#E2136E]/40 bg-card"
                             }`}
                           >
-                            <RadioGroupItem value="bkash" id="page-bkash" className="shrink-0" />
-                            <Label htmlFor="page-bkash" className="flex-1 cursor-pointer min-w-0">
-                              <span className="font-bold text-sm text-foreground block">bKash (বিকাশ)</span>
-                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">Send Money / Make payment via bKash</p>
+                            <RadioGroupItem value="bkash" id="page-bkash" className="shrink-0 mt-0.5" />
+                            <Label htmlFor="page-bkash" className="flex-1 cursor-pointer min-w-0 space-y-0.5">
+                              <span className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                                <span className="text-[#E2136E]">bKash (বিকাশ পেমেন্ট)</span>
+                              </span>
+                              <p className="text-xs text-muted-foreground">বিকাশে Send Money / Payment করুন</p>
                             </Label>
-                            {paymentMethod === "bkash" && <CheckCircle className="h-5 w-5 text-[#E2136E] shrink-0 ml-auto" />}
+                            {paymentMethod === "bkash" && <CheckCircle className="h-4 w-4 text-[#E2136E] shrink-0 mt-0.5" />}
                           </div>
 
                           {/* bKash Payment Details Box */}
                           {paymentMethod === "bkash" && (
-                            <div className="p-3 sm:p-5 rounded-xl border-2 border-[#E2136E]/30 bg-gradient-to-br from-[#E2136E]/10 via-background to-muted/20 space-y-3.5 animate-in fade-in zoom-in-95 duration-200 w-full min-w-0 overflow-hidden">
-                              {/* bKash Header */}
-                              <div className="flex items-center justify-between pb-3 border-b border-[#E2136E]/20 flex-wrap gap-2 min-w-0 w-full">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <div className="w-9 h-9 rounded-xl bg-[#E2136E] text-white flex items-center justify-center font-black text-xs shadow-sm shrink-0">
-                                    bKash
-                                  </div>
-                                  <div className="min-w-0">
-                                    <h4 className="font-bold text-sm text-foreground truncate">bKash Payment Details</h4>
-                                    <p className="text-[11px] text-muted-foreground truncate">Personal / Merchant Account</p>
-                                  </div>
+                            <div className="p-3.5 sm:p-4 rounded-xl border-2 border-[#E2136E]/30 bg-[#E2136E]/[0.03] space-y-3 animate-in fade-in duration-200 w-full min-w-0">
+                              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#E2136E]/10 border border-[#E2136E]/20">
+                                <div className="min-w-0">
+                                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">বিকাশ পার্সোনাল নম্বর</span>
+                                  <span className="text-base sm:text-lg font-black text-[#E2136E] font-mono tracking-wider block">01885985097</span>
                                 </div>
-                                <Badge className="bg-[#E2136E] hover:bg-[#E2136E] text-white text-[10px] font-bold px-2 py-0.5 shrink-0">
-                                  Send Money
-                                </Badge>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText("01885985097");
+                                    toast({ title: "নম্বর কপি হয়েছে!", description: "01885985097 কপি করা হয়েছে" });
+                                  }}
+                                  className="h-7 px-2.5 text-xs font-bold border-[#E2136E]/40 text-[#E2136E] hover:bg-[#E2136E]/10 flex items-center gap-1"
+                                >
+                                  <Copy className="h-3 w-3" /> কপি নম্বর
+                                </Button>
                               </div>
 
-                              {/* Instructions & Number */}
-                              <div className="p-3 rounded-xl bg-[#E2136E]/10 border border-[#E2136E]/20 space-y-2.5 overflow-hidden w-full min-w-0">
-                                <div className="flex items-center justify-between flex-wrap gap-2 w-full">
-                                  <div className="space-y-0.5 min-w-0">
-                                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">bKash Number</span>
-                                    <span className="text-lg sm:text-xl font-black text-[#E2136E] tracking-wider block select-all">01885985097</span>
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText("01885985097");
-                                    }}
-                                    className="h-8 px-2.5 sm:px-3 text-xs font-semibold border-[#E2136E]/30 text-[#E2136E] hover:bg-[#E2136E]/10 flex items-center gap-1.5 shrink-0"
-                                  >
-                                    <Copy className="h-3.5 w-3.5" /> Copy Number
-                                  </Button>
-                                </div>
-
-                                <div className="pt-1 text-xs text-foreground/80 space-y-1.5 break-words">
-                                  <p className="flex items-start gap-1.5 font-medium">
-                                    <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
-                                    <span>বিকাশ অ্যাপে গিয়ে <strong>Send Money</strong> করুন।</span>
-                                  </p>
-                                  <p className="flex items-start gap-1.5 font-medium">
-                                    <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
-                                    <span>টাকার পরিমাণ: <strong className="text-[#E2136E]">৳{total.toLocaleString()}</strong></span>
-                                  </p>
-                                  <p className="flex items-start gap-1.5 font-medium">
-                                    <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0 mt-0.5">3</span>
-                                    <span>পেমেন্ট সম্পন্ন করে নিচের ঘরে আপনার বিকাশ নাম্বার ও TrxID দিন।</span>
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Inputs for verification */}
-                              <div className="grid sm:grid-cols-2 gap-3 pt-1 w-full min-w-0">
-                                <div className="space-y-1.5 min-w-0">
+                              <div className="grid sm:grid-cols-2 gap-2.5 pt-1 w-full min-w-0">
+                                <div className="space-y-1">
                                   <Label htmlFor="bkashNumber" className="text-xs font-bold text-foreground">
-                                    Sender bKash Number (আপনার বিকাশ নাম্বার) *
+                                    যে নম্বর থেকে বিকাশ করেছেন *
                                   </Label>
                                   <Input
                                     id="bkashNumber"
-                                    placeholder="e.g. 01XXXXXXXXX"
+                                    placeholder="01XXXXXXXXX"
                                     value={bkashNumber}
                                     onChange={(e) => setBkashNumber(e.target.value)}
-                                    className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E] w-full"
+                                    className="h-10 text-xs rounded-xl border-[#E2136E]/30 focus-visible:ring-[#E2136E]"
                                     required={paymentMethod === "bkash"}
                                   />
                                 </div>
 
-                                <div className="space-y-1.5 min-w-0">
+                                <div className="space-y-1">
                                   <Label htmlFor="bkashTrxId" className="text-xs font-bold text-foreground">
-                                    Transaction ID (TrxID / ট্রানজেকশন আইডি) *
+                                    ট্রানজেকশন আইডি (TrxID) *
                                   </Label>
                                   <Input
                                     id="bkashTrxId"
-                                    placeholder="e.g. 9M7A8X9K2"
+                                    placeholder="যেমন: 9M7A8X9K2"
                                     value={bkashTrxId}
                                     onChange={(e) => setBkashTrxId(e.target.value.toUpperCase())}
-                                    className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E] uppercase font-mono w-full"
+                                    className="h-10 text-xs rounded-xl border-[#E2136E]/30 focus-visible:ring-[#E2136E] font-mono uppercase"
                                     required={paymentMethod === "bkash"}
                                   />
                                 </div>
@@ -1508,127 +1503,116 @@ export default function Checkout() {
                 )}
               </div>
 
-              {/* Order Summary - Desktop */}
+              {/* Order Summary - Desktop Right Sidebar */}
               <div className="hidden lg:block lg:col-span-1">
-                <Card className="sticky top-24 shadow-sm border">
-                  <CardHeader className="pb-3 border-b bg-muted/20">
-                    <CardTitle className="text-base font-bold">Order Summary</CardTitle>
+                <Card className="sticky top-24 shadow-xs border border-border/80 rounded-2xl bg-card overflow-hidden">
+                  <CardHeader className="p-4 border-b border-border/60 bg-muted/20">
+                    <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <ShoppingBag className="h-4 w-4 text-primary" />
+                      অর্ডার সারসংক্ষেপ ({totalItems})
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4 p-4 sm:p-6">
-                    <div className="space-y-3 max-h-64 overflow-y-auto">
-                      {/* Regular items */}
+                  <CardContent className="space-y-3.5 p-4">
+                    <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
                       {regularItems.map(item => (
-                        <div key={item.id} className="flex gap-3">
+                        <div key={item.id} className="flex gap-2.5 items-center">
                           <img
                             src={item.image}
                             alt={item.product.name}
-                            className="w-14 h-14 object-cover rounded-lg border"
+                            className="w-11 h-11 object-cover rounded-lg border shrink-0"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{item.product.name}</p>
-                            <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
-                            <p className="text-sm font-bold text-primary">
+                            <p className="text-xs font-semibold truncate text-foreground">{item.product.name}</p>
+                            <p className="text-[11px] text-muted-foreground">পরিমাণ: {item.quantity}</p>
+                            <p className="text-xs font-bold text-primary">
                               ৳{((item.product.discount_price || item.product.regular_price) * item.quantity).toLocaleString()}
                             </p>
                           </div>
                         </div>
                       ))}
-                      {/* CJ items */}
-                      {cjItems.map(item => (
-                        <div key={`${item.id}-${item.variantId}`} className="flex gap-3 relative">
-                          <Badge className="absolute -top-1 -right-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[10px] px-1.5 py-0.5">
-                            <Globe className="h-2.5 w-2.5" />
-                          </Badge>
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-14 h-14 object-cover rounded-lg border"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{item.name}</p>
-                            {item.variant && <p className="text-[10px] text-muted-foreground">{item.variant}</p>}
-                            <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
-                            <p className="text-sm font-bold text-primary">
-                              ৳{(item.price * item.quantity).toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
                     </div>
 
-                    <div className="border-t pt-4 space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span className="font-semibold">৳{subtotal.toLocaleString()}</span>
+                    <div className="border-t border-border/60 pt-3 space-y-1.5 text-xs">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>পণ্যের মোট মূল্য:</span>
+                        <span className="font-semibold text-foreground">৳{subtotal.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Shipping</span>
-                        <span className="font-semibold">{shipping === 0 ? <span className="text-success">FREE</span> : `৳${shipping}`}</span>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>ডেলিভারি চার্জ:</span>
+                        <span className="font-semibold text-foreground">
+                          {shipping === 0 ? <span className="text-emerald-600 font-bold">ফ্রি (FREE)</span> : `৳${shipping}`}
+                        </span>
                       </div>
                       {couponDiscount > 0 && (
-                        <div className="flex justify-between text-success font-medium">
-                          <span>Discount ({appliedCoupon?.code})</span>
+                        <div className="flex justify-between text-emerald-600 font-semibold">
+                          <span>কুপন ছাড় ({appliedCoupon?.code}):</span>
                           <span>-৳{couponDiscount.toLocaleString()}</span>
                         </div>
                       )}
                       {referralDiscount > 0 && (
-                        <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
-                          <span className="flex items-center gap-1">
-                            <Sparkles className="h-3.5 w-3.5" />
-                            Referral Reward Applied
-                          </span>
+                        <div className="flex justify-between text-emerald-600 font-semibold">
+                          <span>রেফারেল ছাড়:</span>
                           <span>-৳{referralDiscount.toLocaleString()}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="border-t pt-4 flex justify-between text-lg font-bold">
-                      <span>Total</span>
+                    <div className="border-t border-border/60 pt-3 flex justify-between items-baseline">
+                      <span className="text-xs font-bold text-muted-foreground">সর্বমোট বিল:</span>
                       <span className="text-primary font-black text-xl">৳{total.toLocaleString()}</span>
                     </div>
 
-                    <Button type="submit" className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2" disabled={loading}>
+                    <Button 
+                      type="submit" 
+                      className="w-full h-11 text-sm font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md shadow-primary/20 transition-all active:scale-[0.99] flex items-center justify-center gap-2" 
+                      disabled={loading}
+                    >
                       {loading ? (
                         <>
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                          <span>অর্ডার কনফার্ম হচ্ছে...</span>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>অর্ডার সম্পন্ন হচ্ছে...</span>
                         </>
                       ) : checkoutStep === "shipping" ? (
                         <>
                           <span>পরবর্তী ধাপ (পেমেন্ট পদ্ধতি)</span>
-                          <ArrowRight className="h-4 w-4 ml-1" />
+                          <ArrowRight className="h-4 w-4" />
                         </>
                       ) : (
                         <>
-                          <CheckCircle2 className="h-5 w-5" />
+                          <CheckCircle2 className="h-4 w-4" />
                           <span>অর্ডার কনফার্ম করুন • ৳{total.toLocaleString()}</span>
                         </>
                       )}
                     </Button>
 
-                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-1">
-                      <Shield className="h-4 w-4 text-emerald-600" />
-                      100% Safe & Secure Checkout
+                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground pt-1">
+                      <Shield className="h-3.5 w-3.5 text-emerald-600" />
+                      ১০০% নিরাপদ ও সুরক্ষিত শপিং
                     </div>
                   </CardContent>
                 </Card>
               </div>
             </div>
 
-            {/* Mobile Place Order Bar */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border p-3 sm:p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
-              <div className="flex items-center justify-between gap-3 max-w-lg mx-auto w-full">
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Payable</p>
-                  <p className="text-xl font-black text-primary">৳{total.toLocaleString()}</p>
-                  {couponDiscount > 0 && (
-                    <p className="text-[11px] text-success font-semibold">Saved ৳{couponDiscount.toLocaleString()}</p>
-                  )}
+            {/* Mobile Fixed Bottom Action Bar */}
+            <div 
+              className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/80 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]" 
+              style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}
+            >
+              <div className="flex items-center justify-between gap-3 max-w-4xl mx-auto w-full">
+                <div className="shrink-0">
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">মোট প্রদেয় বিল</p>
+                  <p className="text-lg font-black text-primary leading-tight">৳{total.toLocaleString()}</p>
                 </div>
-                <Button type="submit" size="lg" className="h-12 px-5 text-sm sm:text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex-1 max-w-[220px] shadow-md shadow-primary/20 transition-all active:scale-[0.99] flex items-center justify-center gap-1.5" disabled={loading}>
+                <Button 
+                  type="submit" 
+                  size="lg" 
+                  className="h-11 px-6 text-sm font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex-1 max-w-[240px] shadow-md shadow-primary/25 transition-all active:scale-[0.99] flex items-center justify-center gap-1.5 ml-auto" 
+                  disabled={loading}
+                >
                   {loading ? (
                     <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       <span>কনফার্ম হচ্ছে...</span>
                     </>
                   ) : checkoutStep === "shipping" ? (
@@ -1639,7 +1623,7 @@ export default function Checkout() {
                   ) : (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
-                      <span>অর্ডার কনফার্ম করুন</span>
+                      <span>অর্ডার নিশ্চিত করুন</span>
                     </>
                   )}
                 </Button>
