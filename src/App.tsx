@@ -20,6 +20,7 @@ import { NativeAppProvider } from "@/components/NativeAppProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RoutePrefetcher } from "@/components/RoutePrefetcher";
 import { ReferralTracker } from "@/components/ReferralTracker";
+import { InAppBrowserPrompt } from "@/components/InAppBrowserPrompt";
 
 // Eager load - Only critical landing page for instant first paint
 import Index from "./pages/Index";
@@ -185,6 +186,7 @@ const App = () => (
                         <FacebookPixel />
                         <RoutePrefetcher />
                         <ReferralTracker />
+                        <InAppBrowserPrompt />
                         <Suspense fallback={null}>
                           {typeof window !== "undefined" && (
                             window.location.pathname.startsWith("/admin") ||

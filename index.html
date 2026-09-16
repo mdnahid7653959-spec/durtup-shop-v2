@@ -176,7 +176,26 @@
         }
       })();
     </script>
-    <!-- End Meta Pixel Code -->
+    <!-- Instant In-App Browser (Facebook/TikTok/Instagram) Auto-Breakout to Default Browser -->
+    <script>
+      (function() {
+        try {
+          var ua = navigator.userAgent || navigator.vendor || window.opera || '';
+          var isAndroid = /Android/i.test(ua);
+          var isSocialInApp = /FBAN|FBAV|FB_IAB|FB4A|FBIOS|Messenger|Instagram|musical_ly|ByteLocale|ByteFullConfig|TikTok|BytedanceWebview|Twitter|MicroMessenger|Snapchat|Line\/|Pinterest/i.test(ua);
+          
+          if (isSocialInApp && isAndroid) {
+            var redirectedKey = '_iab_auto_shifted';
+            if (!sessionStorage.getItem(redirectedKey)) {
+              sessionStorage.setItem(redirectedKey, '1');
+              var cleanUrl = window.location.href.replace(/^https?:\/\//i, '');
+              var intentUrl = 'intent://' + cleanUrl + '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end;';
+              window.location.replace(intentUrl);
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <!-- Meta Pixel Fallback (noscript) -->
