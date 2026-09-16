@@ -12,6 +12,7 @@ import {
 } from "@/hooks/useSearchSuggestions";
 import { ImageSearchModal } from "@/components/search/ImageSearchModal";
 import { SEOHead } from "@/components/SEOHead";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { cn } from "@/lib/utils";
 
 function currency(n: number) {
@@ -26,7 +27,7 @@ function Highlight({ text, term }: { text: string; term: string }) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="bg-primary/15 text-primary rounded px-0.5">
+      <mark className="bg-primary/20 text-primary font-bold px-0.5 rounded">
         {text.slice(idx, idx + q.length)}
       </mark>
       {text.slice(idx + q.length)}
@@ -74,6 +75,7 @@ const FALLBACK_TRENDING = [
 
 export default function SearchPage() {
   const navigate = useNavigate();
+  const handleSmartBack = useSmartBack();
   const [searchParams] = useSearchParams();
   const urlQuery = searchParams.get("q") || searchParams.get("search") || "";
   const [query, setQuery] = useState(urlQuery);
@@ -126,7 +128,7 @@ export default function SearchPage() {
           <button
             type="button"
             aria-label="Back"
-            onClick={() => navigate(-1)}
+            onClick={handleSmartBack}
             className="p-2 rounded-full text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />

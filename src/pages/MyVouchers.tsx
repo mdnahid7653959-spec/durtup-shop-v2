@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { cn } from "@/lib/utils";
 
 interface UserVoucher {
@@ -30,6 +31,7 @@ interface UserVoucher {
 
 export default function MyVouchers() {
   const navigate = useNavigate();
+  const handleSmartBack = useSmartBack();
   const { user } = useAuth();
   const { toast } = useToast();
   const [vouchers, setVouchers] = useState<UserVoucher[]>([]);
@@ -199,7 +201,7 @@ export default function MyVouchers() {
         <div className="container max-w-2xl py-4">
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <Button variant="ghost" size="icon" onClick={handleSmartBack}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-xl font-bold">My Vouchers</h1>

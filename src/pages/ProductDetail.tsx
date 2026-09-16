@@ -14,6 +14,7 @@ import { useWishlist } from "@/contexts/WishlistContext";
 import { useToast } from "@/hooks/use-toast";
 import { useProductRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
 import { ProductReviews } from "@/components/products/ProductReviews";
 import { StoreDetails } from "@/components/products/StoreDetails";
@@ -71,12 +72,12 @@ const getYouTubeEmbedUrl = (url: string): string | null => {
 };
 
 function MobileProductTopBar() {
-  const navigate = useNavigate();
+  const handleSmartBack = useSmartBack();
   return (
     <div className="md:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-foreground border-b border-slate-100 dark:border-slate-800 shadow-xs w-full max-w-[100vw]">
       <div className="flex items-center justify-between gap-2 px-3 py-2 w-full max-w-full">
         <button 
-          onClick={() => navigate(-1)} 
+          onClick={handleSmartBack} 
           className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full shrink-0 flex items-center justify-center text-slate-800 dark:text-slate-100 cursor-pointer" 
           aria-label="Back"
         >
@@ -301,7 +302,7 @@ const mapSupplierProduct = (raw: any, productSlug: string, imagesArr: ProductIma
   };
 };
 
-export default function ProductDetail() {
+function ProductDetailContent() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -2138,4 +2139,11 @@ export default function ProductDetail() {
       )}
       <Footer />
     </div>;
+}
+
+export default function ProductDetail() {
+  const { slug } = useParams();
+  const location = useLocation();
+  const activeKey = slug || location.pathname;
+  return <ProductDetailContent key={activeKey} />;
 }

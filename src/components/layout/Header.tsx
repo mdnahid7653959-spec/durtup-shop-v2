@@ -24,11 +24,13 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/firebaseAdapter";
 import { SmartSearchBar } from "@/components/search/SmartSearchBar";
 import { CategoryPillsNav } from "@/components/layout/CategoryPillsNav";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { cn } from "@/lib/utils";
 
 export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
+  const handleSmartBack = useSmartBack();
 
   const isHomePage = location.pathname === "/";
   const isCheckoutPage = location.pathname.toLowerCase() === "/checkout" || location.pathname.toLowerCase().startsWith("/checkout");
@@ -96,13 +98,7 @@ export function Header() {
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {!isHomePage ? (
               <button 
-                onClick={() => {
-                  if (window.history.length > 1) {
-                    navigate(-1);
-                  } else {
-                    navigate("/");
-                  }
-                }}
+                onClick={handleSmartBack}
                 className="p-1 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-90 rounded-xl transition-all flex items-center justify-center text-slate-800 dark:text-slate-100 hover:text-orange-600 group"
                 aria-label="Back"
                 title="Go Back"

@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, lazy, Suspense } from "react";
 import { useLocation } from "react-router-dom";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { useAppHistoryTracker } from "@/hooks/useSmartBack";
 
 const PushNotificationInitializer = lazy(() => import("@/components/PushNotificationInitializer").then(m => ({ default: m.PushNotificationInitializer })));
 
@@ -11,6 +12,7 @@ interface AppLayoutProps {
 // Pages where mobile bottom nav and floating chatbot should NOT appear
 // (admin, seller, staff portals, checkout, full-screen messages)
 export function AppLayout({ children }: AppLayoutProps) {
+  useAppHistoryTracker();
   const location = useLocation();
   const path = location.pathname.toLowerCase();
   

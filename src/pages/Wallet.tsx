@@ -39,14 +39,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { cn } from "@/lib/utils";
 import { getReferralSettings, ReferralSettings, requestWithdrawal } from "@/services/referralService";
 
 interface Transaction {
   id: string;
   amount: number;
-  type: string;
-  direction?: string;
+  type: "credit" | "debit";
   category: string;
   description: string | null;
   status?: string;
@@ -56,6 +56,7 @@ interface Transaction {
 
 export default function Wallet() {
   const navigate = useNavigate();
+  const handleSmartBack = useSmartBack();
   const { user, profile } = useAuth();
   const { toast } = useToast();
 
@@ -368,7 +369,7 @@ export default function Wallet() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-xl">
+              <Button variant="ghost" size="icon" onClick={handleSmartBack} className="rounded-xl">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <h1 className="text-xl sm:text-2xl font-black">My Wallet</h1>

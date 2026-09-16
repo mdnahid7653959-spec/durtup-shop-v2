@@ -7,6 +7,7 @@ import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { cn } from "@/lib/utils";
 
 interface Notification {
@@ -49,6 +50,7 @@ const getNotificationColor = (type: string) => {
 
 export default function Notifications() {
   const navigate = useNavigate();
+  const handleSmartBack = useSmartBack();
   const { user } = useAuth();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -168,7 +170,7 @@ export default function Notifications() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <Button variant="ghost" size="icon" onClick={handleSmartBack}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { Home, Heart, ShoppingCart, Star, Truck, Shield, RotateCcw, Minus, Plus, Loader2, ChevronLeft, ChevronRight, Share2, Zap, ZoomIn } from "lucide-react";
 import DOMPurify from "dompurify";
 import { supabase } from "@/lib/firebaseAdapter";
@@ -11,6 +11,7 @@ import { useCJCart } from "@/hooks/useCJCart";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
 import { ProductZoomViewer } from "@/components/products/ProductZoomViewer";
 import { SEOHead } from "@/components/SEOHead";
@@ -52,9 +53,10 @@ interface CJProductDetail {
   listedCount: number;
 }
 
-export default function CJProductDetail() {
+function CJProductDetailContent() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const handleSmartBack = useSmartBack();
   const [product, setProduct] = useState<CJProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -216,7 +218,7 @@ export default function CJProductDetail() {
         </div>
         <div className="md:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-foreground border-b border-slate-100 dark:border-slate-800 shadow-xs w-full max-w-[100vw]">
           <div className="flex items-center justify-between gap-2 px-3 py-2 w-full max-w-full">
-            <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full shrink-0 flex items-center justify-center text-slate-800 dark:text-slate-100 cursor-pointer" aria-label="Back">
+            <button onClick={handleSmartBack} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full shrink-0 flex items-center justify-center text-slate-800 dark:text-slate-100 cursor-pointer" aria-label="Back">
               <ChevronLeft className="h-5 w-5" />
             </button>
             <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-slate-100 truncate flex-1 text-center">Product Details</span>
@@ -251,7 +253,7 @@ export default function CJProductDetail() {
         </div>
         <div className="md:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-foreground border-b border-slate-100 dark:border-slate-800 shadow-xs w-full max-w-[100vw]">
           <div className="flex items-center justify-between gap-2 px-3 py-2 w-full max-w-full">
-            <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full shrink-0 flex items-center justify-center text-slate-800 dark:text-slate-100 cursor-pointer" aria-label="Back">
+            <button onClick={handleSmartBack} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full shrink-0 flex items-center justify-center text-slate-800 dark:text-slate-100 cursor-pointer" aria-label="Back">
               <ChevronLeft className="h-5 w-5" />
             </button>
             <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-slate-100 truncate flex-1 text-center">Product Details</span>
@@ -321,7 +323,7 @@ export default function CJProductDetail() {
       </div>
       <div className="md:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-foreground border-b border-slate-100 dark:border-slate-800 shadow-xs w-full max-w-[100vw]">
         <div className="flex items-center justify-between gap-2 px-3 py-2 w-full max-w-full">
-          <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full shrink-0 flex items-center justify-center text-slate-800 dark:text-slate-100 cursor-pointer" aria-label="Back">
+          <button onClick={handleSmartBack} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full shrink-0 flex items-center justify-center text-slate-800 dark:text-slate-100 cursor-pointer" aria-label="Back">
             <ChevronLeft className="h-5 w-5" />
           </button>
           <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-slate-100 truncate flex-1 text-center">Product Details</span>
@@ -793,3 +795,11 @@ export default function CJProductDetail() {
     </div>
   );
 }
+
+export default function CJProductDetail() {
+  const { id } = useParams();
+  const location = useLocation();
+  const activeKey = id || location.pathname;
+  return <CJProductDetailContent key={activeKey} />;
+}
+
