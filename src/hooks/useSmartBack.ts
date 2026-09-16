@@ -1,6 +1,13 @@
 import { useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+// Force manual scroll restoration so browser never jerks user to the bottom of the previous page
+if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+  try {
+    window.history.scrollRestoration = "manual";
+  } catch {}
+}
+
 const STORAGE_KEY = "durtup_nav_history_stack";
 
 function getHistoryStack(): string[] {
@@ -24,13 +31,14 @@ function setHistoryStack(stack: string[]) {
 
 /**
  * Global tracker to record internal route navigations into sessionStorage.
- * Mount this once inside <BrowserRouter> (e.g. in App.tsx or AppLayout.tsx).
+ * Tracks distinct full paths (ignoring same-page hash changes).
  */
 export function useAppHistoryTracker() {
   const location = useLocation();
 
   useEffect(() => {
-    const currentUrl = location.pathname + location.search + location.hash;
+    // Only track actual route path + search, ignore hash jumps
+    const currentUrl = location.pathname + (location.search ? location.search : "");
     const stack = getHistoryStack();
     const lastUrl = stack[stack.length - 1];
 
@@ -38,23 +46,33 @@ export function useAppHistoryTracker() {
       stack.push(currentUrl);
       setHistoryStack(stack);
     }
-  }, [location.pathname, location.search, location.hash]);
+  }, [location.pathname, location.search]);
 }
 
 /**
- * Smart Back hook that seamlessly navigates to the previous page within the site
- * (e.g. Product B -> Product A), or gracefully falls back to Home ('/') if the user
- * landed directly on the page without prior navigation.
+ * Smart Back hook:
+ * One single click on Back immediately and cleanly returns to the previous page at the top.
+ * If no previous page on this site, cleanly navigates to fallbackPath ('/').
  */
 export function useSmartBack(fallbackPath: string = "/") {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleBack = useCallback(() => {
-    const stack = getHistoryStack();
-    const currentUrl = location.pathname + location.search + location.hash;
+  const handleBack = useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault?.();
+      e.stopPropagation?.();
+    }
 
-    // Remove any trailing duplicates matching current URL
+    // Scroll to top instantly
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+
+    const currentUrl = location.pathname + (location.search ? location.search : "");
+    const stack = getHistoryStack();
+
+    // Remove any trailing items matching current URL
     while (stack.length > 0 && stack[stack.length - 1] === currentUrl) {
       stack.pop();
     }
@@ -62,12 +80,11 @@ export function useSmartBack(fallbackPath: string = "/") {
     if (stack.length > 0) {
       const targetPreviousUrl = stack.pop();
       setHistoryStack(stack);
-      
-      // If browser history has entries, navigate(-1) gives native smooth transition
-      if (typeof window !== "undefined" && window.history.length > 1) {
+
+      if (targetPreviousUrl) {
+        navigate(targetPreviousUrl, { replace: false });
+      } else if (typeof window !== "undefined" && window.history.length > 1) {
         navigate(-1);
-      } else if (targetPreviousUrl) {
-        navigate(targetPreviousUrl);
       } else {
         navigate(fallbackPath);
       }
@@ -79,7 +96,14 @@ export function useSmartBack(fallbackPath: string = "/") {
         navigate(fallbackPath);
       }
     }
-  }, [navigate, location.pathname, location.search, location.hash, fallbackPath]);
+
+    // Secondary instant scroll to top after route transition
+    setTimeout(() => {
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      }
+    }, 20);
+  }, [navigate, location.pathname, location.search, fallbackPath]);
 
   return handleBack;
 }

@@ -5,6 +5,13 @@ import App from "./App.tsx";
 import "./index.css";
 import "./styles/scroll-reset.css";
 
+// Disable browser's automatic dirty scroll restoration so back button always lands cleanly at page top
+if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+  try {
+    window.history.scrollRestoration = "manual";
+  } catch {}
+}
+
 // Global error handler to prevent native app crashes from unhandled async errors
 window.addEventListener("unhandledrejection", (event) => {
   console.error("Unhandled promise rejection:", event.reason);
