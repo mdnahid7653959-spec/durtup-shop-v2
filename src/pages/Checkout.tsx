@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { sendTelegramOrderNotification } from "@/utils/telegramNotifier";
 import { trackPurchase } from "@/components/FacebookPixel";
 import { checkFirstOrderDiscountEligibility, DiscountEligibilityResult } from "@/services/referralService";
+import { triggerCustomerOrderPhoneNotification } from "@/services/customerNotificationService";
 
 
 interface AppliedCoupon {
@@ -787,6 +788,19 @@ export default function Checkout() {
       // Clear both carts in background
       clearCart().catch(() => {});
       clearCJCart();
+
+      // 📱 Trigger Real Phone Push Notification on user device with product image & sound
+      triggerCustomerOrderPhoneNotification({
+        orderId,
+        orderNumber,
+        customerName: shippingInfo.firstName || "Customer",
+        productName: primaryProductName,
+        productImage: primaryProductImage,
+        totalAmount: total,
+        paymentMethod: paymentMethod,
+      }).catch((err) => {
+        console.warn("Customer push notification warning:", err);
+      });
 
       toast({ 
         title: "অর্ডার সফলভাবে সম্পন্ন হয়েছে! 🎉", 

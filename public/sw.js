@@ -208,19 +208,22 @@ self.addEventListener('push', (event) => {
   }
 });
 
-// Handle custom messages from web app
+// Handle custom messages from web app (Customer & Admin push notifications)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const payload = event.data.payload || {};
-    const prodImg = payload.image || payload.product_image;
-    self.registration.showNotification(payload.title || '🛍️ New Order Alert', {
-      body: payload.body || 'Order received',
-      icon: prodImg || '/durtup-logo.png',
-      badge: '/durtup-logo.png',
-      image: prodImg || undefined,
+    const prodImg = payload.image || payload.product_image || '/durtup-logo.png';
+    const targetUrl = (payload.data && payload.data.url) || '/';
+
+    self.registration.showNotification(payload.title || '🛍️ Durtup.shop - অর্ডার সফল হয়েছে!', {
+      body: payload.body || 'আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে।',
+      icon: '/icon-192.png',
+      badge: '/favicon-32x32.png',
+      image: prodImg,
       vibrate: [400, 150, 400, 150, 400, 150, 800],
+      requireInteraction: true,
       tag: payload.tag || `durtup-msg-${Date.now()}`,
-      data: payload.data || { url: '/admin/orders' }
+      data: payload.data || { url: targetUrl }
     });
   }
 });
