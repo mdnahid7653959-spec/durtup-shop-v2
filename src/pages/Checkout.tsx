@@ -947,6 +947,7 @@ export default function Checkout() {
     );
   }
 
+  return (
     <div className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-primary/20">
       <SEOHead title="Secure Checkout - Durtup.shop" noindex={true} />
       <Header />
