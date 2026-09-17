@@ -555,20 +555,23 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
           console.warn("[FirestoreSearchAdapter] Ecomseller BD cache fetch error:", e);
         }
 
-        if (productMap.size === 0) {
-          FALLBACK_SUPPLIER_PRODUCTS.forEach((p, idx) => {
-            const pid = String(p.id);
+        // Always merge Fast Seed & Fallback Supplier Products so every catalog item is 100% indexed
+        FALLBACK_SUPPLIER_PRODUCTS.forEach((p: any, idx: number) => {
+          const pid = String(p.id);
+          if (!productMap.has(pid)) {
             productMap.set(pid, {
               id: pid,
               name: p.name,
               slug: p.slug || `product-${pid}`,
-              regular_price: p.originalPrice || p.price || 0,
+              regular_price: p.originalPrice || p.regular_price || p.price || 0,
               discount_price: p.originalPrice ? p.price : null,
               price: p.price || 0,
               category: p.category || "General",
               brand: "Generic",
               seller_name: "Durtup Marketplace",
-              sku: `SKU-${pid}`,
+              sku: p.product_code || p.sku || `SKU-${pid}`,
+              product_code: p.product_code || pid,
+              supplier_sku: p.product_code || p.sku,
               image: p.image || defaultImages[idx % defaultImages.length],
               product_images: [{ image_url: p.image || defaultImages[idx % defaultImages.length] }],
               rating_average: p.rating || 4.8,
@@ -576,10 +579,10 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
               sold_count: p.sold || 45,
               in_stock: true,
               status: "active",
-              description: ""
+              description: p.description || ""
             });
-          });
-        }
+          }
+        });
 
         this.indexedProducts = Array.from(productMap.values());
       }

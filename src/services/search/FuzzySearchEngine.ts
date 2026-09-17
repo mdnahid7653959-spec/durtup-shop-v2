@@ -69,15 +69,27 @@ export function normalizeText(text: string): string {
 }
 
 /**
- * Tokenizes a string into array of normalized words with stop word filtering
+ * Tokenizes a string into array of normalized words with stop word filtering and sub-token expansion
  */
 export function tokenizeText(text: string, filterStopWords = true): string[] {
   const normalized = normalizeText(text);
   if (!normalized) return [];
-  const tokens = normalized.split(" ").filter((t) => t.length > 0);
-  if (!filterStopWords) return tokens;
-  const filtered = tokens.filter((t) => !SEARCH_STOP_WORDS.has(t) || /^\d+$/.test(t));
-  return filtered.length > 0 ? filtered : tokens;
+  const baseTokens = normalized.split(" ").filter((t) => t.length > 0);
+  const tokenSet = new Set<string>();
+
+  for (const tok of baseTokens) {
+    tokenSet.add(tok);
+    if (tok.includes("-")) {
+      const parts = tok.split("-").filter(p => p.length > 0);
+      parts.forEach(p => tokenSet.add(p));
+      tokenSet.add(parts.join(""));
+    }
+  }
+
+  const allTokens = Array.from(tokenSet);
+  if (!filterStopWords) return allTokens;
+  const filtered = allTokens.filter((t) => !SEARCH_STOP_WORDS.has(t) || /^\d+$/.test(t));
+  return filtered.length > 0 ? filtered : allTokens;
 }
 
 /**

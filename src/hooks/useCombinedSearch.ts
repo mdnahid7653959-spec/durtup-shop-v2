@@ -81,21 +81,39 @@ async function searchLocalProducts(params: SearchParams): Promise<CombinedProduc
       supplier_name: (p as any).supplier_name || (p as any).seller_name
     }));
 
-    // Fallback: If browsing without a search query and search adapter returned empty, directly fetch and filter from master supplier catalogs
-    if (mapped.length === 0 && !params.search) {
-      const { getCachedMohasagorProducts, filterProductsByCategory, interleaveCatalogs } = await import("@/utils/mohasagorCache");
+    // Fallback: If search or browsing returned empty, directly search and filter across master supplier catalogs
+    if (mapped.length === 0) {
+      const { getCachedMohasagorProducts, filterProductsByCategory, interleaveCatalogs, FAST_SEED_PRODUCTS } = await import("@/utils/mohasagorCache");
       const { EcomsellerEngine } = await import("@/services/suppliers/ecomsellerEngine");
+      const { normalizeText, tokenizeText } = await import("@/services/search/FuzzySearchEngine");
       
       const [allMohasagor, allEcom] = await Promise.all([
         getCachedMohasagorProducts().catch(() => []),
         EcomsellerEngine.getCachedEcomsellerProducts().catch(() => [])
       ]);
       const combinedAll = interleaveCatalogs(allMohasagor, allEcom);
+      const allPool = [...FAST_SEED_PRODUCTS, ...combinedAll];
 
-      let fallbackList = combinedAll;
-      if (params.category && params.category !== "all") {
+      let fallbackList = allPool;
+      if (params.search) {
+        const qNorm = normalizeText(params.search);
+        const qTokens = tokenizeText(qNorm, true).filter(t => t.length >= 2);
+        
+        fallbackList = allPool.filter((p: any) => {
+          const pNameNorm = normalizeText(p.name || "");
+          const pCode = normalizeText(p.product_code || p.sku || p.id || "");
+          if (pCode === qNorm || (qNorm.length >= 3 && pCode.includes(qNorm))) return true;
+          if (pNameNorm === qNorm || pNameNorm.includes(qNorm) || (qNorm.length > 5 && qNorm.includes(pNameNorm))) return true;
+          if (qTokens.length > 0) {
+            const matched = qTokens.filter(t => pNameNorm.includes(t));
+            if (matched.length >= Math.max(1, Math.ceil(qTokens.length * 0.4))) return true;
+          }
+          return false;
+        });
+      } else if (params.category && params.category !== "all") {
         fallbackList = filterProductsByCategory(combinedAll, params.category);
       }
+
       if (fallbackList && fallbackList.length > 0) {
         mapped = fallbackList.map((p) => ({
           id: p.id,
