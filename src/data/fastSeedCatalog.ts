@@ -2,6 +2,24 @@ import type { Product } from "@/components/products/ProductCard";
 
 export const FAST_SEED_PRODUCTS: Product[] = [
   {
+    "id": "297705",
+    "name": "2-in-1 Multifunctional Electric Hot Pot & Steamer (18cm)",
+    "slug": "2-in-1-multifunctional-electric-hot-pot-steamer-18cm",
+    "product_code": "297705",
+    "category": "Home & Lifestyle",
+    "image": "https://images.unsplash.com/photo-1585515320310-259814833e62?w=600&h=600&fit=crop",
+    "price": 1050,
+    "originalPrice": 1250,
+    "regular_price": 1250,
+    "rating": 4.9,
+    "reviews": 38,
+    "sold": 95,
+    "stock": 50,
+    "freeShipping": true,
+    "isNew": true,
+    "isBestSeller": true
+  },
+  {
     "id": "14",
     "name": "X01 Full Charge Separator – Type-C Auto Power Cut-Off Charging Protector with Mechanical Pop-Out Feature & Fast Charging Support",
     "slug": "mens-winter-hoodie-3002",

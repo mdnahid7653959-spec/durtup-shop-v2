@@ -1,6 +1,22 @@
 {
   "products": [
     {
+      "id": "297705-ecom-hotpot-steamer",
+      "name": "2-in-1 Multifunctional Electric Hot Pot & Steamer (18cm)",
+      "slug": "2-in-1-multifunctional-electric-hot-pot-steamer-18cm",
+      "code": "297705",
+      "short": "2-in-1 Multifunctional Electric Hot Pot & Steamer (18cm) with non-stick coating and dual temperature control.",
+      "price": 1050,
+      "resellerPrice": 530,
+      "categoryId": "6f985930-746f-40cb-b470-5f8992a06e6e",
+      "brandId": "a421f983-a3d2-41a8-91c3-5d435a339bbd",
+      "featured": 3,
+      "image": "https://images.unsplash.com/photo-1585515320310-259814833e62?w=600&h=600&fit=crop",
+      "images": [
+        "https://images.unsplash.com/photo-1585515320310-259814833e62?w=600&h=600&fit=crop"
+      ]
+    },
+    {
       "id": "465efae0-e7dd-4189-938e-7291dff980de",
       "name": "2-in-1 Dumpling & Pitha Maker Machine",
       "slug": "2-in-1-dumpling-pitha-maker-machine",

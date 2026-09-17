@@ -247,6 +247,7 @@ export class EcomsellerEngine {
         category_id: mappedCategory.id,
         category_slug: mappedCategory.slug,
         brand: "Generic",
+        description: p.short || p.description || "",
         image: primaryImg,
         images: rawImgs,
         product_images: rawImgs.map((imgUrl: string, idx: number) => ({

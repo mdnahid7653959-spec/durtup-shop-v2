@@ -21,6 +21,7 @@ import { StoreDetails } from "@/components/products/StoreDetails";
 import { getCachedMohasagorProducts, findMohasagorProduct, findMohasagorProductSync, FALLBACK_SUPPLIER_PRODUCTS } from "@/utils/mohasagorCache";
 import { calculateProductPrice } from "@/utils/pricingMargin";
 import { getSmartProductImage } from "@/utils/productImageHelper";
+import { getEnhancedProductDescription } from "@/utils/productDescriptionHelper";
 import { extractProductVariants, getColorHex, sortVariantValues, type ProductVariant } from "@/utils/productVariantHelper";
 import { db } from "@/integrations/firebase/client";
 import { collection, getDocs } from "firebase/firestore";
@@ -282,7 +283,14 @@ const mapSupplierProduct = (raw: any, productSlug: string, imagesArr: ProductIma
     name: raw.name || raw.title || "Product",
     slug: productSlug,
     short_description: raw.short_description || null,
-    description: raw.details || raw.description || "High quality product.",
+    description: getEnhancedProductDescription({
+      id: String(raw.id),
+      name: raw.name || raw.title || "Product",
+      category: raw.category || raw.category_id,
+      description: raw.details || raw.description,
+      short_description: raw.short_description,
+      price: sellingPrice
+    }),
     regular_price: (regularPrice && regularPrice > sellingPrice) ? regularPrice : sellingPrice,
     discount_price: (regularPrice && regularPrice > sellingPrice) ? sellingPrice : null,
     stock_quantity: parseInt(raw.stock_quantity) || parseInt(raw.stock) || 50,
@@ -1820,8 +1828,16 @@ function ProductDetailContent() {
               )}
 
               {/* Description */}
-              {product.description && (() => {
-                const unescapedDesc = (product.description || "")
+              {(() => {
+                const enhancedDesc = getEnhancedProductDescription({
+                  id: product.id,
+                  name: product.name,
+                  category: product.category_id || undefined,
+                  description: product.description,
+                  short_description: product.short_description,
+                  price: product.discount_price || product.regular_price
+                });
+                const unescapedDesc = (enhancedDesc || "")
                   .replace(/\\x3C/gi, "<")
                   .replace(/\\x3E/gi, ">")
                   .replace(/\\x22/gi, '"')

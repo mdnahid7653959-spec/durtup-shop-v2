@@ -90,11 +90,13 @@ async function fetchSuggestions(q: string): Promise<SuggestResult> {
 
         const matched = combined.filter((p: any) => {
           const pNorm = normalizeText(p.name || "");
+          const pSku = normalizeText(p.sku || p.product_code || p.supplier_sku || p.code || p.id || "");
           const pWords = pNorm.split(" ");
           
+          if (pSku === norm || (norm.length >= 3 && pSku.includes(norm))) return true;
           if (pNorm.includes(norm)) return true;
           if (pWords.some(w => w.startsWith(norm))) return true;
-          if (normWords.length > 1 && normWords.every(nw => pNorm.includes(nw))) return true;
+          if (normWords.length > 1 && normWords.filter(nw => pNorm.includes(nw)).length >= Math.ceil(normWords.length * 0.5)) return true;
           return false;
         }).slice(0, 8);
 
