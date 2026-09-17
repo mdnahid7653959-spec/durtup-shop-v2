@@ -71,9 +71,13 @@ export function InfiniteProductFeed() {
       }
     };
     window.addEventListener("mohasagor_products_updated", handleUpdate);
+    window.addEventListener("ecomseller_products_updated", handleUpdate);
+    window.addEventListener("durtup_products_updated", handleUpdate);
     return () => {
       clearInterval(autoRotateTimer);
       window.removeEventListener("mohasagor_products_updated", handleUpdate);
+      window.removeEventListener("ecomseller_products_updated", handleUpdate);
+      window.removeEventListener("durtup_products_updated", handleUpdate);
     };
   }, []);
 

@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { lazyWithRetry as lazy } from "@/utils/lazyWithRetry";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -21,6 +21,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RoutePrefetcher } from "@/components/RoutePrefetcher";
 import { ReferralTracker } from "@/components/ReferralTracker";
 import { InAppBrowserPrompt } from "@/components/InAppBrowserPrompt";
+import { startMohasagorAutoSync } from "@/utils/mohasagorCache";
+import { EcomsellerAutoSync } from "@/services/suppliers/ecomsellerAutoSync";
 
 // Eager load - Only critical landing page for instant first paint
 import Index from "./pages/Index";
@@ -169,12 +171,21 @@ const queryClient = new QueryClient({
   },
 });
 
+function AutoSyncManager() {
+  useEffect(() => {
+    startMohasagorAutoSync();
+    EcomsellerAutoSync.init();
+  }, []);
+  return null;
+}
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <AutoSyncManager />
         <BrowserRouter>
           <NativeAppProvider>
             <AuthProvider>

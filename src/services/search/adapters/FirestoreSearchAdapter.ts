@@ -342,14 +342,14 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
 
   constructor() {
     if (typeof window !== "undefined") {
-      window.addEventListener("admin_products_updated", () => {
+      const handleInvalidate = () => {
         this.invalidateIndex();
         this.buildIndex().catch(() => {});
-      });
-      window.addEventListener("mohasagor_products_updated", () => {
-        this.invalidateIndex();
-        this.buildIndex().catch(() => {});
-      });
+      };
+      window.addEventListener("admin_products_updated", handleInvalidate);
+      window.addEventListener("mohasagor_products_updated", handleInvalidate);
+      window.addEventListener("ecomseller_products_updated", handleInvalidate);
+      window.addEventListener("durtup_products_updated", handleInvalidate);
     }
 
     setTimeout(() => {

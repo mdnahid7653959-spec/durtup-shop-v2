@@ -91,11 +91,12 @@ export function serializeToSeroval(val: any): any {
   };
 }
 
-const CATALOG_SERVER_FN = "2a45d9b79d4ba9547992f1eac18039c2bae0ddf7df7670a8638b3bf5e0a6962f";
+const CATEGORIES_SERVER_FN = "53f6e25532eda7e5a30d487296c48d6be16a40d02ebf430aab2a0edea81fa0d2";
+const PRODUCTS_SERVER_FN = "5a01c59194865d30180a7f68b4912eb37e699345f2bbe311a9d2d8c38e2e897b";
 const DETAIL_SERVER_FN = "007261ee9d86e87592cfcd5491f56565cca84574c79db98974ab1951a1437f9d";
 const ECOMSELLER_BASE = "https://ecomsellerbd.com";
 
-const CACHE_KEY_CATALOG = "ecomseller_catalog_cache_v6";
+const CACHE_KEY_CATALOG = "ecomseller_catalog_cache_v7";
 const CACHE_KEY_PRICING = "durtup_supplier_pricing_config_v2";
 
 export class EcomsellerEngine {
@@ -104,10 +105,10 @@ export class EcomsellerEngine {
   public static CATALOG_URL = "https://ecomsellerbd.com/catalog";
 
   private static inMemoryProductsCache: any[] | null = null;
+  private static activeCategoriesFn = CATEGORIES_SERVER_FN;
+  private static activeProductsFn = PRODUCTS_SERVER_FN;
+  private static activeDetailFn = DETAIL_SERVER_FN;
 
-  /**
-   * Helper to perform HTTP GET requests with CORS proxies when in browser
-   */
   /**
    * Helper to perform HTTP GET requests with CORS proxies when in browser
    */
@@ -128,6 +129,7 @@ export class EcomsellerEngine {
     const defaultHeaders = {
       "Accept": "application/json, text/plain, */*",
       "x-tsr-serverfn": "true",
+      "Referer": "https://ecomsellerbd.com/catalog",
       ...headers
     };
 
@@ -161,7 +163,7 @@ export class EcomsellerEngine {
     }
 
     // 3. Fallback to public seed catalog if requesting catalog endpoint
-    if (url.includes(CATALOG_SERVER_FN) && typeof window !== "undefined") {
+    if ((url.includes(this.activeProductsFn) || url.includes(this.activeCategoriesFn)) && typeof window !== "undefined") {
       try {
         const seedRes = await this.fetchWithTimeout("/ecomseller_catalog.json", {}, 6000);
         if (seedRes.ok) {
@@ -269,6 +271,64 @@ export class EcomsellerEngine {
   }
 
   /**
+   * Helper to fetch a single page of products with perPage = 200
+   */
+  private static async fetchProductsPage(page = 1, perPage = 200): Promise<{ products: EcomsellerRawProduct[]; total: number }> {
+    const payloadTree = {
+      t: {
+        t: 10,
+        i: 0,
+        p: {
+          k: ["data"],
+          v: [
+            {
+              t: 10,
+              i: 1,
+              p: {
+                k: ["page", "perPage"],
+                v: [{ t: 0, s: page }, { t: 0, s: perPage }]
+              },
+              o: 0
+            }
+          ]
+        },
+        o: 0
+      },
+      f: 127,
+      m: []
+    };
+
+    const query = "payload=" + encodeURIComponent(JSON.stringify(payloadTree));
+    const endpointUrl = `${ECOMSELLER_BASE}/_serverFn/${this.activeProductsFn}?${query}`;
+    const rawText = await this.executeFetch(endpointUrl);
+    const rawJson = JSON.parse(rawText);
+
+    if (rawJson && Array.isArray(rawJson.products)) {
+      return { products: rawJson.products, total: rawJson.total || rawJson.products.length };
+    }
+
+    const decoded = parseTssResponse(rawJson);
+    const result = decoded?.result || {};
+    const rawProducts: any[] = result.products || [];
+    const products: EcomsellerRawProduct[] = rawProducts.map((p: any) => ({
+      id: p.id,
+      name: p.name || "Untitled Product",
+      slug: p.slug || `product-${p.id}`,
+      code: p.code || p.id,
+      short: p.short || "",
+      price: Number(p.price) || 0,
+      resellerPrice: Number(p.resellerPrice) || 0,
+      categoryId: p.categoryId,
+      brandId: p.brandId,
+      featured: Number(p.featured) || 0,
+      image: p.image || (Array.isArray(p.images) ? p.images[0] : ""),
+      images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : [])
+    }));
+
+    return { products, total: Number(result.total) || products.length };
+  }
+
+  /**
    * Fetch Live Master Catalog from Ecomseller BD
    */
   public static async fetchLiveCatalog(forceRefresh = false): Promise<{
@@ -295,36 +355,50 @@ export class EcomsellerEngine {
     } | null = null;
 
     try {
-      const endpointUrl = `${ECOMSELLER_BASE}/_serverFn/${CATALOG_SERVER_FN}`;
-      const rawText = await this.executeFetch(endpointUrl);
-      const rawJson = JSON.parse(rawText);
+      // 1. Fetch Categories & Brands
+      let categories: EcomsellerRawCategory[] = [];
+      let brands: EcomsellerRawBrand[] = [];
 
-      // Check if already decoded (e.g. from static /ecomseller_catalog.json)
-      if (rawJson && Array.isArray(rawJson.products)) {
-        catalogData = rawJson;
-      } else {
-        const decoded = parseTssResponse(rawJson);
-        const result = decoded?.result || {};
-        const categories: EcomsellerRawCategory[] = result.categories || [];
-        const brands: EcomsellerRawBrand[] = result.brands || [];
-        const products: EcomsellerRawProduct[] = (result.products || []).map((p: any) => ({
-          id: p.id,
-          name: p.name || "Untitled Ecomseller Product",
-          slug: p.slug,
-          code: p.code || p.id,
-          short: p.short || "",
-          price: Number(p.price) || 0,
-          resellerPrice: Number(p.resellerPrice) || 0,
-          categoryId: p.categoryId,
-          brandId: p.brandId,
-          featured: Number(p.featured) || 0,
-          image: p.image || (Array.isArray(p.images) ? p.images[0] : ""),
-          images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : [])
-        }));
-        catalogData = { products, categories, brands };
+      try {
+        const catEndpoint = `${ECOMSELLER_BASE}/_serverFn/${this.activeCategoriesFn}`;
+        const catRaw = await this.executeFetch(catEndpoint);
+        const catJson = JSON.parse(catRaw);
+        const catDecoded = parseTssResponse(catJson);
+        categories = catDecoded?.result?.categories || [];
+        brands = catDecoded?.result?.brands || [];
+      } catch (catErr) {
+        console.warn("[EcomsellerEngine] Categories fetch warning:", catErr);
+      }
+
+      // 2. Fetch Page 1 Products
+      const page1 = await this.fetchProductsPage(1, 200);
+      let allProducts = [...(page1.products || [])];
+      const total = page1.total || allProducts.length;
+
+      // 3. Fetch remaining pages if any
+      if (total > allProducts.length) {
+        const totalPages = Math.ceil(total / 200);
+        for (let p = 2; p <= totalPages; p++) {
+          try {
+            const nextP = await this.fetchProductsPage(p, 200);
+            if (nextP.products && nextP.products.length > 0) {
+              allProducts.push(...nextP.products);
+            }
+          } catch (pErr) {
+            console.warn(`[EcomsellerEngine] Page ${p} fetch warning:`, pErr);
+          }
+        }
+      }
+
+      if (allProducts.length > 0) {
+        catalogData = { products: allProducts, categories, brands };
       }
     } catch (netErr) {
       console.warn("[EcomsellerEngine] Live catalog fetch failed, loading static seed catalog:", netErr);
+    }
+
+    // Fallback to static seed catalog if needed
+    if (!catalogData || !catalogData.products || catalogData.products.length === 0) {
       if (typeof window !== "undefined") {
         try {
           const res = await fetch("/ecomseller_catalog.json");
