@@ -1,6 +1,6 @@
-const CACHE_NAME = 'durtup-v17';
-const STATIC_CACHE = 'durtup-static-v17';
-const DYNAMIC_CACHE = 'durtup-dynamic-v17';
+const CACHE_NAME = 'durtup-v18';
+const STATIC_CACHE = 'durtup-static-v18';
+const DYNAMIC_CACHE = 'durtup-dynamic-v18';
 
 // Assets to cache immediately on SW install
 const STATIC_ASSETS = [
@@ -10,15 +10,13 @@ const STATIC_ASSETS = [
   '/durtup-logo-transparent.png',
   '/icon-192.png',
   '/icon-512.png',
-  '/hero-gadgets.webp',
-  '/banner-trust-delivery.webp',
-  '/banner-fashion.webp',
-  '/banner-flash-deals.webp',
+  '/banners/hero-banner-1.webp',
+  '/banners/hero-banner-2.webp',
 ];
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v17...');
+  console.log('[SW] Installing service worker v18...');
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
       console.log('[SW] Caching static assets');
