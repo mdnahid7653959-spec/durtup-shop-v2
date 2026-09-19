@@ -219,7 +219,7 @@ export function HeroBanner() {
             </div>
           </div>
 
-          {/* Right Side 2 Dynamic Random Products (Clean Professional Display) */}
+          {/* Right Side 2 Dynamic Random Products (Vertical Top-Down Layout) */}
           <div 
             className="hidden lg:flex lg:col-span-4 xl:col-span-3 flex-col gap-3 justify-between"
             onMouseEnter={() => setIsSideCardsPaused(true)}
@@ -261,54 +261,47 @@ const SideProductCard = memo(function SideProductCard({ product }: SideProductCa
       to={productUrl}
       onMouseEnter={() => prefetchRoute(productUrl)}
       onTouchStart={() => prefetchRoute(productUrl)}
-      className="group/card relative flex-1 flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/80 hover:border-primary/70 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-500 hover:-translate-y-0.5"
+      className="group/card relative flex-1 flex flex-col justify-between p-2.5 sm:p-3 rounded-2xl bg-card border border-border/80 hover:border-primary/70 shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-500 hover:-translate-y-0.5"
     >
-      {/* Product Image Container (100% Clean, No Overlapping Badge) */}
-      <div className="relative w-28 h-28 rounded-xl bg-slate-50 dark:bg-slate-900/60 p-2 shrink-0 overflow-hidden flex items-center justify-center border border-border/60 group-hover/card:border-primary/40 transition-colors">
+      {/* 1. UPORE: Product Photo Box */}
+      <div className="relative w-full h-24 sm:h-28 rounded-xl bg-slate-50 dark:bg-slate-900/60 p-1.5 flex items-center justify-center overflow-hidden border border-border/50 group-hover/card:border-primary/30 transition-colors">
         <img
           src={displayImage}
           alt={product.name}
-          width={112}
-          height={112}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-contain filter drop-shadow-sm group-hover/card:scale-108 transition-transform duration-400"
+          className="w-full h-full object-contain filter drop-shadow-xs group-hover/card:scale-108 transition-transform duration-300"
         />
+        {discount > 0 && (
+          <span className="absolute top-1.5 right-1.5 text-[9px] sm:text-[10px] font-black text-red-600 dark:text-red-400 bg-red-500/10 dark:bg-red-950/50 px-1.5 py-0.5 rounded-full border border-red-500/20 shadow-xs">
+            -{discount}%
+          </span>
+        )}
       </div>
 
-      {/* Product Details & Price */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-1">
-        <div className="space-y-1">
-          {/* Discount Tag (if available) */}
-          {discount > 0 && (
-            <span className="inline-block text-[10px] font-extrabold text-red-600 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
-              -{discount}% ছাড়
+      {/* 2. NICHE: Description / Title */}
+      <div className="pt-1.5 pb-1">
+        <h3 className="text-xs sm:text-sm font-semibold text-foreground line-clamp-1 group-hover/card:text-primary transition-colors">
+          {product.name}
+        </h3>
+      </div>
+
+      {/* 3. TAR NICHE: Price & Buy Button */}
+      <div className="flex items-center justify-between gap-1 pt-1 border-t border-border/40">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-sm sm:text-base font-black text-primary">
+            ৳{Number(product.price).toLocaleString()}
+          </span>
+          {product.originalPrice && product.originalPrice > product.price && (
+            <span className="text-[11px] text-muted-foreground line-through">
+              ৳{Number(product.originalPrice).toLocaleString()}
             </span>
           )}
-
-          {/* Product Title */}
-          <h3 className="text-xs sm:text-sm font-semibold text-foreground line-clamp-2 leading-snug group-hover/card:text-primary transition-colors">
-            {product.name}
-          </h3>
         </div>
 
-        {/* Price & Buy Action Button */}
-        <div className="pt-2 flex items-center justify-between gap-1.5">
-          <div className="flex flex-col">
-            <span className="text-base sm:text-lg font-black text-primary leading-none">
-              ৳{Number(product.price).toLocaleString()}
-            </span>
-            {product.originalPrice && product.originalPrice > product.price && (
-              <span className="text-[11px] text-muted-foreground line-through mt-0.5">
-                ৳{Number(product.originalPrice).toLocaleString()}
-              </span>
-            )}
-          </div>
-
-          <div className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary text-white font-bold text-[11px] shadow-xs group-hover/card:bg-primary/90 transition-all">
-            <ShoppingCart className="w-3 h-3" />
-            <span>কিনুন</span>
-          </div>
+        <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-white font-bold text-[11px] shadow-xs group-hover/card:bg-primary/90 transition-all">
+          <ShoppingCart className="w-3 h-3" />
+          <span>কিনুন</span>
         </div>
       </div>
     </Link>
