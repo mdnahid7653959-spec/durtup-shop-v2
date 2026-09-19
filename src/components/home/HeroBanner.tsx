@@ -2,7 +2,6 @@ import { memo, useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { prefetchRoute } from "@/components/RoutePrefetcher";
-import { cn } from "@/lib/utils";
 
 interface HeroSlide {
   id: string;
@@ -44,10 +43,6 @@ export function HeroBanner() {
 
   const prevSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
-  }, []);
-
-  const goToSlide = useCallback((index: number) => {
-    setCurrentSlide(index);
   }, []);
 
   // Auto-advance carousel
@@ -135,7 +130,7 @@ export function HeroBanner() {
             ))}
           </div>
 
-          {/* Left Arrow Button */}
+          {/* Left Arrow Button (Desktop hover only) */}
           <button
             onClick={(e) => {
               e.preventDefault();
@@ -143,12 +138,12 @@ export function HeroBanner() {
               prevSlide();
             }}
             aria-label="Previous Slide"
-            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md flex items-center justify-center border border-white/20 opacity-0 group-hover/banner:opacity-100 transition-all duration-200 active:scale-90 shadow-md hover:scale-105"
+            className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md items-center justify-center border border-white/20 opacity-0 group-hover/banner:opacity-100 transition-all duration-200 active:scale-90 shadow-md hover:scale-105"
           >
-            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+            <ChevronLeft className="w-6 h-6" />
           </button>
 
-          {/* Right Arrow Button */}
+          {/* Right Arrow Button (Desktop hover only) */}
           <button
             onClick={(e) => {
               e.preventDefault();
@@ -156,31 +151,10 @@ export function HeroBanner() {
               nextSlide();
             }}
             aria-label="Next Slide"
-            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md flex items-center justify-center border border-white/20 opacity-0 group-hover/banner:opacity-100 transition-all duration-200 active:scale-90 shadow-md hover:scale-105"
+            className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md items-center justify-center border border-white/20 opacity-0 group-hover/banner:opacity-100 transition-all duration-200 active:scale-90 shadow-md hover:scale-105"
           >
-            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+            <ChevronRight className="w-6 h-6" />
           </button>
-
-          {/* Slide Indicator Dots */}
-          <div className="absolute bottom-2 sm:bottom-3.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 rounded-full bg-black/30 backdrop-blur-md border border-white/10">
-            {HERO_SLIDES.map((slide, index) => (
-              <button
-                key={slide.id}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  goToSlide(index);
-                }}
-                aria-label={`Go to slide ${index + 1}: ${slide.title}`}
-                className={cn(
-                  "h-1.5 sm:h-2 rounded-full transition-all duration-300",
-                  currentSlide === index
-                    ? "w-6 sm:w-8 bg-white shadow-sm"
-                    : "w-1.5 sm:w-2 bg-white/50 hover:bg-white/80"
-                )}
-              />
-            ))}
-          </div>
         </div>
       </div>
     </section>
