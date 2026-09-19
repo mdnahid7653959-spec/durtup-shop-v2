@@ -1,6 +1,6 @@
 import { memo, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Flame, Sparkles, ShoppingBag, ArrowRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
 import { prefetchRoute } from "@/components/RoutePrefetcher";
 import { useHomeProducts } from "@/hooks/useHomeProducts";
 import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
@@ -219,25 +219,21 @@ export function HeroBanner() {
             </div>
           </div>
 
-          {/* Right Side 2 Dynamic Random Products (Desktop Showcase) */}
+          {/* Right Side 2 Dynamic Random Products (Clean Professional Display) */}
           <div 
             className="hidden lg:flex lg:col-span-4 xl:col-span-3 flex-col gap-3 justify-between"
             onMouseEnter={() => setIsSideCardsPaused(true)}
             onMouseLeave={() => setIsSideCardsPaused(false)}
           >
-            {/* Card 1: Flash Hot Pick */}
+            {/* Top Product Card */}
             <SideProductCard
               key={`side-prod-1-${product1.id}`}
-              badgeText="🔥 হট ডিল"
-              badgeColor="bg-gradient-to-r from-red-600 to-amber-500 text-white"
               product={product1}
             />
 
-            {/* Card 2: Trending Selection */}
+            {/* Bottom Product Card */}
             <SideProductCard
               key={`side-prod-2-${product2.id}`}
-              badgeText="⭐ ট্রেন্ডিং"
-              badgeColor="bg-gradient-to-r from-emerald-600 to-teal-500 text-white"
               product={product2}
             />
           </div>
@@ -250,11 +246,9 @@ export function HeroBanner() {
 
 interface SideProductCardProps {
   product: Product;
-  badgeText: string;
-  badgeColor: string;
 }
 
-const SideProductCard = memo(function SideProductCard({ product, badgeText, badgeColor }: SideProductCardProps) {
+const SideProductCard = memo(function SideProductCard({ product }: SideProductCardProps) {
   const displayImage = getSmartProductImage(product.name, product.image, (product as any).category || "");
   const discount = product.originalPrice && product.originalPrice > product.price
     ? Math.round((1 - product.price / product.originalPrice) * 100)
@@ -267,13 +261,10 @@ const SideProductCard = memo(function SideProductCard({ product, badgeText, badg
       to={productUrl}
       onMouseEnter={() => prefetchRoute(productUrl)}
       onTouchStart={() => prefetchRoute(productUrl)}
-      className="group/card relative flex-1 flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/80 hover:border-primary/60 hover:shadow-lg transition-all duration-300 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-500"
+      className="group/card relative flex-1 flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/80 hover:border-primary/70 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-500 hover:-translate-y-0.5"
     >
-      {/* Background soft glow */}
-      <div className="absolute -right-8 -top-8 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover/card:bg-primary/10 transition-colors pointer-events-none" />
-
-      {/* Product Image Box */}
-      <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl bg-muted/40 p-1.5 shrink-0 overflow-hidden flex items-center justify-center border border-border/50 group-hover/card:border-primary/30 transition-colors">
+      {/* Product Image Container (100% Clean, No Overlapping Badge) */}
+      <div className="relative w-28 h-28 rounded-xl bg-slate-50 dark:bg-slate-900/60 p-2 shrink-0 overflow-hidden flex items-center justify-center border border-border/60 group-hover/card:border-primary/40 transition-colors">
         <img
           src={displayImage}
           alt={product.name}
@@ -281,22 +272,17 @@ const SideProductCard = memo(function SideProductCard({ product, badgeText, badg
           height={112}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-contain filter drop-shadow-sm group-hover/card:scale-105 transition-transform duration-300"
+          className="w-full h-full object-contain filter drop-shadow-sm group-hover/card:scale-108 transition-transform duration-400"
         />
-
-        {/* Floating Mini Badge */}
-        <span className={`absolute top-1 left-1 text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-xs ${badgeColor}`}>
-          {badgeText}
-        </span>
       </div>
 
-      {/* Product Details */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-0.5 space-y-1.5">
-        <div>
-          {/* Discount Pill if available */}
+      {/* Product Details & Price */}
+      <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-1">
+        <div className="space-y-1">
+          {/* Discount Tag (if available) */}
           {discount > 0 && (
-            <span className="inline-block text-[10px] font-extrabold text-red-600 bg-red-500/10 dark:bg-red-950/40 px-1.5 py-0.2 rounded border border-red-500/20 mb-1">
-              -{discount}% OFF
+            <span className="inline-block text-[10px] font-extrabold text-red-600 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
+              -{discount}% ছাড়
             </span>
           )}
 
@@ -306,23 +292,22 @@ const SideProductCard = memo(function SideProductCard({ product, badgeText, badg
           </h3>
         </div>
 
-        {/* Pricing & Quick Action */}
-        <div className="pt-0.5 flex items-center justify-between gap-1">
-          <div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-sm sm:text-base font-black text-primary">
-                ৳{Number(product.price).toLocaleString()}
+        {/* Price & Buy Action Button */}
+        <div className="pt-2 flex items-center justify-between gap-1.5">
+          <div className="flex flex-col">
+            <span className="text-base sm:text-lg font-black text-primary leading-none">
+              ৳{Number(product.price).toLocaleString()}
+            </span>
+            {product.originalPrice && product.originalPrice > product.price && (
+              <span className="text-[11px] text-muted-foreground line-through mt-0.5">
+                ৳{Number(product.originalPrice).toLocaleString()}
               </span>
-              {product.originalPrice && product.originalPrice > product.price && (
-                <span className="text-[11px] text-muted-foreground line-through">
-                  ৳{Number(product.originalPrice).toLocaleString()}
-                </span>
-              )}
-            </div>
+            )}
           </div>
 
-          <div className="w-7 h-7 rounded-lg bg-primary/10 group-hover/card:bg-primary text-primary group-hover/card:text-white flex items-center justify-center transition-all duration-200 shadow-xs shrink-0">
-            <ArrowRight className="w-3.5 h-3.5 group-hover/card:translate-x-0.5 transition-transform" />
+          <div className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary text-white font-bold text-[11px] shadow-xs group-hover/card:bg-primary/90 transition-all">
+            <ShoppingCart className="w-3 h-3" />
+            <span>কিনুন</span>
           </div>
         </div>
       </div>
