@@ -1,6 +1,6 @@
 import { memo, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingCart, ArrowRight } from "lucide-react";
 import { prefetchRoute } from "@/components/RoutePrefetcher";
 import { useHomeProducts } from "@/hooks/useHomeProducts";
 import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
@@ -219,7 +219,7 @@ export function HeroBanner() {
             </div>
           </div>
 
-          {/* Right Side 2 Dynamic Random Products (Vertical Top-Down Layout) */}
+          {/* Right Side 2 Dynamic Random Products (Glassmorphic Showcase) */}
           <div 
             className="hidden lg:flex lg:col-span-4 xl:col-span-3 flex-col gap-3 justify-between"
             onMouseEnter={() => setIsSideCardsPaused(true)}
@@ -261,35 +261,38 @@ const SideProductCard = memo(function SideProductCard({ product }: SideProductCa
       to={productUrl}
       onMouseEnter={() => prefetchRoute(productUrl)}
       onTouchStart={() => prefetchRoute(productUrl)}
-      className="group/card relative flex-1 flex flex-col justify-between p-2.5 sm:p-3 rounded-2xl bg-card border border-border/80 hover:border-primary/70 shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-500 hover:-translate-y-0.5"
+      className="group/card relative flex-1 flex flex-col justify-between p-3 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/60 dark:border-white/10 shadow-[0_8px_25px_rgb(0,0,0,0.05)] hover:shadow-[0_12px_32px_rgba(255,84,0,0.18)] hover:border-orange-500/50 transition-all duration-300 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-500 hover:-translate-y-1"
     >
-      {/* 1. UPORE: Product Photo Box */}
-      <div className="relative w-full h-24 sm:h-28 rounded-xl bg-slate-50 dark:bg-slate-900/60 p-1.5 flex items-center justify-center overflow-hidden border border-border/50 group-hover/card:border-primary/30 transition-colors">
+      {/* Soft Ambient Glow in background */}
+      <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl group-hover/card:bg-orange-500/20 transition-all pointer-events-none" />
+
+      {/* 1. UPORE: Product Photo in Glass Box */}
+      <div className="relative w-full h-24 sm:h-28 rounded-xl bg-white/80 dark:bg-slate-800/50 backdrop-blur-md p-1.5 flex items-center justify-center overflow-hidden border border-white/80 dark:border-white/10 shadow-2xs group-hover/card:scale-[1.02] transition-transform duration-300">
         <img
           src={displayImage}
           alt={product.name}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-contain filter drop-shadow-xs group-hover/card:scale-108 transition-transform duration-300"
+          className="w-full h-full object-contain filter drop-shadow-sm group-hover/card:scale-108 transition-transform duration-300"
         />
         {discount > 0 && (
-          <span className="absolute top-1.5 right-1.5 text-[9px] sm:text-[10px] font-black text-red-600 dark:text-red-400 bg-red-500/10 dark:bg-red-950/50 px-1.5 py-0.5 rounded-full border border-red-500/20 shadow-xs">
+          <span className="absolute top-1.5 right-1.5 text-[9px] sm:text-[10px] font-black text-rose-600 dark:text-rose-400 bg-rose-500/15 dark:bg-rose-950/50 backdrop-blur-md px-2 py-0.5 rounded-full border border-rose-500/25 shadow-xs">
             -{discount}%
           </span>
         )}
       </div>
 
       {/* 2. NICHE: Description / Title */}
-      <div className="pt-1.5 pb-1">
-        <h3 className="text-xs sm:text-sm font-semibold text-foreground line-clamp-1 group-hover/card:text-primary transition-colors">
+      <div className="pt-2 pb-1 relative z-10">
+        <h3 className="text-xs sm:text-sm font-bold text-foreground line-clamp-1 group-hover/card:text-primary transition-colors">
           {product.name}
         </h3>
       </div>
 
-      {/* 3. TAR NICHE: Price & Buy Button */}
-      <div className="flex items-center justify-between gap-1 pt-1 border-t border-border/40">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-sm sm:text-base font-black text-primary">
+      {/* 3. TAR NICHE: Price & Glassmorphic Buy Now Button */}
+      <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-border/40 relative z-10">
+        <div className="flex flex-col">
+          <span className="text-sm sm:text-base font-black text-primary leading-tight">
             ৳{Number(product.price).toLocaleString()}
           </span>
           {product.originalPrice && product.originalPrice > product.price && (
@@ -299,9 +302,10 @@ const SideProductCard = memo(function SideProductCard({ product }: SideProductCa
           )}
         </div>
 
-        <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-white font-bold text-[11px] shadow-xs group-hover/card:bg-primary/90 transition-all">
-          <ShoppingCart className="w-3 h-3" />
-          <span>কিনুন</span>
+        {/* Glassmorphic Buy Now Button */}
+        <div className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-[11px] shadow-[0_4px_14px_rgba(255,84,0,0.35)] hover:shadow-[0_6px_20px_rgba(255,84,0,0.5)] backdrop-blur-md border border-white/30 active:scale-95 group-hover/card:scale-105 transition-all duration-200">
+          <ShoppingCart className="w-3.5 h-3.5" />
+          <span>Buy Now</span>
         </div>
       </div>
     </Link>
