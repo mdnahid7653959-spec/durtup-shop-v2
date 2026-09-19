@@ -1,7 +1,11 @@
-import { memo, useState, useEffect, useRef, useCallback } from "react";
+import { memo, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flame, Sparkles, ShoppingBag, ArrowRight } from "lucide-react";
 import { prefetchRoute } from "@/components/RoutePrefetcher";
+import { useHomeProducts } from "@/hooks/useHomeProducts";
+import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
+import { getSmartProductImage } from "@/utils/productImageHelper";
+import type { Product } from "@/components/products/ProductCard";
 
 interface HeroSlide {
   id: string;
@@ -31,11 +35,64 @@ const HERO_SLIDES: HeroSlide[] = [
   },
 ];
 
+// Helper to get random item index different from excluded index
+function getRandomIndex(total: number, excludeIndex = -1): number {
+  if (total <= 1) return 0;
+  let idx = Math.floor(Math.random() * total);
+  while (idx === excludeIndex) {
+    idx = Math.floor(Math.random() * total);
+  }
+  return idx;
+}
+
 export function HeroBanner() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isBannerPaused, setIsBannerPaused] = useState(false);
+  const [isSideCardsPaused, setIsSideCardsPaused] = useState(false);
   const touchStartXRef = useRef<number | null>(null);
   const touchEndXRef = useRef<number | null>(null);
+
+  const { data: homeData } = useHomeProducts();
+
+  // Combine rich product catalog pool for dynamic selection
+  const productPool: Product[] = useMemo(() => {
+    const raw = [
+      ...(homeData?.featured || []),
+      ...(homeData?.trending || []),
+      ...(homeData?.flashSale || []),
+      ...(homeData?.allProducts || []),
+      ...FAST_SEED_PRODUCTS,
+    ];
+    // Deduplicate by ID and ensure valid image & price
+    const seen = new Set<string>();
+    const unique: Product[] = [];
+    for (const p of raw) {
+      if (p && p.id && !seen.has(p.id) && p.name && (p.price || p.price === 0)) {
+        seen.add(p.id);
+        unique.push(p);
+      }
+    }
+    return unique.length > 0 ? unique : FAST_SEED_PRODUCTS;
+  }, [homeData]);
+
+  // Initial random product selection per user session
+  const [prodIndex1, setProdIndex1] = useState<number>(() => getRandomIndex(FAST_SEED_PRODUCTS.length));
+  const [prodIndex2, setProdIndex2] = useState<number>(() => getRandomIndex(FAST_SEED_PRODUCTS.length, 0));
+
+  // Auto-rotate the side random products smoothly every 6.5 seconds
+  useEffect(() => {
+    if (isSideCardsPaused || productPool.length < 2) return;
+
+    const interval = setInterval(() => {
+      setProdIndex1((prev) => getRandomIndex(productPool.length, prev));
+      setProdIndex2((prev) => getRandomIndex(productPool.length, prev));
+    }, 6500);
+
+    return () => clearInterval(interval);
+  }, [isSideCardsPaused, productPool.length]);
+
+  const product1 = productPool[prodIndex1 % productPool.length] || FAST_SEED_PRODUCTS[0];
+  const product2 = productPool[prodIndex2 % productPool.length] || FAST_SEED_PRODUCTS[1] || FAST_SEED_PRODUCTS[0];
 
   const nextSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
@@ -45,20 +102,20 @@ export function HeroBanner() {
     setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
   }, []);
 
-  // Auto-advance carousel
+  // Auto-advance banner carousel
   useEffect(() => {
-    if (isPaused) return;
+    if (isBannerPaused) return;
     const timer = setInterval(() => {
       nextSlide();
     }, 5000);
     return () => clearInterval(timer);
-  }, [isPaused, nextSlide]);
+  }, [isBannerPaused, nextSlide]);
 
   // Touch swipe support for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartXRef.current = e.touches[0].clientX;
     touchEndXRef.current = e.touches[0].clientX;
-    setIsPaused(true);
+    setIsBannerPaused(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -76,7 +133,7 @@ export function HeroBanner() {
     }
     touchStartXRef.current = null;
     touchEndXRef.current = null;
-    setIsPaused(false);
+    setIsBannerPaused(false);
   };
 
   return (
@@ -86,79 +143,191 @@ export function HeroBanner() {
       className="w-full px-2 sm:px-4 pt-1 sm:pt-2 pb-1"
     >
       <div className="max-w-7xl mx-auto">
-        <div
-          className="relative overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl shadow-md sm:shadow-lg bg-slate-950 select-none group/banner border border-border/40 aspect-[1024/400] max-h-[440px]"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          {/* Slide Track */}
-          <div 
-            className="w-full h-full flex transition-transform duration-700 ease-out"
-            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-          >
-            {HERO_SLIDES.map((slide, index) => (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-stretch">
+          
+          {/* Main Hero Slider (8 cols on lg, 9 cols on xl) */}
+          <div className="lg:col-span-8 xl:col-span-9 relative flex">
+            <div
+              className="w-full relative overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl shadow-md sm:shadow-lg bg-slate-950 select-none group/banner border border-border/40 aspect-[1024/400] max-h-[440px]"
+              onMouseEnter={() => setIsBannerPaused(true)}
+              onMouseLeave={() => setIsBannerPaused(false)}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              {/* Slide Track */}
               <div 
-                key={slide.id} 
-                className="w-full h-full shrink-0 relative"
+                className="w-full h-full flex transition-transform duration-700 ease-out"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
               >
-                <Link
-                  to={slide.link}
-                  onMouseEnter={() => prefetchRoute(slide.link)}
-                  onTouchStart={() => prefetchRoute(slide.link)}
-                  aria-label={slide.title}
-                  className="block w-full h-full relative cursor-pointer overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  <picture className="w-full h-full block">
-                    <source srcSet={slide.imageWebp} type="image/webp" />
-                    <img
-                      src={slide.imageJpg}
-                      alt={slide.alt}
-                      width={1024}
-                      height={400}
-                      className="w-full h-full object-cover object-center transition-transform duration-500 group-hover/banner:scale-[1.01]"
-                      loading={index === 0 ? "eager" : "lazy"}
-                      // @ts-expect-error fetchPriority attribute is supported in modern browsers
-                      fetchPriority={index === 0 ? "high" : "low"}
-                      decoding="async"
-                    />
-                  </picture>
-                </Link>
+                {HERO_SLIDES.map((slide, index) => (
+                  <div 
+                    key={slide.id} 
+                    className="w-full h-full shrink-0 relative"
+                  >
+                    <Link
+                      to={slide.link}
+                      onMouseEnter={() => prefetchRoute(slide.link)}
+                      onTouchStart={() => prefetchRoute(slide.link)}
+                      aria-label={slide.title}
+                      className="block w-full h-full relative cursor-pointer overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      <picture className="w-full h-full block">
+                        <source srcSet={slide.imageWebp} type="image/webp" />
+                        <img
+                          src={slide.imageJpg}
+                          alt={slide.alt}
+                          width={1024}
+                          height={400}
+                          className="w-full h-full object-cover object-center transition-transform duration-500 group-hover/banner:scale-[1.01]"
+                          loading={index === 0 ? "eager" : "lazy"}
+                          // @ts-expect-error fetchPriority attribute is supported in modern browsers
+                          fetchPriority={index === 0 ? "high" : "low"}
+                          decoding="async"
+                        />
+                      </picture>
+                    </Link>
+                  </div>
+                ))}
               </div>
-            ))}
+
+              {/* Left Arrow Button (Desktop hover only) */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  prevSlide();
+                }}
+                aria-label="Previous Slide"
+                className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md items-center justify-center border border-white/20 opacity-0 group-hover/banner:opacity-100 transition-all duration-200 active:scale-90 shadow-md hover:scale-105"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+
+              {/* Right Arrow Button (Desktop hover only) */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  nextSlide();
+                }}
+                aria-label="Next Slide"
+                className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md items-center justify-center border border-white/20 opacity-0 group-hover/banner:opacity-100 transition-all duration-200 active:scale-90 shadow-md hover:scale-105"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </div>
           </div>
 
-          {/* Left Arrow Button (Desktop hover only) */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              prevSlide();
-            }}
-            aria-label="Previous Slide"
-            className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md items-center justify-center border border-white/20 opacity-0 group-hover/banner:opacity-100 transition-all duration-200 active:scale-90 shadow-md hover:scale-105"
+          {/* Right Side 2 Dynamic Random Products (Desktop Showcase) */}
+          <div 
+            className="hidden lg:flex lg:col-span-4 xl:col-span-3 flex-col gap-3 justify-between"
+            onMouseEnter={() => setIsSideCardsPaused(true)}
+            onMouseLeave={() => setIsSideCardsPaused(false)}
           >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
+            {/* Card 1: Flash Hot Pick */}
+            <SideProductCard
+              key={`side-prod-1-${product1.id}`}
+              badgeText="🔥 হট ডিল"
+              badgeColor="bg-gradient-to-r from-red-600 to-amber-500 text-white"
+              product={product1}
+            />
 
-          {/* Right Arrow Button (Desktop hover only) */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              nextSlide();
-            }}
-            aria-label="Next Slide"
-            className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md items-center justify-center border border-white/20 opacity-0 group-hover/banner:opacity-100 transition-all duration-200 active:scale-90 shadow-md hover:scale-105"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
+            {/* Card 2: Trending Selection */}
+            <SideProductCard
+              key={`side-prod-2-${product2.id}`}
+              badgeText="⭐ ট্রেন্ডিং"
+              badgeColor="bg-gradient-to-r from-emerald-600 to-teal-500 text-white"
+              product={product2}
+            />
+          </div>
+
         </div>
       </div>
     </section>
   );
 }
+
+interface SideProductCardProps {
+  product: Product;
+  badgeText: string;
+  badgeColor: string;
+}
+
+const SideProductCard = memo(function SideProductCard({ product, badgeText, badgeColor }: SideProductCardProps) {
+  const displayImage = getSmartProductImage(product.name, product.image, (product as any).category || "");
+  const discount = product.originalPrice && product.originalPrice > product.price
+    ? Math.round((1 - product.price / product.originalPrice) * 100)
+    : 0;
+
+  const productUrl = `/product/${product.id}`;
+
+  return (
+    <Link
+      to={productUrl}
+      onMouseEnter={() => prefetchRoute(productUrl)}
+      onTouchStart={() => prefetchRoute(productUrl)}
+      className="group/card relative flex-1 flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/80 hover:border-primary/60 hover:shadow-lg transition-all duration-300 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-500"
+    >
+      {/* Background soft glow */}
+      <div className="absolute -right-8 -top-8 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover/card:bg-primary/10 transition-colors pointer-events-none" />
+
+      {/* Product Image Box */}
+      <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl bg-muted/40 p-1.5 shrink-0 overflow-hidden flex items-center justify-center border border-border/50 group-hover/card:border-primary/30 transition-colors">
+        <img
+          src={displayImage}
+          alt={product.name}
+          width={112}
+          height={112}
+          loading="lazy"
+          decoding="async"
+          className="w-full h-full object-contain filter drop-shadow-sm group-hover/card:scale-105 transition-transform duration-300"
+        />
+
+        {/* Floating Mini Badge */}
+        <span className={`absolute top-1 left-1 text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-xs ${badgeColor}`}>
+          {badgeText}
+        </span>
+      </div>
+
+      {/* Product Details */}
+      <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-0.5 space-y-1.5">
+        <div>
+          {/* Discount Pill if available */}
+          {discount > 0 && (
+            <span className="inline-block text-[10px] font-extrabold text-red-600 bg-red-500/10 dark:bg-red-950/40 px-1.5 py-0.2 rounded border border-red-500/20 mb-1">
+              -{discount}% OFF
+            </span>
+          )}
+
+          {/* Product Title */}
+          <h3 className="text-xs sm:text-sm font-semibold text-foreground line-clamp-2 leading-snug group-hover/card:text-primary transition-colors">
+            {product.name}
+          </h3>
+        </div>
+
+        {/* Pricing & Quick Action */}
+        <div className="pt-0.5 flex items-center justify-between gap-1">
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-sm sm:text-base font-black text-primary">
+                ৳{Number(product.price).toLocaleString()}
+              </span>
+              {product.originalPrice && product.originalPrice > product.price && (
+                <span className="text-[11px] text-muted-foreground line-through">
+                  ৳{Number(product.originalPrice).toLocaleString()}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="w-7 h-7 rounded-lg bg-primary/10 group-hover/card:bg-primary text-primary group-hover/card:text-white flex items-center justify-center transition-all duration-200 shadow-xs shrink-0">
+            <ArrowRight className="w-3.5 h-3.5 group-hover/card:translate-x-0.5 transition-transform" />
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+});
 
 export default memo(HeroBanner);
