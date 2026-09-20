@@ -34,8 +34,33 @@ export const DEFAULT_REFERRAL_SETTINGS: ReferralSettings = {
   minimumWithdrawAmount: 500,
 };
 
-let cachedSettings: ReferralSettings | null = null;
+const SETTINGS_STORAGE_KEY = "durtup_referral_settings";
+
+let cachedSettings: ReferralSettings | null = (() => {
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+  }
+  return null;
+})();
+
 let lastSettingsFetch = 0;
+
+export function getReferralSettingsSync(): ReferralSettings {
+  if (cachedSettings) return cachedSettings;
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (raw) {
+        cachedSettings = JSON.parse(raw);
+        return cachedSettings!;
+      }
+    } catch {}
+  }
+  return DEFAULT_REFERRAL_SETTINGS;
+}
 
 export async function getReferralSettings(forceRefresh = false): Promise<ReferralSettings> {
   const now = Date.now();
@@ -58,13 +83,18 @@ export async function getReferralSettings(forceRefresh = false): Promise<Referra
         minimumWithdrawAmount: Number(d.minimumWithdrawAmount) || 500,
       };
       lastSettingsFetch = now;
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(cachedSettings));
+        } catch {}
+      }
       return cachedSettings;
     }
   } catch (err) {
     console.warn("Failed fetching settings/referral:", err);
   }
 
-  cachedSettings = { ...DEFAULT_REFERRAL_SETTINGS };
+  cachedSettings = cachedSettings || { ...DEFAULT_REFERRAL_SETTINGS };
   lastSettingsFetch = now;
   return cachedSettings;
 }
@@ -79,6 +109,11 @@ export async function saveReferralSettings(settings: Partial<ReferralSettings>):
   await setDoc(doc(db, "settings", "referral"), updated, { merge: true });
   cachedSettings = updated;
   lastSettingsFetch = Date.now();
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+  }
 }
 
 // -------------------------------------------------------------
@@ -204,9 +239,34 @@ export function clearStoredAttribution(): void {
 export async function ensureUserReferralProfile(
   userId: string, 
   userEmail?: string | null, 
-  userName?: string | null
+  userName?: string | null,
+  existingProfileData?: any
 ): Promise<{ referralCode: string; referredBy: string | null }> {
   if (!userId) throw new Error("Missing userId");
+
+  // If already present in provided profile data, skip network read
+  if (existingProfileData && (existingProfileData.referralCode || existingProfileData.referral_code)) {
+    const code = existingProfileData.referralCode || existingProfileData.referral_code;
+    const refBy = existingProfileData.referredBy || existingProfileData.referred_by || null;
+    return { referralCode: code, referredBy: refBy };
+  }
+
+  // Check local cache first
+  if (typeof window !== "undefined") {
+    try {
+      const localKey = "durtup_profile_" + userId;
+      const raw = localStorage.getItem(localKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.referralCode || parsed?.referral_code) {
+          return {
+            referralCode: parsed.referralCode || parsed.referral_code,
+            referredBy: parsed.referredBy || parsed.referred_by || null,
+          };
+        }
+      }
+    } catch {}
+  }
 
   const profileRef = doc(db, "profiles", userId);
   const snap = await getDoc(profileRef);

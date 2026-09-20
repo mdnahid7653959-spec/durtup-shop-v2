@@ -198,6 +198,8 @@ export function Header() {
                       </div>
                       <DropdownMenuItem asChild><Link to="/orders" className="cursor-pointer">My Orders</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/wishlist" className="cursor-pointer">Wishlist</Link></DropdownMenuItem>
+                      <DropdownMenuItem asChild><Link to="/referrals" className="cursor-pointer flex items-center justify-between"><span>Refer & Earn</span><span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded">৳৫০ বোনাস</span></Link></DropdownMenuItem>
+                      <DropdownMenuItem asChild><Link to="/wallet" className="cursor-pointer">My Wallet</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/account" className="cursor-pointer">Account Settings</Link></DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
@@ -213,6 +215,7 @@ export function Header() {
                           <Button asChild variant="outline" size="sm" className="flex-1"><Link to="/register">Register</Link></Button>
                         </div>
                       </div>
+                      <DropdownMenuItem asChild><Link to="/referrals" className="cursor-pointer flex items-center justify-between"><span>Refer & Earn</span><span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded">৳৫০ বোনাস</span></Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/orders" className="cursor-pointer">My Orders</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/wishlist" className="cursor-pointer">Wishlist</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/account" className="cursor-pointer">Account Settings</Link></DropdownMenuItem>
