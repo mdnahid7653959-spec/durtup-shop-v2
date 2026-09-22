@@ -9,64 +9,67 @@ export interface DurtupMasterCategory {
 }
 
 export const DURTUP_MASTER_CATEGORIES: DurtupMasterCategory[] = [
-  { id: "cat-electronics", name: "Electronics & Gadgets", slug: "electronics", description: "Mobiles, Laptops, Earbuds, Accessories" },
-  { id: "cat-home", name: "Home & Kitchen", slug: "home", description: "Home appliances, kitchenware, essentials" },
-  { id: "cat-fashion", name: "Fashion & Clothing", slug: "fashion", description: "Men and Women Fashion, Footwear, Bags" },
-  { id: "cat-beauty", name: "Health & Beauty", slug: "beauty", description: "Skincare, Makeup & Personal Care, Trimmers" },
-  { id: "cat-watches", name: "Watches & Accessories", slug: "watches", description: "Watches, Jewellery, Sunglasses, Wallets" },
-  { id: "cat-kids", name: "Toys & Baby Care", slug: "kids", description: "Toys, Baby products & Clothing, Games" },
+  { id: "gadgets-electronics", name: "Gadgets & Electronics", slug: "gadgets-electronics", description: "Mobiles, Laptops, Earbuds, Accessories" },
+  { id: "mens-fashion", name: "Men's Fashion", slug: "mens-fashion", description: "Panjabi, T-Shirts, Shirts, Pants, Trousers" },
+  { id: "womens-fashion", name: "Women's Fashion", slug: "womens-fashion", description: "Sarees, Kurtis, Abaya, Hijab, Jewelry" },
+  { id: "home-lifestyle", name: "Home & Lifestyle", slug: "home-lifestyle", description: "Kitchenware, Home Decor, Appliances, Bedding" },
+  { id: "health-beauty", name: "Health & Beauty", slug: "health-beauty", description: "Skincare, Haircare, Wellness, Perfumes" },
+  { id: "watch", name: "Watch", slug: "watch", description: "Smartwatches, Quartz, Men & Women Watches, Clocks" },
+  { id: "kids-zone", name: "Kids Zone", slug: "kids-zone", description: "Toys, Baby products & Clothing, Games" },
+  { id: "foods", name: "Foods", slug: "foods", description: "Pure Honey, Nuts, Ghee, Supplements, Organic" },
+  { id: "winter", name: "Winter", slug: "winter", description: "Winter Hoodies, Jackets, Sweaters" },
 ];
 
 export const DEFAULT_ECOMSELLER_CATEGORY_MAPPINGS: Record<string, { durtupId: string; durtupName: string; durtupSlug: string }> = {
   // Jewellery & Watches
-  "jewellery": { durtupId: "cat-watches", durtupName: "Watches & Accessories", durtupSlug: "watches" },
-  "jewelry": { durtupId: "cat-watches", durtupName: "Watches & Accessories", durtupSlug: "watches" },
+  "jewellery": { durtupId: "watch", durtupName: "Watch", durtupSlug: "watch" },
+  "jewelry": { durtupId: "watch", durtupName: "Watch", durtupSlug: "watch" },
 
   // Electronics & Gadgets
-  "mobile-accessories": { durtupId: "cat-electronics", durtupName: "Electronics & Gadgets", durtupSlug: "electronics" },
-  "earbuds": { durtupId: "cat-electronics", durtupName: "Electronics & Gadgets", durtupSlug: "electronics" },
-  "neckband": { durtupId: "cat-electronics", durtupName: "Electronics & Gadgets", durtupSlug: "electronics" },
-  "speaker-microphone": { durtupId: "cat-electronics", durtupName: "Electronics & Gadgets", durtupSlug: "electronics" },
-  "camera": { durtupId: "cat-electronics", durtupName: "Electronics & Gadgets", durtupSlug: "electronics" },
-  "rechargeable-fan": { durtupId: "cat-electronics", durtupName: "Electronics & Gadgets", durtupSlug: "electronics" },
-  "rechargeable-light": { durtupId: "cat-electronics", durtupName: "Electronics & Gadgets", durtupSlug: "electronics" },
-  "outdoor-gadgets": { durtupId: "cat-electronics", durtupName: "Electronics & Gadgets", durtupSlug: "electronics" },
-  "safety-and-security": { durtupId: "cat-electronics", durtupName: "Electronics & Gadgets", durtupSlug: "electronics" },
+  "mobile-accessories": { durtupId: "gadgets-electronics", durtupName: "Gadgets & Electronics", durtupSlug: "gadgets-electronics" },
+  "earbuds": { durtupId: "gadgets-electronics", durtupName: "Gadgets & Electronics", durtupSlug: "gadgets-electronics" },
+  "neckband": { durtupId: "gadgets-electronics", durtupName: "Gadgets & Electronics", durtupSlug: "gadgets-electronics" },
+  "speaker-microphone": { durtupId: "gadgets-electronics", durtupName: "Gadgets & Electronics", durtupSlug: "gadgets-electronics" },
+  "camera": { durtupId: "gadgets-electronics", durtupName: "Gadgets & Electronics", durtupSlug: "gadgets-electronics" },
+  "rechargeable-fan": { durtupId: "gadgets-electronics", durtupName: "Gadgets & Electronics", durtupSlug: "gadgets-electronics" },
+  "rechargeable-light": { durtupId: "gadgets-electronics", durtupName: "Gadgets & Electronics", durtupSlug: "gadgets-electronics" },
+  "outdoor-gadgets": { durtupId: "gadgets-electronics", durtupName: "Gadgets & Electronics", durtupSlug: "gadgets-electronics" },
+  "safety-and-security": { durtupId: "gadgets-electronics", durtupName: "Gadgets & Electronics", durtupSlug: "gadgets-electronics" },
 
-  // Home & Kitchen
-  "kitchen-gadget": { durtupId: "cat-home", durtupName: "Home & Kitchen", durtupSlug: "home" },
-  "home-essentials": { durtupId: "cat-home", durtupName: "Home & Kitchen", durtupSlug: "home" },
-  "home-kitchen-accessories": { durtupId: "cat-home", durtupName: "Home & Kitchen", durtupSlug: "home" },
-  "cleaning-tool": { durtupId: "cat-home", durtupName: "Home & Kitchen", durtupSlug: "home" },
-  "bathroom-accessories": { durtupId: "cat-home", durtupName: "Home & Kitchen", durtupSlug: "home" },
-  "tools-hardware": { durtupId: "cat-home", durtupName: "Home & Kitchen", durtupSlug: "home" },
-  "stationery": { durtupId: "cat-home", durtupName: "Home & Kitchen", durtupSlug: "home" },
-  "islamic-products": { durtupId: "cat-home", durtupName: "Home & Kitchen", durtupSlug: "home" },
+  // Home & Kitchen / Lifestyle
+  "kitchen-gadget": { durtupId: "home-lifestyle", durtupName: "Home & Lifestyle", durtupSlug: "home-lifestyle" },
+  "home-essentials": { durtupId: "home-lifestyle", durtupName: "Home & Lifestyle", durtupSlug: "home-lifestyle" },
+  "home-kitchen-accessories": { durtupId: "home-lifestyle", durtupName: "Home & Lifestyle", durtupSlug: "home-lifestyle" },
+  "cleaning-tool": { durtupId: "home-lifestyle", durtupName: "Home & Lifestyle", durtupSlug: "home-lifestyle" },
+  "bathroom-accessories": { durtupId: "home-lifestyle", durtupName: "Home & Lifestyle", durtupSlug: "home-lifestyle" },
+  "tools-hardware": { durtupId: "home-lifestyle", durtupName: "Home & Lifestyle", durtupSlug: "home-lifestyle" },
+  "stationery": { durtupId: "home-lifestyle", durtupName: "Home & Lifestyle", durtupSlug: "home-lifestyle" },
+  "islamic-products": { durtupId: "home-lifestyle", durtupName: "Home & Lifestyle", durtupSlug: "home-lifestyle" },
+  "car-accessories": { durtupId: "home-lifestyle", durtupName: "Home & Lifestyle", durtupSlug: "home-lifestyle" },
+  "fishing-bit": { durtupId: "home-lifestyle", durtupName: "Home & Lifestyle", durtupSlug: "home-lifestyle" },
 
   // Fashion & Clothing
-  "fashion-accessories": { durtupId: "cat-fashion", durtupName: "Fashion & Clothing", durtupSlug: "fashion" },
-  "men-s-fashion": { durtupId: "cat-fashion", durtupName: "Fashion & Clothing", durtupSlug: "fashion" },
-  "women-s-fashion": { durtupId: "cat-fashion", durtupName: "Fashion & Clothing", durtupSlug: "fashion" },
-  "travel-accessories": { durtupId: "cat-fashion", durtupName: "Fashion & Clothing", durtupSlug: "fashion" },
-  "car-accessories": { durtupId: "cat-home", durtupName: "Home & Kitchen", durtupSlug: "home" },
-  "fishing-bit": { durtupId: "cat-home", durtupName: "Home & Kitchen", durtupSlug: "home" },
+  "fashion-accessories": { durtupId: "mens-fashion", durtupName: "Men's Fashion", durtupSlug: "mens-fashion" },
+  "men-s-fashion": { durtupId: "mens-fashion", durtupName: "Men's Fashion", durtupSlug: "mens-fashion" },
+  "women-s-fashion": { durtupId: "womens-fashion", durtupName: "Women's Fashion", durtupSlug: "womens-fashion" },
+  "travel-accessories": { durtupId: "home-lifestyle", durtupName: "Home & Lifestyle", durtupSlug: "home-lifestyle" },
 
   // Health & Beauty
-  "skin-care": { durtupId: "cat-beauty", durtupName: "Health & Beauty", durtupSlug: "beauty" },
-  "hair-care": { durtupId: "cat-beauty", durtupName: "Health & Beauty", durtupSlug: "beauty" },
-  "beauty-gadgets": { durtupId: "cat-beauty", durtupName: "Health & Beauty", durtupSlug: "beauty" },
-  "trimmer": { durtupId: "cat-beauty", durtupName: "Health & Beauty", durtupSlug: "beauty" },
-  "health-care": { durtupId: "cat-beauty", durtupName: "Health & Beauty", durtupSlug: "beauty" },
-  "health-care-devices": { durtupId: "cat-beauty", durtupName: "Health & Beauty", durtupSlug: "beauty" },
-  "brush-toothpaste": { durtupId: "cat-beauty", durtupName: "Health & Beauty", durtupSlug: "beauty" },
-  "foot-care": { durtupId: "cat-beauty", durtupName: "Health & Beauty", durtupSlug: "beauty" },
-  "food-supplement": { durtupId: "cat-beauty", durtupName: "Health & Beauty", durtupSlug: "beauty" },
-  "medical-accessories": { durtupId: "cat-beauty", durtupName: "Health & Beauty", durtupSlug: "beauty" },
-  "fitness-equipment": { durtupId: "cat-beauty", durtupName: "Health & Beauty", durtupSlug: "beauty" },
+  "skin-care": { durtupId: "health-beauty", durtupName: "Health & Beauty", durtupSlug: "health-beauty" },
+  "hair-care": { durtupId: "health-beauty", durtupName: "Health & Beauty", durtupSlug: "health-beauty" },
+  "beauty-gadgets": { durtupId: "health-beauty", durtupName: "Health & Beauty", durtupSlug: "health-beauty" },
+  "trimmer": { durtupId: "gadgets-electronics", durtupName: "Gadgets & Electronics", durtupSlug: "gadgets-electronics" },
+  "health-care": { durtupId: "health-beauty", durtupName: "Health & Beauty", durtupSlug: "health-beauty" },
+  "health-care-devices": { durtupId: "health-beauty", durtupName: "Health & Beauty", durtupSlug: "health-beauty" },
+  "brush-toothpaste": { durtupId: "health-beauty", durtupName: "Health & Beauty", durtupSlug: "health-beauty" },
+  "foot-care": { durtupId: "health-beauty", durtupName: "Health & Beauty", durtupSlug: "health-beauty" },
+  "food-supplement": { durtupId: "foods", durtupName: "Foods", durtupSlug: "foods" },
+  "medical-accessories": { durtupId: "health-beauty", durtupName: "Health & Beauty", durtupSlug: "health-beauty" },
+  "fitness-equipment": { durtupId: "health-beauty", durtupName: "Health & Beauty", durtupSlug: "health-beauty" },
 
   // Toys & Baby Care
-  "toys-games": { durtupId: "cat-kids", durtupName: "Toys & Baby Care", durtupSlug: "kids" },
-  "baby-product": { durtupId: "cat-kids", durtupName: "Toys & Baby Care", durtupSlug: "kids" }
+  "toys-games": { durtupId: "kids-zone", durtupName: "Kids Zone", durtupSlug: "kids-zone" },
+  "baby-product": { durtupId: "kids-zone", durtupName: "Kids Zone", durtupSlug: "kids-zone" }
 };
 
 const STORAGE_KEY = "durtup_category_mappings_cache_v1";
@@ -86,24 +89,33 @@ export class CategoryMappingService {
       return { id: match.durtupId, name: match.durtupName, slug: match.durtupSlug };
     }
 
-    // Heuristics
-    if (clean.includes("jewel") || clean.includes("watch") || clean.includes("ring") || clean.includes("chain") || clean.includes("necklace")) {
-      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "watches") || DURTUP_MASTER_CATEGORIES[4];
+    // Heuristics with canonical category slugs
+    if (clean.includes("watch") || clean.includes("clock") || clean.includes("quartz") || clean.includes("smartwatch")) {
+      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "watch") || DURTUP_MASTER_CATEGORIES[5];
+    }
+    if (clean.includes("food") || clean.includes("honey") || clean.includes("supplement") || clean.includes("shake") || clean.includes("ghee") || clean.includes("organic")) {
+      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "foods") || DURTUP_MASTER_CATEGORIES[7];
+    }
+    if (clean.includes("beauty") || clean.includes("skin") || clean.includes("hair") || clean.includes("cramp") || clean.includes("massage") || clean.includes("perfume") || clean.includes("care") || clean.includes("health")) {
+      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "health-beauty") || DURTUP_MASTER_CATEGORIES[4];
     }
     if (clean.includes("toy") || clean.includes("baby") || clean.includes("kid") || clean.includes("game")) {
-      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "kids") || DURTUP_MASTER_CATEGORIES[5];
+      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "kids-zone") || DURTUP_MASTER_CATEGORIES[6];
     }
-    if (clean.includes("beauty") || clean.includes("skin") || clean.includes("hair") || clean.includes("care") || clean.includes("trimmer") || clean.includes("health")) {
-      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "beauty") || DURTUP_MASTER_CATEGORIES[3];
+    if (clean.includes("winter") || clean.includes("hoodie")) {
+      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "winter") || DURTUP_MASTER_CATEGORIES[8];
     }
-    if (clean.includes("fashion") || clean.includes("cloth") || clean.includes("men") || clean.includes("women") || clean.includes("wear") || clean.includes("dress")) {
-      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "fashion") || DURTUP_MASTER_CATEGORIES[2];
+    if (clean.includes("women") || clean.includes("saree") || clean.includes("kurti") || clean.includes("borkha") || clean.includes("hijab") || clean.includes("jewel") || clean.includes("ring")) {
+      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "womens-fashion") || DURTUP_MASTER_CATEGORIES[2];
     }
-    if (clean.includes("kitchen") || clean.includes("home") || clean.includes("clean") || clean.includes("tool") || clean.includes("bath") || clean.includes("fan")) {
-      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "home") || DURTUP_MASTER_CATEGORIES[1];
+    if (clean.includes("men") || clean.includes("panjabi") || clean.includes("shirt") || clean.includes("pant") || clean.includes("trouser") || clean.includes("boxer") || clean.includes("polo")) {
+      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "mens-fashion") || DURTUP_MASTER_CATEGORIES[1];
     }
-    if (clean.includes("gadget") || clean.includes("mobile") || clean.includes("phone") || clean.includes("ear") || clean.includes("speaker") || clean.includes("audio") || clean.includes("tech")) {
-      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "electronics") || DURTUP_MASTER_CATEGORIES[0];
+    if (clean.includes("kitchen") || clean.includes("home") || clean.includes("clean") || clean.includes("tool") || clean.includes("bath") || clean.includes("bed") || clean.includes("decor")) {
+      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "home-lifestyle") || DURTUP_MASTER_CATEGORIES[3];
+    }
+    if (clean.includes("gadget") || clean.includes("mobile") || clean.includes("phone") || clean.includes("ear") || clean.includes("speaker") || clean.includes("audio") || clean.includes("tech") || clean.includes("electr")) {
+      return DURTUP_MASTER_CATEGORIES.find(c => c.slug === "gadgets-electronics") || DURTUP_MASTER_CATEGORIES[0];
     }
 
     return DURTUP_MASTER_CATEGORIES[0];
@@ -201,4 +213,73 @@ export class CategoryMappingService {
     // 3. Heuristic suggestion fallback
     return this.suggestDurtupCategory(supplierCatSlug || supplierCatName);
   }
+
+  /**
+   * Resolve Durtup Category taking product name into consideration to avoid misclassification
+   */
+  public static resolveProductCategory(
+    productName: string,
+    supplierCatSlug: string,
+    supplierCatName: string,
+    customMappings: CategoryMappingRule[] = []
+  ): DurtupMasterCategory {
+    const pName = (productName || "").toLowerCase();
+
+    // 1. WATCH takes precedence over supplier category (e.g. BINBOND watch miscategorized as Men's Fashion)
+    if (
+      pName.includes("watch") ||
+      pName.includes("wristband") ||
+      pName.includes("smartwatch") ||
+      pName.includes("quartz") ||
+      pName.includes("chronograph") ||
+      pName.includes("clock") ||
+      pName.includes("binbond") ||
+      pName.includes("curren") ||
+      pName.includes("naviforce") ||
+      pName.includes("skmei") ||
+      pName.includes("poedagar") ||
+      pName.includes("olevs") ||
+      pName.includes("rolex")
+    ) {
+      const found = DURTUP_MASTER_CATEGORIES.find(c => c.slug === "watch");
+      if (found) return found;
+    }
+
+    // 2. FOODS & SUPPLEMENTS take precedence
+    if (
+      pName.includes("milk shake") ||
+      pName.includes("milkshake") ||
+      pName.includes("supplement") ||
+      pName.includes("weight gain") ||
+      pName.includes("chia seed") ||
+      pName.includes("honey nuts") ||
+      /\bhoney\b/i.test(pName) ||
+      pName.includes("ghee")
+    ) {
+      const found = DURTUP_MASTER_CATEGORIES.find(c => c.slug === "foods");
+      if (found) return found;
+    }
+
+    // 3. HEALTH & BEAUTY (cramp relief, fungus treatment, face wash, serum)
+    if (
+      pName.includes("fungus") ||
+      pName.includes("cramp") ||
+      pName.includes("menstrual") ||
+      pName.includes("heating pad") ||
+      pName.includes("massager") ||
+      pName.includes("massage") ||
+      pName.includes("pain relief") ||
+      pName.includes("serum") ||
+      pName.includes("whitening") ||
+      pName.includes("derma") ||
+      pName.includes("perfume")
+    ) {
+      const found = DURTUP_MASTER_CATEGORIES.find(c => c.slug === "health-beauty");
+      if (found) return found;
+    }
+
+    // Fall back to category-based resolution
+    return this.resolveCategory(supplierCatSlug, supplierCatName, customMappings);
+  }
 }
+

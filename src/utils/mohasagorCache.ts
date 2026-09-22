@@ -3,6 +3,7 @@ import { calculateProductPrice } from "@/utils/pricingMargin";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 import { extractProductVariants } from "@/utils/productVariantHelper";
 import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
+export { FAST_SEED_PRODUCTS };
 import { findCategoryOrSubcategory, CATEGORIES_DATA } from "@/data/categoriesData";
 import { EcomsellerEngine } from "@/services/suppliers/ecomsellerEngine";
 
@@ -20,6 +21,10 @@ let inMemoryProductsCache: Product[] | null = [...FAST_SEED_PRODUCTS];
 let isFetchingAllPages = false;
 let autoSyncTimer: number | null = null;
 let lastSyncTimestamp: number | null = Date.now();
+
+export function getInMemoryProducts(): Product[] {
+  return inMemoryProductsCache && inMemoryProductsCache.length > 0 ? inMemoryProductsCache : FAST_SEED_PRODUCTS;
+}
 
 // Ultra-fast O(1) Hash Map Index for Instant Lookups
 const productIndexMap = new Map<string, Product & { [key: string]: any }>();
@@ -313,12 +318,11 @@ function notifyCatalogUpdated() {
 }
 
 if (typeof window !== "undefined") {
+  // Eagerly initiate slim catalog load so all 2,818 products are available for live search immediately
+  fetchSlimCatalog().catch(() => {});
+
   const scheduleHydration = () => {
-    if ("requestIdleCallback" in window) {
-      (window as any).requestIdleCallback(() => hydrateCatalog(), { timeout: 5000 });
-    } else {
-      setTimeout(() => hydrateCatalog(), 2500);
-    }
+    hydrateCatalog().catch(() => {});
   };
 
   if (document.readyState === "complete") {
@@ -524,6 +528,11 @@ export function mapRawProducts(rawProducts: any[], base: string = "https://mohas
     // Map Product Variants (Size, Color, Options) using robust multi-source extractor
     const variants = extractProductVariants(p);
 
+    const rawCategory = p.category || "";
+    const inferredSlug = inferCategory(p.name || p.title || "", rawCategory);
+    const matchedCat = CATEGORIES_DATA.find(c => c.slug === inferredSlug);
+    const canonicalCatName = matchedCat ? matchedCat.name : (rawCategory || "Gadgets & Electronics");
+
     return {
       id: String(p.id || `prod_${Date.now()}_${index}`),
       name: p.name || p.title || "Product",
@@ -543,7 +552,9 @@ export function mapRawProducts(rawProducts: any[], base: string = "https://mohas
       freeShipping: true,
       isNew: index < 20,
       isBestSeller: index % 4 === 0,
-      category: p.category || "",
+      category: canonicalCatName,
+      category_name: canonicalCatName,
+      category_slug: inferredSlug,
       description: p.details || p.description || "",
       short_description: p.short_description || "",
       stock: Number(rawStock),
@@ -848,6 +859,343 @@ export function normalizeCategorySlug(raw: string): string {
 }
 
 export function inferCategory(name: string, currentCategory?: string): string {
+  const n = (name || "").toLowerCase().trim();
+  const c = (currentCategory || "").toLowerCase().trim();
+
+  // 1. WATCH & CLOCKS (Absolute top priority - a watch is ALWAYS a watch, never apparel!)
+  if (
+    n.includes("watch") ||
+    n.includes("watches") ||
+    n.includes("smartwatch") ||
+    n.includes("smart watch") ||
+    n.includes("wristband") ||
+    n.includes("wrist watch") ||
+    n.includes("quartz") ||
+    n.includes("chronograph") ||
+    n.includes("binbond") ||
+    n.includes("curren") ||
+    n.includes("naviforce") ||
+    n.includes("skmei") ||
+    n.includes("poedagar") ||
+    n.includes("olevs") ||
+    n.includes("rolex") ||
+    n.includes("t800") ||
+    n.includes("t900") ||
+    n.includes("s10 max") ||
+    n.includes("dz09") ||
+    n.includes("ঘড়ি") ||
+    n.includes("হাত ঘড়ি") ||
+    n.includes("wall clock") ||
+    n.includes("table clock") ||
+    n.includes("digital clock") ||
+    n.includes("alarm clock") ||
+    c === "watch" ||
+    c === "watches"
+  ) {
+    return "watch";
+  }
+
+  // 2. FOODS & NUTRITION (Milk shakes, weight supplements, honey, ghee, dates, nuts)
+  if (
+    n.includes("milk shake") ||
+    n.includes("milkshake") ||
+    n.includes("supplement") ||
+    n.includes("weight gain") ||
+    n.includes("weight management") ||
+    n.includes("fat burn") ||
+    n.includes("protein powder") ||
+    n.includes("chia seed") ||
+    n.includes("moringa") ||
+    n.includes("spirulina") ||
+    n.includes("mustard oil") ||
+    n.includes("khejur") ||
+    n.includes("dates") ||
+    n.includes("honey nuts") ||
+    /\bhoney\b/i.test(n) ||
+    n.includes("almond") ||
+    n.includes("cashew") ||
+    n.includes("oats") ||
+    n.includes("ghee") ||
+    n.includes("মধু") ||
+    n.includes("ঘি") ||
+    n.includes("সরিষার তেল") ||
+    n.includes("খাদ্য") ||
+    c === "foods" ||
+    c === "food"
+  ) {
+    if (!n.includes("tray") && !n.includes("dispenser") && !n.includes("holder")) {
+      return "foods";
+    }
+  }
+
+  // 3. HEALTH & BEAUTY (Nail fungus treatment, menstrual cramp relief, cosmetics, face wash, serums)
+  if (
+    n.includes("fungus") ||
+    n.includes("nail care") ||
+    n.includes("nail fungus") ||
+    n.includes("electric nail") ||
+    n.includes("cramp") ||
+    n.includes("menstrual") ||
+    n.includes("period") ||
+    n.includes("heating pad") ||
+    n.includes("massager") ||
+    n.includes("massage") ||
+    n.includes("posture corrector") ||
+    n.includes("pain relief") ||
+    n.includes("slimming") ||
+    n.includes("body shaper") ||
+    n.includes("fat burner") ||
+    n.includes("serum") ||
+    (n.includes("cream") && !n.includes("shoe") && !n.includes("leather")) ||
+    n.includes("lotion") ||
+    n.includes("whitening") ||
+    n.includes("face wash") ||
+    n.includes("facewash") ||
+    n.includes("scrub") ||
+    n.includes("facial") ||
+    n.includes("perfume") ||
+    n.includes("attar") ||
+    n.includes("fragrance") ||
+    n.includes("body spray") ||
+    n.includes("derma") ||
+    n.includes("foot care") ||
+    n.includes("hair oil") ||
+    n.includes("hair dryer") ||
+    n.includes("hair straightener") ||
+    n.includes("curler") ||
+    n.includes("shampoo") ||
+    n.includes("conditioner") ||
+    (n.includes("soap") && !n.includes("dispenser") && !n.includes("holder")) ||
+    n.includes("toothpaste") ||
+    n.includes("lipstick") ||
+    n.includes("makeup") ||
+    n.includes("cosmetic") ||
+    n.includes("skincare") ||
+    n.includes("skin care") ||
+    c.includes("beauty") ||
+    c.includes("health") ||
+    c.includes("skin")
+  ) {
+    return "health-beauty";
+  }
+
+  // 4. KIDS ZONE (Toys, baby items, learning kits)
+  if (
+    n.includes("toy") ||
+    n.includes("robot") ||
+    n.includes("puzzle") ||
+    n.includes("doll") ||
+    n.includes("baby") ||
+    n.includes("feeder") ||
+    n.includes("teether") ||
+    n.includes("rattle") ||
+    n.includes("diaper") ||
+    n.includes("stroller") ||
+    n.includes("walker") ||
+    n.includes("rc car") ||
+    n.includes("lego") ||
+    n.includes("talking book") ||
+    n.includes("drawing kit") ||
+    n.includes("coloring") ||
+    n.includes("খেলনা") ||
+    c.includes("kid") ||
+    c.includes("baby")
+  ) {
+    return "kids-zone";
+  }
+
+  // 5. WINTER (Hoodies, jackets, sweaters)
+  if (
+    n.includes("hoodie") ||
+    n.includes("hoodies") ||
+    n.includes("jacket") ||
+    n.includes("jackets") ||
+    n.includes("windbreaker") ||
+    n.includes("sweater") ||
+    n.includes("sweatshirt") ||
+    n.includes("হুডি") ||
+    c === "winter"
+  ) {
+    return "winter";
+  }
+
+  // 6. WOMEN'S FASHION
+  if (
+    n.includes("saree") ||
+    n.includes("sari") ||
+    n.includes("sharee") ||
+    n.includes("lehenga") ||
+    n.includes("kurti") ||
+    n.includes("salwar") ||
+    n.includes("kameez") ||
+    n.includes("kamiz") ||
+    n.includes("tunic") ||
+    n.includes("palazzo") ||
+    n.includes("two piece") ||
+    n.includes("three piece") ||
+    n.includes("hijab") ||
+    n.includes("abaya") ||
+    n.includes("borkha") ||
+    n.includes("burqa") ||
+    n.includes("khimar") ||
+    n.includes("niqab") ||
+    n.includes("jewelry") ||
+    n.includes("jewellery") ||
+    n.includes("ring") ||
+    n.includes("necklace") ||
+    n.includes("earring") ||
+    n.includes("bracelet") ||
+    n.includes("bangle") ||
+    n.includes("bra") ||
+    n.includes("lingerie") ||
+    n.includes("nighty") ||
+    n.includes("মহিলা") ||
+    n.includes("লেহেঙ্গা") ||
+    n.includes("বোরকা") ||
+    n.includes("হিজাব") ||
+    c === "womens-fashion" ||
+    c.includes("women")
+  ) {
+    return "womens-fashion";
+  }
+
+  // 7. MEN'S FASHION (Strictly apparel, clothing, and attire)
+  const isMenApparel =
+    n.includes("panjabi") ||
+    n.includes("punjabi") ||
+    n.includes("pajama") ||
+    n.includes("payjama") ||
+    n.includes("t-shirt") ||
+    n.includes("tshirt") ||
+    n.includes("polo") ||
+    n.includes("shirt") ||
+    n.includes("gabardine") ||
+    n.includes("pant") ||
+    n.includes("pants") ||
+    n.includes("trouser") ||
+    n.includes("trousers") ||
+    n.includes("jogger") ||
+    n.includes("joggers") ||
+    n.includes("boxer") ||
+    n.includes("boxers") ||
+    n.includes("brief") ||
+    n.includes("innerwear") ||
+    n.includes("lungi") ||
+    n.includes("katua") ||
+    n.includes("fatua") ||
+    n.includes("পাঞ্জাবি") ||
+    n.includes("পায়জামা") ||
+    n.includes("প্যান্ট") ||
+    n.includes("টি-শার্ট");
+
+  const hasMenWordStrict =
+    /\b(men|mens|gents|male)\b/i.test(n) ||
+    n.includes("men's") ||
+    n.includes("gents'") ||
+    n.includes("পুরুষ") ||
+    n.includes("ছেলে");
+
+  const isExcludedFromMenFashion =
+    n.includes("perfume") ||
+    n.includes("trimmer") ||
+    n.includes("shaver") ||
+    n.includes("clipper") ||
+    n.includes("dispenser") ||
+    n.includes("wallet") ||
+    n.includes("backpack") ||
+    n.includes("bag") ||
+    n.includes("belt") ||
+    n.includes("bracket") ||
+    n.includes("cleaner") ||
+    n.includes("light") ||
+    n.includes("tool");
+
+  if (isMenApparel && !isExcludedFromMenFashion) {
+    return "mens-fashion";
+  }
+
+  if (hasMenWordStrict && !n.includes("women") && !isExcludedFromMenFashion) {
+    if (c.includes("fashion") || c.includes("clothing") || c.includes("apparel") || c === "mens-fashion") {
+      return "mens-fashion";
+    }
+  }
+
+  // 8. GADGETS & ELECTRONICS
+  if (
+    n.includes("charger") ||
+    n.includes("charging") ||
+    n.includes("cable") ||
+    n.includes("power bank") ||
+    n.includes("earbud") ||
+    n.includes("headphone") ||
+    n.includes("earphone") ||
+    n.includes("tws") ||
+    n.includes("speaker") ||
+    n.includes("soundbar") ||
+    n.includes("bluetooth") ||
+    n.includes("mouse") ||
+    n.includes("keyboard") ||
+    n.includes("router") ||
+    n.includes("monitor") ||
+    n.includes("camera") ||
+    n.includes("mic") ||
+    n.includes("trimmer") ||
+    n.includes("shaver") ||
+    n.includes("clipper") ||
+    n.includes("fan") ||
+    n.includes("cooler") ||
+    n.includes("usb") ||
+    n.includes("adapter") ||
+    c.includes("electronic") ||
+    c.includes("gadget")
+  ) {
+    return "gadgets-electronics";
+  }
+
+  // 9. HOME & LIFESTYLE
+  if (
+    n.includes("kitchen") ||
+    n.includes("knife") ||
+    n.includes("chopper") ||
+    n.includes("blender") ||
+    n.includes("grinder") ||
+    n.includes("cooker") ||
+    n.includes("pot") ||
+    n.includes("pan") ||
+    n.includes("kettle") ||
+    n.includes("bottle") ||
+    n.includes("lamp") ||
+    n.includes("light") ||
+    n.includes("mop") ||
+    n.includes("cleaner") ||
+    n.includes("storage") ||
+    n.includes("organizer") ||
+    n.includes("rack") ||
+    n.includes("shelf") ||
+    n.includes("bed sheet") ||
+    n.includes("pillow") ||
+    n.includes("blanket") ||
+    n.includes("towel") ||
+    n.includes("iron") ||
+    n.includes("steamer") ||
+    n.includes("tool") ||
+    n.includes("nail gun") ||
+    c.includes("home") ||
+    c.includes("kitchen")
+  ) {
+    return "home-lifestyle";
+  }
+
+  // Match subcategory keywords
+  for (const cat of CATEGORIES_DATA) {
+    for (const sub of cat.subcategories) {
+      if (sub.keywords.some((k) => n.includes(k.toLowerCase()))) {
+        return cat.slug;
+      }
+    }
+  }
+
+  // Category fallback
   if (currentCategory) {
     const info = findCategoryOrSubcategory(currentCategory);
     if (info.type === "category" && info.category) {
@@ -855,43 +1203,11 @@ export function inferCategory(name: string, currentCategory?: string): string {
     }
   }
 
-  const n = (name || "").toLowerCase();
-
-  // 1. Women's Fashion Priority Keywords
-  const womenKws = [
-    "saree", "sari", "sharee", "lehenga", "kurti", "salwar", "kameez", "tunic", "palazzo",
-    "two piece", "three piece", "hijab", "abaya", "borkha", "burqa", "khimar", "scarf",
-    "niqab", "borka", "ring", "necklace", "earring", "chain", "pendant", "bangle", "bracelet",
-    "jewel", "diamond", "bra", "lingerie", "nighty", "women", "womens", "ladies", "female",
-    "মহিলা", "শাড়ি", "লেহেঙ্গা", "কুর্তি", "বোরকা", "হিজাব"
-  ];
-  if (womenKws.some(k => n.includes(k))) {
-    return "womens-fashion";
-  }
-
-  // 2. Men's Fashion Keywords
-  const menKws = [
-    "panjabi", "punjabi", "pajama", "payjama", "t-shirt", "tshirt", "polo", "shirt",
-    "pant", "gabardine", "jeans", "trouser", "jogger", "boxer", "men", "mens", "gents",
-    "পাঞ্জাবি", "পায়জামা", "প্যান্ট", "টি-শার্ট"
-  ];
-  if (menKws.some(k => n.includes(k))) {
-    return "mens-fashion";
-  }
-
-  for (const cat of CATEGORIES_DATA) {
-    for (const sub of cat.subcategories) {
-      if (sub.keywords.some(k => n.includes(k.toLowerCase()))) {
-        return cat.slug;
-      }
-    }
-  }
-
   return "gadgets-electronics";
 }
 
 export function filterProductsByCategory(
-  products: (Product & { category?: string })[],
+  products: (Product & { category?: string; category_slug?: string })[],
   categorySlug: string,
   categoryName?: string
 ): Product[] {
@@ -912,42 +1228,58 @@ export function filterProductsByCategory(
 
   let result: Product[] = [];
 
+  // 1. Subcategory filter
   if (info.type === "subcategory" && info.keywords) {
-    const kws = info.keywords.map(k => k.toLowerCase());
-    const filtered = products.filter(p => {
+    const kws = info.keywords.map((k) => k.toLowerCase());
+    const parentCatSlug = info.category?.slug.toLowerCase();
+
+    const filtered = products.filter((p) => {
       const pName = (p.name || "").toLowerCase();
       const pCat = (p.category || "").toLowerCase();
-      const matchesKeyword = kws.some(k => pName.includes(k) || pCat.includes(k));
-      const matchesCat = info.category ? (pCat === info.category.name.toLowerCase() || pCat.includes(info.category.slug)) : true;
-      return matchesKeyword || (matchesCat && matchesKeyword);
+      const pSlug = (p as any).category_slug || inferCategory(p.name, p.category);
+
+      // Must belong to the parent category (allowing men's winter jackets/hoodies in men's fashion)
+      if (parentCatSlug && pSlug !== parentCatSlug && !(parentCatSlug === "mens-fashion" && pSlug === "winter")) {
+        return false;
+      }
+
+      return kws.some((k) => pName.includes(k) || pCat.includes(k));
     });
+
     if (filtered.length > 0) {
       result = filtered;
     }
   }
 
+  // 2. Main category filter (Strict category matching)
   if (result.length === 0 && info.type === "category" && info.category) {
-    const catName = info.category.name.toLowerCase();
-    const catSlug = info.category.slug.toLowerCase();
-    const filtered = products.filter(p => {
-      const pCat = (p.category || "").toLowerCase();
-      if (pCat === catName || pCat.includes(catSlug) || pCat.includes(catName)) return true;
-      const inferred = inferCategory(p.name, p.category);
-      return inferred === catSlug;
+    const targetSlug = info.category.slug.toLowerCase();
+    const filtered = products.filter((p) => {
+      const detectedSlug = (p as any).category_slug || inferCategory(p.name, p.category);
+      if (detectedSlug === targetSlug) return true;
+
+      // Allow men's winter hoodies/jackets in Men's Fashion
+      if (targetSlug === "mens-fashion" && detectedSlug === "winter") {
+        const pName = (p.name || "").toLowerCase();
+        return /\b(men|mens|gents)\b/i.test(pName) || pName.includes("hoodie") || pName.includes("jacket");
+      }
+
+      return false;
     });
+
     if (filtered.length > 0) {
       result = filtered;
     }
   }
 
+  // 3. Fallback normalized slug match (Clean fallback, never dump unrelated items!)
   if (result.length === 0) {
     const target = normalizeCategorySlug(query);
-    const fallback = products.filter(p => {
-      const pCat = (p.category || "").toLowerCase();
-      const pName = (p.name || "").toLowerCase();
-      return pCat.includes(target) || pName.includes(target) || inferCategory(p.name, p.category) === target;
+    const fallback = products.filter((p) => {
+      const detectedSlug = (p as any).category_slug || inferCategory(p.name, p.category);
+      return detectedSlug === target;
     });
-    result = fallback.length > 0 ? fallback : products.slice(0, 30);
+    result = fallback;
   }
 
   categoryFilterCache.set(cacheKey, result);

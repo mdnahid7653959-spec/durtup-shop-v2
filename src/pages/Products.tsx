@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Filter, ChevronRight, Globe, X, SlidersHorizontal, ArrowUpDown, Tag, Sparkles, Camera, Store } from "lucide-react";
+import { Filter, ChevronRight, Globe, X, SlidersHorizontal, ArrowUpDown, Tag, Sparkles, Camera, Store, Search } from "lucide-react";
 import { useCombinedSearch } from "@/hooks/useCombinedSearch";
 import { useCategories } from "@/hooks/useProductSearch";
 import { useCJSettings } from "@/hooks/useCJSettings";
@@ -24,7 +24,7 @@ export default function Products() {
     : location.pathname.includes("free-shipping") ? "free-shipping"
     : undefined;
 
-  const rawSearch = searchParams.get("search");
+  const rawSearch = searchParams.get("search") || searchParams.get("q");
   const searchQuery = rawSearch ? rawSearch.trim().replace(/\s+/g, " ") : undefined;
   const currentCategory = searchParams.get("category") || undefined;
   const currentSupplier = searchParams.get("supplier") || undefined;
@@ -443,6 +443,24 @@ export default function Products() {
               {hasFilters && (
                 <div className="flex flex-wrap items-center gap-2 mb-4 p-2.5 rounded-xl bg-muted/30 border">
                   <span className="text-xs text-muted-foreground font-medium mr-1">Active:</span>
+                  {searchQuery && (
+                    <Badge variant="secondary" className="gap-1 text-xs font-semibold bg-orange-500/10 text-orange-600 border border-orange-500/20">
+                      Search: "{searchQuery}"
+                      <button 
+                        onClick={() => {
+                          const p = new URLSearchParams(searchParams);
+                          p.delete("search");
+                          p.delete("q");
+                          setSearchParams(p);
+                        }} 
+                        className="ml-1 hover:text-destructive"
+                        title="Clear search"
+                        aria-label="Clear search"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
                   {currentCategory && (
                     <Badge variant="secondary" className="gap-1 text-xs font-normal">
                       Category: {activeCategoryObj?.name || currentCategory}
@@ -535,9 +553,44 @@ export default function Products() {
                   )}
                 </>
               ) : (
-                <div className="text-center py-16">
-                  <p className="text-muted-foreground mb-4">No products found.</p>
-                  <Button onClick={clearFilters}>Clear Filters</Button>
+                <div className="text-center py-16 px-4 max-w-md mx-auto">
+                  <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center">
+                    <Search className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground mb-1">
+                    {searchQuery ? `"${searchQuery}" এর জন্য কোনো প্রোডাক্ট পাওয়া যায়নি` : "কোনো প্রোডাক্ট পাওয়া যায়নি"}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mb-5">
+                    {searchQuery
+                      ? "অনুগ্রহ করে বানানটি চেক করুন অথবা অন্য কোনো সাধারণ কি-ওয়ার্ড দিয়ে চেষ্টা করুন।"
+                      : "আপনার ফিল্টার পরিবর্তন করে পুনরায় চেষ্টা করুন।"}
+                  </p>
+                  
+                  {searchQuery && (
+                    <div className="mb-6">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">জনপ্রিয় সার্চ কি-ওয়ার্ডস</p>
+                      <div className="flex flex-wrap justify-center gap-1.5">
+                        {["Wireless earbuds", "Smart watch", "Hot Pot", "Battery Charger", "Hoodie", "Trimmer"].map((kw) => (
+                          <button
+                            key={kw}
+                            onClick={() => {
+                              const p = new URLSearchParams(searchParams);
+                              p.set("search", kw);
+                              p.delete("q");
+                              setSearchParams(p);
+                            }}
+                            className="text-xs px-3 py-1.5 rounded-full border bg-muted/40 hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-600 transition-colors"
+                          >
+                            {kw}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <Button onClick={clearFilters} variant="outline" size="sm">
+                    সব প্রোডাক্ট দেখুন (View All Products)
+                  </Button>
                 </div>
               )}
             </div>

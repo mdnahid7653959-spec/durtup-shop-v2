@@ -209,7 +209,7 @@ export class EcomsellerEngine {
 
     return (catalog.products || []).map((p) => {
       const rawCat = catMap.get(p.categoryId);
-      const mappedCategory = CategoryMappingService.resolveCategory(rawCat?.slug || "", rawCat?.name || "");
+      const mappedCategory = CategoryMappingService.resolveProductCategory(p.name, rawCat?.slug || "", rawCat?.name || "");
       const priceInfo = this.calculatePrice(p.price, mappedCategory.slug, p.id, pricingConfig);
 
       const numId = typeof p.id === "string" ? p.id.split("-")[0].replace(/\D/g, "") || "10" : Number(p.id) || 10;

@@ -230,6 +230,46 @@ export const CATEGORIES_DATA: MainCategoryItem[] = [
     ]
   },
   {
+    id: "health-beauty",
+    name: "Health & Beauty",
+    slug: "health-beauty",
+    bangla: "হেলথ ও বিউটি",
+    tag: "💄 BEAUTY",
+    badgeColor: "bg-rose-600 text-white",
+    image: "https://ghelicfxwzbysfzbpxrk.supabase.co/storage/v1/object/sign/branding/categories/9329d5ff-5793-4ae8-b7ed-0bc25786cc8e.webp?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wNGI5YjA2MC0yMTliLTQyZDktYjI2NC1hYjUzM2ZlNWNhYzUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJicmFuZGluZy9jYXRlZ29yaWVzLzkzMjlkNWZmLTU3OTMtNGFlOC1iN2VkLTBiYzI1Nzg2Y2M4ZS53ZWJwIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NzI1NTEzMywiZXhwIjoxOTQ0OTM1MTMzfQ.4tPxtDqZxFI_4ESD4kLNXNNNdetQH4cUdLXQVEtF3z4",
+    iconName: "Sparkles",
+    subcategories: [
+      {
+        id: "skin-care",
+        name: "Skin & Personal Care",
+        slug: "skin-care",
+        bangla: "স্কিন ও পার্সোনাল কেয়ার",
+        keywords: ["skin", "serum", "cream", "lotion", "face wash", "facewash", "scrub", "mask", "fungus", "nail", "foot care", "whitening", "derma roller", "soap"]
+      },
+      {
+        id: "hair-care",
+        name: "Hair Care & Styling",
+        slug: "hair-care",
+        bangla: "হেয়ার কেয়ার ও ড্রায়ার",
+        keywords: ["hair", "hair oil", "shampoo", "conditioner", "dryer", "hair dryer", "straightener", "curler"]
+      },
+      {
+        id: "health-wellness",
+        name: "Health & Wellness Devices",
+        slug: "health-wellness",
+        bangla: "হেলথ ও বডি কেয়ার",
+        keywords: ["cramp", "menstrual", "period", "massager", "slimming", "belt", "pain relief", "support", "posture corrector", "health care"]
+      },
+      {
+        id: "perfume-fragrance",
+        name: "Perfume & Fragrance",
+        slug: "perfume-fragrance",
+        bangla: "পারফিউম ও সুগন্ধি",
+        keywords: ["perfume", "attar", "fragrance", "body spray", "solid perfume"]
+      }
+    ]
+  },
+  {
     id: "kids-zone",
     name: "Kids Zone",
     slug: "kids-zone",
@@ -535,8 +575,42 @@ export function findCategoryOrSubcategory(queryOrSlug: string): {
     }
   }
 
-  // 3. Priority disambiguation: Women's Fashion MUST precede Men's Fashion
-  // (because "women's fashion".includes("men's fashion") is true!)
+  // 3. Common category aliases & safe mappings
+  if (norm === "beauty" || norm.includes("health") || norm.includes("skin") || norm.includes("beauty")) {
+    const cat = CATEGORIES_DATA.find(c => c.slug === "health-beauty") || CATEGORIES_DATA.find(c => c.slug === "home-lifestyle")!;
+    return { type: "category", category: cat, canonicalCategoryName: cat.name };
+  }
+  if (
+    norm === "watches" ||
+    norm === "watch" ||
+    norm.includes("watch") ||
+    norm.includes("quartz") ||
+    norm.includes("smartwatch") ||
+    norm.includes("chronograph") ||
+    norm.includes("clock") ||
+    norm.includes("ঘড়ি")
+  ) {
+    const cat = CATEGORIES_DATA.find(c => c.slug === "watch")!;
+    return { type: "category", category: cat, canonicalCategoryName: cat.name };
+  }
+  if (norm === "electronics" || norm === "gadgets") {
+    const cat = CATEGORIES_DATA.find(c => c.slug === "gadgets-electronics")!;
+    return { type: "category", category: cat, canonicalCategoryName: cat.name };
+  }
+  if (norm === "home" || norm === "kitchen") {
+    const cat = CATEGORIES_DATA.find(c => c.slug === "home-lifestyle")!;
+    return { type: "category", category: cat, canonicalCategoryName: cat.name };
+  }
+  if (norm === "kids" || norm === "baby") {
+    const cat = CATEGORIES_DATA.find(c => c.slug === "kids-zone")!;
+    return { type: "category", category: cat, canonicalCategoryName: cat.name };
+  }
+  if (norm === "food" || norm.includes("honey") || norm.includes("supplement") || norm.includes("milk shake") || norm.includes("milkshake")) {
+    const cat = CATEGORIES_DATA.find(c => c.slug === "foods")!;
+    return { type: "category", category: cat, canonicalCategoryName: cat.name };
+  }
+
+  // 4. Priority disambiguation: Women's Fashion MUST precede Men's Fashion
   if (
     norm.includes("women") ||
     norm.includes("female") ||
@@ -549,13 +623,9 @@ export function findCategoryOrSubcategory(queryOrSlug: string): {
     return { type: "category", category: cat, canonicalCategoryName: cat.name };
   }
 
-  if (
-    (norm.includes("men") && !norm.includes("women")) ||
-    norm.includes("male") ||
-    norm.includes("gents") ||
-    norm.includes("পুরুষ") ||
-    norm.includes("ছেলে")
-  ) {
+  // Strict word-boundary matching for Men's Fashion (NEVER substring of treatment, supplement, etc. AND NEVER watches/gadgets)
+  const isMenStrict = /\b(men|mens|gents|male)\b/i.test(norm) || norm.includes("men's") || norm.includes("gents'") || norm.includes("পুরুষ") || norm.includes("ছেলে");
+  if (isMenStrict && !norm.includes("women") && !norm.includes("ladies") && !norm.includes("watch") && !norm.includes("clock") && !norm.includes("trimmer") && !norm.includes("shaver")) {
     const cat = CATEGORIES_DATA.find(c => c.slug === "mens-fashion")!;
     return { type: "category", category: cat, canonicalCategoryName: cat.name };
   }

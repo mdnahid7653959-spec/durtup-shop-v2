@@ -25,21 +25,22 @@ type Row =
   | { type: "product"; label: string; href: string; product: SuggestProduct };
 
 function Highlight({ text, term }: { text: string; term: string }) {
-  const q = term.trim();
-  if (!q) return <>{text}</>;
-  const idx = text.toLowerCase().indexOf(q.toLowerCase());
-  if (idx === -1) return <>{text}</>;
+  const str = text || "";
+  const q = (term || "").trim();
+  if (!q) return <>{str}</>;
+  const idx = str.toLowerCase().indexOf(q.toLowerCase());
+  if (idx === -1) return <>{str}</>;
   return (
     <>
-      {text.slice(0, idx)}
-      <mark className="bg-primary/15 text-primary rounded px-0.5">{text.slice(idx, idx + q.length)}</mark>
-      {text.slice(idx + q.length)}
+      {str.slice(0, idx)}
+      <mark className="bg-primary/15 text-primary rounded px-0.5">{str.slice(idx, idx + q.length)}</mark>
+      {str.slice(idx + q.length)}
     </>
   );
 }
 
 function currency(n: number) {
-  return `৳${n.toLocaleString("en-BD")}`;
+  return `৳${(n || 0).toLocaleString("en-BD")}`;
 }
 
 export function SmartSearchBar({
@@ -137,27 +138,8 @@ export function SmartSearchBar({
 
   const showDropdown =
     open && (hasQuery ? true : rows.length > 0);
-  // Mobile: tap opens dedicated /search page for a richer experience
-  if (variant === "mobile") {
-    return (
-      <div className={cn("w-full relative", className)}>
-        <button
-          type="button"
-          onClick={() => {
-            onNavigate?.();
-            navigate("/search");
-          }}
-          className="w-full h-11 px-4 flex items-center gap-2.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs text-left transition-all min-w-0 active:scale-[0.99] focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20"
-          aria-label="Open search"
-        >
-          <Search className="h-4 w-4 text-slate-400 shrink-0" />
-          <span className="flex-1 min-w-0 truncate text-xs sm:text-[13px] text-slate-400 font-normal select-none">
-            {placeholder}
-          </span>
-        </button>
-      </div>
-    );
-  }
+
+
 
   return (
     <div ref={wrapRef} className={cn("relative w-full", className)}>
@@ -172,11 +154,18 @@ export function SmartSearchBar({
         <div
           className={cn(
             "group relative w-full h-11 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700",
-            "rounded-full shadow-2xs transition-all duration-200 flex items-center px-4 gap-2.5",
+            "rounded-full shadow-2xs transition-all duration-200 flex items-center pl-3.5 pr-2 gap-2",
             "focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20"
           )}
         >
-          <Search className="h-4 w-4 text-slate-400 shrink-0" />
+          <button
+            type="submit"
+            aria-label="Search"
+            title="Search"
+            className="p-1 text-slate-400 hover:text-orange-600 active:scale-90 transition-all shrink-0 cursor-pointer focus:outline-none"
+          >
+            <Search className="h-4 w-4 shrink-0" />
+          </button>
 
           {/* Main Search Input */}
           <input
@@ -199,16 +188,17 @@ export function SmartSearchBar({
             className="w-full h-full bg-transparent text-foreground placeholder:text-slate-400 text-sm outline-none border-0 leading-none [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none font-medium"
           />
 
-          {/* Right Actions: Loader / Clear Button */}
+          {/* Right Actions: Loader / Clear / Search Button */}
           <div className="flex items-center gap-1.5 shrink-0">
             {isFetching && hasQuery && (
-              <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" aria-hidden />
+              <Loader2 className="w-4 h-4 text-orange-600 animate-spin shrink-0" aria-hidden />
             )}
 
             {query && (
               <button
                 type="button"
                 aria-label="Clear search"
+                title="Clear"
                 onClick={() => {
                   setQuery("");
                   setActiveIdx(-1);
@@ -219,6 +209,14 @@ export function SmartSearchBar({
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
+
+            <button
+              type="submit"
+              aria-label="Submit search"
+              className="h-8 px-3 rounded-full bg-orange-600 hover:bg-orange-500 active:scale-95 text-white text-xs font-semibold flex items-center gap-1 transition-all shadow-xs shrink-0"
+            >
+              <span>Search</span>
+            </button>
           </div>
         </div>
       </form>

@@ -159,7 +159,14 @@ export default function SearchPage() {
               {/* Bottom Caustic Reflection Arc */}
               <div className="absolute bottom-0.5 inset-x-10 h-[2px] bg-gradient-to-r from-transparent via-white to-transparent rounded-full blur-[0.3px] shadow-[0_0_4px_rgba(255,255,255,0.95)]" />
 
-              <SearchIcon className="h-4 w-4 text-slate-500 dark:text-slate-300 shrink-0 relative z-10" />
+              <button
+                type="submit"
+                aria-label="Search"
+                title="Search"
+                className="p-1 -ml-1 text-slate-500 dark:text-slate-300 hover:text-orange-600 active:scale-90 transition-all shrink-0 relative z-10 cursor-pointer"
+              >
+                <SearchIcon className="h-4 w-4" />
+              </button>
               <input
                 ref={inputRef}
                 type="search"
@@ -169,12 +176,13 @@ export default function SearchPage() {
                 className="flex-1 min-w-0 bg-transparent outline-none border-0 text-sm placeholder:text-slate-400 font-semibold text-slate-900 dark:text-white relative z-10 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
               />
               {isFetching && hasQuery && (
-                <Loader2 className="h-4 w-4 animate-spin text-slate-500 dark:text-slate-300 shrink-0 relative z-10" />
+                <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0 relative z-10" />
               )}
               {query && (
                 <button
                   type="button"
                   aria-label="Clear"
+                  title="Clear"
                   onClick={() => {
                     setQuery("");
                     inputRef.current?.focus();
@@ -184,6 +192,13 @@ export default function SearchPage() {
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
+              <button
+                type="submit"
+                aria-label="Search"
+                className="h-7 px-3 rounded-full bg-orange-600 hover:bg-orange-500 active:scale-95 text-white text-xs font-semibold flex items-center transition-all shrink-0 relative z-10 shadow-2xs"
+              >
+                Search
+              </button>
             </div>
           </form>
         </div>

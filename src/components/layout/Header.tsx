@@ -7,7 +7,8 @@ import {
   ShoppingCart, 
   MessageCircle, 
   LogOut,
-  ArrowLeft
+  ArrowLeft,
+  Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -88,7 +89,7 @@ export function Header() {
   return (
     <>
       {/* Main Header (Scrolls naturally with page content) */}
-      <header className="relative w-full max-w-full overflow-hidden bg-white dark:bg-slate-900 shadow-xs border-b border-slate-100 dark:border-slate-800">
+      <header className="relative w-full max-w-full bg-white dark:bg-slate-900 shadow-xs border-b border-slate-100 dark:border-slate-800">
 
       {/* 1. Main Header Row (Logo, Search, Actions) */}
       <div className="px-3 sm:px-4 py-2 max-w-7xl mx-auto w-full">
@@ -129,12 +130,12 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Center: Search Bar (Desktop - ONLY on Home Page) / Checkout Secure Badge */}
-          {isHomePage ? (
+          {/* Center: Search Bar (Desktop - On ALL pages except Checkout) / Checkout Secure Badge */}
+          {!isCheckoutPage ? (
             <div className="flex-1 max-w-2xl mx-2 hidden md:block">
               <SmartSearchBar variant="desktop" />
             </div>
-          ) : isCheckoutPage ? (
+          ) : (
             <div className="flex items-center justify-center shrink-0">
               <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 whitespace-nowrap shadow-xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -145,12 +146,12 @@ export function Header() {
                 <span>100% Secure</span>
               </div>
             </div>
-          ) : (
-            <div className="flex-1" />
           )}
 
-          {/* Right Action Icons (Wishlist, Messages, Cart, Account) */}
+          {/* Right Action Icons (Search for mobile, Wishlist, Messages, Cart, Account) */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+
+
 
             {/* Messages / Sigma AI Assistant */}
             <Link to="/messages" className="flex flex-col items-center justify-center p-1 sm:px-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-orange-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all relative group" title="Sigma AI Assistant">
@@ -229,10 +230,10 @@ export function Header() {
 
         </div>
 
-        {/* Search Bar (Mobile View - ONLY on Home Page) */}
-        {isHomePage && (
+        {/* Search Bar (Mobile View - Always visible except on checkout) */}
+        {!isCheckoutPage && (
           <div className="mt-2 md:hidden">
-            <SmartSearchBar variant="mobile" />
+            <SmartSearchBar />
           </div>
         )}
       </div>

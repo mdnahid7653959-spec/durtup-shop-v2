@@ -11,7 +11,7 @@ import {
 import { synonymManager } from "../SynonymManager";
 import { fuzzyMatchToken, tokenizeText, normalizeText, getEditDistance } from "../FuzzySearchEngine";
 import { searchAnalytics } from "../SearchAnalyticsService";
-import { getCachedMohasagorProducts, FALLBACK_SUPPLIER_PRODUCTS } from "@/utils/mohasagorCache";
+import { getCachedMohasagorProducts, getInMemoryProducts, FALLBACK_SUPPLIER_PRODUCTS, inferCategory } from "@/utils/mohasagorCache";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 
 const defaultImages = [
@@ -24,282 +24,20 @@ const defaultImages = [
 
 export function normalizeCategorySlug(raw: string): string {
   const str = (raw || "").toLowerCase().trim();
-  if (str.includes("watch") || str.includes("jewelry") || str.includes("jewellery") || str.includes("accessory")) return "watches";
-  if (str.includes("toy") || str.includes("kid") || str.includes("baby") || str.includes("child")) return "kids";
-  if (str.includes("beauty") || str.includes("health") || str.includes("skin") || str.includes("care") || str.includes("cosmetic")) return "beauty";
-  if (str.includes("fashion") || str.includes("cloth") || str.includes("wear") || str.includes("apparel") || str.includes("garment") || str.includes("winter") || str.includes("shoe")) return "fashion";
-  if (str.includes("home") || str.includes("kitchen") || str.includes("lifestyle") || str.includes("living") || str.includes("appliance") || str.includes("household") || str.includes("garden")) return "home";
-  if (str.includes("electronic") || str.includes("gadget") || str.includes("mobile") || str.includes("phone") || str.includes("tech") || str.includes("audio") || str.includes("computer")) return "electronics";
+  if (str === "watch" || str === "watches" || str.includes("watch") || str.includes("quartz")) return "watch";
+  if (str.includes("food") || str.includes("supplement") || str.includes("honey")) return "foods";
+  if (str.includes("beauty") || str.includes("health") || str.includes("skin") || str.includes("care") || str.includes("cosmetic")) return "health-beauty";
+  if (str.includes("toy") || str.includes("kid") || str.includes("baby") || str.includes("child")) return "kids-zone";
+  if (str.includes("winter") || str.includes("hoodie")) return "winter";
+  if (str.includes("women") || str.includes("saree") || str.includes("kurti") || str.includes("borkha") || str.includes("jewelry")) return "womens-fashion";
+  if (str.includes("men") || str.includes("panjabi") || str.includes("shirt") || str.includes("pant") || str.includes("fashion") || str.includes("cloth")) return "mens-fashion";
+  if (str.includes("home") || str.includes("kitchen") || str.includes("lifestyle") || str.includes("living") || str.includes("appliance")) return "home-lifestyle";
+  if (str.includes("electronic") || str.includes("gadget") || str.includes("mobile") || str.includes("phone") || str.includes("tech") || str.includes("audio")) return "gadgets-electronics";
   return str;
 }
 
 export function inferProductCategory(name: string, currentCategory?: string): string {
-  const n = (name || "").toLowerCase();
-  const c = (currentCategory || "").toLowerCase();
-
-  // 1. Watches & Accessories
-  if (
-    n.includes("smartwatch") ||
-    n.includes("smart watch") ||
-    n.includes("wrist watch") ||
-    n.includes("curren") ||
-    n.includes("naviforce") ||
-    n.includes("skmei") ||
-    n.includes("strap") ||
-    n.includes("bracelet") ||
-    n.includes("jewelry") ||
-    n.includes("jewellery") ||
-    n.includes("sunglass") ||
-    n.includes("sunglasses") ||
-    n.includes("ring") ||
-    n.includes("necklace") ||
-    n.includes("chain") ||
-    n.includes("earring") ||
-    n.includes("pendant") ||
-    n.includes("bangle") ||
-    n.includes("eyewear") ||
-    (n.includes("watch") && !n.includes("face wash") && !n.includes("stopwatch")) ||
-    c.includes("watch") ||
-    c.includes("jewelry") ||
-    c.includes("accessory")
-  ) {
-    return "watches";
-  }
-
-  // 2. Toys & Baby Care
-  if (
-    n.includes("toy") ||
-    n.includes("toys") ||
-    n.includes("baby") ||
-    n.includes("kid") ||
-    n.includes("kids") ||
-    n.includes("child") ||
-    n.includes("children") ||
-    n.includes("doll") ||
-    n.includes("puzzle") ||
-    n.includes("diaper") ||
-    n.includes("stroller") ||
-    n.includes("walker") ||
-    n.includes("rc car") ||
-    n.includes("lego") ||
-    n.includes("rattle") ||
-    n.includes("teether") ||
-    n.includes("feeding bottle") ||
-    c.includes("kid") ||
-    c.includes("toy") ||
-    c.includes("baby")
-  ) {
-    return "kids";
-  }
-
-  // 3. Health & Beauty
-  if (
-    n.includes("hair dryer") ||
-    n.includes("dryer") ||
-    n.includes("shaver") ||
-    n.includes("trimmer") ||
-    n.includes("clipper") ||
-    n.includes("hair straightener") ||
-    n.includes("curler") ||
-    n.includes("serum") ||
-    n.includes("cream") ||
-    n.includes("lotion") ||
-    n.includes("oil") ||
-    n.includes("shampoo") ||
-    n.includes("conditioner") ||
-    n.includes("soap") ||
-    n.includes("face wash") ||
-    n.includes("facewash") ||
-    n.includes("lipstick") ||
-    n.includes("makeup") ||
-    n.includes("perfume") ||
-    n.includes("fragrance") ||
-    n.includes("attar") ||
-    n.includes("body spray") ||
-    n.includes("sunscreen") ||
-    n.includes("scrub") ||
-    n.includes("mask") ||
-    n.includes("facial") ||
-    n.includes("massager") ||
-    n.includes("massage") ||
-    n.includes("gripper") ||
-    n.includes("fitness") ||
-    n.includes("slimming") ||
-    n.includes("toothbrush") ||
-    c.includes("beauty") ||
-    c.includes("health") ||
-    c.includes("cosmetic") ||
-    c.includes("skincare")
-  ) {
-    return "beauty";
-  }
-
-  // 4. Fashion & Clothing
-  if (
-    n.includes("shirt") ||
-    n.includes("t-shirt") ||
-    n.includes("tshirt") ||
-    n.includes("pant") ||
-    n.includes("trouser") ||
-    n.includes("jeans") ||
-    n.includes("jacket") ||
-    n.includes("hoodie") ||
-    n.includes("sweater") ||
-    n.includes("sweatshirt") ||
-    n.includes("coat") ||
-    n.includes("blazer") ||
-    n.includes("polo") ||
-    n.includes("panjabi") ||
-    n.includes("punjabi") ||
-    n.includes("kurti") ||
-    n.includes("saree") ||
-    n.includes("sari") ||
-    n.includes("sharee") ||
-    n.includes("dress") ||
-    n.includes("shoe") ||
-    n.includes("shoes") ||
-    n.includes("sneaker") ||
-    n.includes("sneakers") ||
-    n.includes("boot") ||
-    n.includes("sandal") ||
-    n.includes("slippers") ||
-    n.includes("loafers") ||
-    n.includes("socks") ||
-    n.includes("underwear") ||
-    n.includes("boxer") ||
-    n.includes("innerwear") ||
-    n.includes("scarf") ||
-    n.includes("hijab") ||
-    n.includes("abaya") ||
-    n.includes("borkha") ||
-    n.includes("khimar") ||
-    n.includes("palazzo") ||
-    n.includes("lehenga") ||
-    n.includes("combo offer") ||
-    n.includes("jersey") ||
-    n.includes("tracksuit") ||
-    n.includes("shorts") ||
-    n.includes("cap") ||
-    n.includes("hat") ||
-    n.includes("belt") ||
-    n.includes("wallet") ||
-    n.includes("handbag") ||
-    n.includes("backpack") ||
-    n.includes("bag") ||
-    n.includes("tote") ||
-    c.includes("fashion") ||
-    c.includes("clothing") ||
-    c.includes("wear") ||
-    c.includes("winter") ||
-    c.includes("apparel")
-  ) {
-    return "fashion";
-  }
-
-  // 5. Home & Kitchen
-  if (
-    n.includes("water dispenser") ||
-    n.includes("dispenser") ||
-    n.includes("water pump") ||
-    n.includes("electric pump") ||
-    n.includes("fan") ||
-    n.includes("cooler") ||
-    n.includes("cup") ||
-    n.includes("mug") ||
-    n.includes("flask") ||
-    n.includes("bottle") ||
-    n.includes("thermos") ||
-    n.includes("pillow") ||
-    n.includes("cushion") ||
-    n.includes("bedding") ||
-    n.includes("bed sheet") ||
-    n.includes("blanket") ||
-    n.includes("curtain") ||
-    n.includes("towel") ||
-    n.includes("kitchen") ||
-    n.includes("cooker") ||
-    n.includes("stove") ||
-    n.includes("kettle") ||
-    n.includes("blender") ||
-    n.includes("grinder") ||
-    n.includes("juicer") ||
-    n.includes("chopper") ||
-    n.includes("air fryer") ||
-    n.includes("pan") ||
-    n.includes("pot") ||
-    n.includes("knife") ||
-    n.includes("sealer") ||
-    n.includes("scale") ||
-    n.includes("mop") ||
-    n.includes("cleaner") ||
-    n.includes("vacuum") ||
-    n.includes("shelf") ||
-    n.includes("rack") ||
-    n.includes("organizer") ||
-    n.includes("storage") ||
-    n.includes("hanger") ||
-    n.includes("lamp") ||
-    n.includes("light") ||
-    n.includes("night lamp") ||
-    n.includes("torch") ||
-    n.includes("iron") ||
-    n.includes("steamer") ||
-    n.includes("mosquito") ||
-    n.includes("repeller") ||
-    n.includes("humidifier") ||
-    n.includes("diffuser") ||
-    n.includes("lunch box") ||
-    n.includes("container") ||
-    n.includes("tableware") ||
-    n.includes("projector") ||
-    c.includes("home") ||
-    c.includes("kitchen") ||
-    c.includes("lifestyle") ||
-    c.includes("living") ||
-    c.includes("appliance") ||
-    c.includes("household") ||
-    c.includes("garden")
-  ) {
-    return "home";
-  }
-
-  // 6. Electronics & Gadgets
-  if (
-    n.includes("mouse") ||
-    n.includes("keyboard") ||
-    n.includes("earbuds") ||
-    n.includes("headphone") ||
-    n.includes("earphone") ||
-    n.includes("headset") ||
-    n.includes("tws") ||
-    n.includes("charger") ||
-    n.includes("charging") ||
-    n.includes("cable") ||
-    n.includes("speaker") ||
-    n.includes("power bank") ||
-    n.includes("router") ||
-    n.includes("bluetooth") ||
-    n.includes("camera") ||
-    n.includes("display") ||
-    n.includes("monitor") ||
-    n.includes("receiver") ||
-    n.includes("mp3") ||
-    n.includes("usb") ||
-    n.includes("mic") ||
-    n.includes("microphone") ||
-    n.includes("tripod") ||
-    n.includes("gimbal") ||
-    n.includes("adapter") ||
-    c.includes("electronic") ||
-    c.includes("gadget") ||
-    c.includes("mobile") ||
-    c.includes("phone") ||
-    c.includes("tech")
-  ) {
-    return "electronics";
-  }
-
-  return normalizeCategorySlug(c) || "home";
+  return inferCategory(name, currentCategory);
 }
 
 function getSessionSeed(): number {
@@ -339,6 +77,7 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
   private isLoaded = false;
   private lastFetchTime = 0;
   private CACHE_TTL = 1 * 60 * 1000; // 1 minute cache for real-time reactivity
+  private ongoingBuildPromise: Promise<void> | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -371,14 +110,121 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
     if (this.isLoaded && this.indexedProducts.length > 0 && now - this.lastFetchTime < this.CACHE_TTL && !products) {
       return;
     }
+    if (this.ongoingBuildPromise && !products) {
+      return this.ongoingBuildPromise;
+    }
 
-    await synonymManager.init();
+    this.ongoingBuildPromise = (async () => {
+      await synonymManager.init();
 
-    try {
-      if (products && products.length > 0) {
-        this.indexedProducts = products;
-      } else {
-        const productMap = new Map<string, any>();
+      try {
+        if (products && products.length > 0) {
+          this.indexedProducts = products;
+        } else {
+          const productMap = new Map<string, any>();
+
+          // 1. Seed immediately with In-Memory master catalog (2,818+ products) so searches never block
+          try {
+            const memCatalog = getInMemoryProducts();
+            if (memCatalog && memCatalog.length > 0) {
+              memCatalog.forEach((p: any, idx: number) => {
+                const pid = String(p.id);
+                if (!productMap.has(pid)) {
+                  productMap.set(pid, {
+                    id: pid,
+                    name: p.name,
+                    slug: p.slug || `product-${pid}`,
+                    regular_price: Number(p.originalPrice || p.regular_price || p.price || 0),
+                    discount_price: p.originalPrice && p.originalPrice > p.price ? Number(p.price) : (p.discount_price ? Number(p.discount_price) : null),
+                    price: Number(p.price || 0),
+                    category: p.category || "General",
+                    brand: p.brand || "Generic",
+                    seller_name: "Durtup Marketplace",
+                    sku: p.product_code || p.sku || `SKU-${pid}`,
+                    product_code: p.product_code || pid,
+                    supplier_sku: p.product_code || p.sku,
+                    image: p.image || defaultImages[idx % defaultImages.length],
+                    product_images: Array.isArray(p.images) ? p.images.map((u: string) => ({ image_url: u })) : [{ image_url: p.image || defaultImages[idx % defaultImages.length] }],
+                    rating_average: Number(p.rating || 4.8),
+                    rating_count: Number(p.reviews || 15),
+                    sold_count: Number(p.sold || 45),
+                    in_stock: true,
+                    status: "active",
+                    description: p.details || p.description || ""
+                  });
+                }
+              });
+            }
+          } catch (e) {
+            console.warn("[FirestoreSearchAdapter] memCatalog seed error:", e);
+          }
+
+          // If in-memory had only seed items, await cached catalog
+          if (productMap.size < 100) {
+            try {
+              const cached = await getCachedMohasagorProducts();
+              if (cached && cached.length > 0) {
+                cached.forEach((p: any, idx: number) => {
+                  const pid = String(p.id);
+                  if (!productMap.has(pid)) {
+                    productMap.set(pid, {
+                      id: pid,
+                      name: p.name,
+                      slug: p.slug || `product-${pid}`,
+                      regular_price: Number(p.originalPrice || p.regular_price || p.price || 0),
+                      discount_price: p.originalPrice && p.originalPrice > p.price ? Number(p.price) : (p.discount_price ? Number(p.discount_price) : null),
+                      price: Number(p.price || 0),
+                      category: p.category || "General",
+                      brand: p.brand || "Generic",
+                      seller_name: "Durtup Marketplace",
+                      sku: p.product_code || p.sku || `SKU-${pid}`,
+                      product_code: p.product_code || pid,
+                      supplier_sku: p.product_code || p.sku,
+                      image: p.image || defaultImages[idx % defaultImages.length],
+                      product_images: Array.isArray(p.images) ? p.images.map((u: string) => ({ image_url: u })) : [{ image_url: p.image || defaultImages[idx % defaultImages.length] }],
+                      rating_average: Number(p.rating || 4.8),
+                      rating_count: Number(p.reviews || 15),
+                      sold_count: Number(p.sold || 45),
+                      in_stock: true,
+                      status: "active",
+                      description: p.details || p.description || ""
+                    });
+                  }
+                });
+              }
+            } catch (e) {
+              console.warn("[FirestoreSearchAdapter] getCachedMohasagorProducts error:", e);
+            }
+          }
+
+          // Always seed Fast Seed & Fallback Supplier Products immediately
+          FALLBACK_SUPPLIER_PRODUCTS.forEach((p: any, idx: number) => {
+            const pid = String(p.id);
+            if (!productMap.has(pid)) {
+              productMap.set(pid, {
+                id: pid,
+                name: p.name,
+                slug: p.slug || `product-${pid}`,
+                regular_price: p.originalPrice || p.regular_price || p.price || 0,
+                discount_price: p.originalPrice ? p.price : null,
+                price: p.price || 0,
+                category: p.category || "General",
+                brand: "Generic",
+                seller_name: "Durtup Marketplace",
+                sku: p.product_code || p.sku || `SKU-${pid}`,
+                product_code: p.product_code || pid,
+                supplier_sku: p.product_code || p.sku,
+                image: p.image || defaultImages[idx % defaultImages.length],
+                product_images: [{ image_url: p.image || defaultImages[idx % defaultImages.length] }],
+                rating_average: p.rating || 4.8,
+                rating_count: p.reviews || 15,
+                sold_count: p.sold || 45,
+                in_stock: true,
+                status: "active",
+                description: p.description || ""
+              });
+            }
+          });
 
         // 1. Fetch Local Storage Admin Products
         if (typeof window !== "undefined") {
@@ -616,8 +462,13 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
       this.lastFetchTime = now;
     } catch (err) {
       console.warn("[FirestoreSearchAdapter] Build index warning:", err);
+    } finally {
+      this.ongoingBuildPromise = null;
     }
-  }
+  })();
+
+  return this.ongoingBuildPromise;
+}
 
   public async indexProduct(product: any): Promise<void> {
     const existingIdx = this.indexedProducts.findIndex((p) => p.id === product.id);
@@ -655,6 +506,11 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
       slug: p.slug,
       image: p.image,
       price: p.price,
+      originalPrice: p.originalPrice,
+      regular_price: p.originalPrice || p.price,
+      discount_price: p.originalPrice && p.originalPrice > p.price ? p.price : null,
+      rating_average: p.rating,
+      rating_count: p.reviews,
       category: p.category
     }));
 
