@@ -192,7 +192,7 @@ export const extractImageDedupeKey = (url: string): string => {
   }
 };
 
-// Helper to map images from Mohasagor API
+// Helper to map images from Mohasagor / Dropshipping / Supplier API
 const mapSupplierImages = (raw: any): ProductImage[] => {
   const product_images: ProductImage[] = [];
   const base = "https://mohasagor.com.bd";
@@ -232,7 +232,7 @@ const mapSupplierImages = (raw: any): ProductImage[] => {
       if (typeof img === "string") {
         addImg(img);
       } else if (img && typeof img === "object") {
-        addImg(img.product_image || img.image_url || img.image || img.url);
+        addImg(img.product_image || img.image_url || img.image || img.url || img.path || img.src);
       }
     });
   }
@@ -243,18 +243,51 @@ const mapSupplierImages = (raw: any): ProductImage[] => {
       if (typeof img === "string") {
         addImg(img);
       } else if (img && typeof img === "object") {
-        addImg(img.image_url || img.url || img.image);
+        addImg(img.image_url || img.url || img.image || img.src);
       }
     });
   }
 
-  // 3. Single image properties - only add if no images have been captured yet
-  if (product_images.length === 0) {
-    if (raw.thumbnail_img) addImg(raw.thumbnail_img);
-    if (raw.image_url) addImg(raw.image_url);
-    if (raw.image) addImg(raw.image);
-    if (raw.thumbnail) addImg(raw.thumbnail);
+  // 3. Check gallery and photos array or comma-separated strings
+  if (Array.isArray(raw.photos) && raw.photos.length > 0) {
+    raw.photos.forEach((p: any) => addImg(p));
+  } else if (typeof raw.photos === "string" && raw.photos.includes(",")) {
+    raw.photos.split(",").forEach((p: string) => addImg(p));
   }
+
+  if (Array.isArray(raw.gallery) && raw.gallery.length > 0) {
+    raw.gallery.forEach((g: any) => addImg(g));
+  } else if (typeof raw.gallery === "string" && raw.gallery.includes(",")) {
+    raw.gallery.split(",").forEach((g: string) => addImg(g));
+  }
+
+  if (Array.isArray(raw.gallery_images) && raw.gallery_images.length > 0) {
+    raw.gallery_images.forEach((g: any) => addImg(g));
+  }
+
+  // 4. Extract all variant photos (e.g. from color/style options)
+  if (Array.isArray(raw.product_variants) && raw.product_variants.length > 0) {
+    raw.product_variants.forEach((v: any) => {
+      if (v && typeof v === "object") {
+        addImg(v.image || v.image_url || v.variant_image || v.photo || v.img);
+      }
+    });
+  }
+  if (Array.isArray(raw.variants) && raw.variants.length > 0) {
+    raw.variants.forEach((v: any) => {
+      if (v && typeof v === "object") {
+        addImg(v.image || v.image_url || v.variant_image || v.photo || v.img);
+      }
+    });
+  }
+
+  // 5. Single image properties
+  if (raw.thumbnail_img) addImg(raw.thumbnail_img);
+  if (raw.image_url) addImg(raw.image_url);
+  if (raw.image) addImg(raw.image);
+  if (raw.thumbnail) addImg(raw.thumbnail);
+  if (raw.photo) addImg(raw.photo);
+  if (raw.featured_image) addImg(raw.featured_image);
 
   return product_images;
 };
@@ -1595,6 +1628,44 @@ function ProductDetailContent() {
                   )}
                 </div>
               )}
+
+              {/* Trust & Guarantee Highlights Card (Desktop and Tablet) to fill left column and provide instant trust */}
+              <div className="hidden lg:block mt-4 w-full sm:max-w-[480px] md:max-w-[520px] lg:max-w-[540px] xl:max-w-[580px] mx-auto rounded-2xl border border-border/80 bg-muted/20 p-4 space-y-3">
+                <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/60">
+                  <div className="w-8 h-8 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-foreground">১০০% অথেনটিক কোয়ালিটি নিশ্চয়তা</h4>
+                    <p className="text-[11px] text-muted-foreground">কুরিয়ারের সামনে প্রডাক্ট দেখে নেওয়ার সুবিধা</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-card border border-border/60">
+                    <Truck className="h-3.5 w-3.5 text-orange-600 shrink-0" />
+                    <div>
+                      <span className="font-bold text-foreground block">ক্যাশ অন ডেলিভারি</span>
+                      <span className="text-muted-foreground text-[10px]">সারাদেশের ৬৪ জেলায়</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-card border border-border/60">
+                    <RotateCcw className="h-3.5 w-3.5 text-orange-600 shrink-0" />
+                    <div>
+                      <span className="font-bold text-foreground block">৭ দিনের রিটার্ন</span>
+                      <span className="text-muted-foreground text-[10px]">সহজ এক্সচেঞ্জ পলিসি</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Award className="h-3.5 w-3.5 text-orange-600" />
+                    ভেরিফায়েড সেলার & অরিজিনাল আইটেম
+                  </span>
+                  <span className="font-bold text-orange-600">Durtup Express</span>
+                </div>
+              </div>
             </div>
 
 
