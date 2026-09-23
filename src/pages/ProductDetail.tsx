@@ -432,6 +432,14 @@ function ProductDetailContent() {
     trackView
   } = useRecentlyViewed();
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const thumbnailScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollThumbnails = (direction: "left" | "right") => {
+    if (thumbnailScrollRef.current) {
+      const scrollAmount = direction === "left" ? -240 : 240;
+      thumbnailScrollRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+  };
 
   // Enable real-time sync for this product
   useProductRealtimeSync(product?.id);
@@ -1587,93 +1595,89 @@ function ProductDetailContent() {
                 </div>
               </div>
 
-              {/* Thumbnail strip - full-width scroll on mobile, perfectly aligned on desktop */}
+              {/* Thumbnail strip - Large, crisp, beautifully scrollable gallery */}
               {((product as any)?.video_url ? images.length + 1 : images.length) > 1 && (
-                <div className="flex gap-2 sm:gap-2.5 justify-start sm:justify-center overflow-x-auto py-2.5 px-3 sm:px-1 scrollbar-hide w-full sm:max-w-[480px] md:max-w-[520px] lg:max-w-[540px] xl:max-w-[580px] mx-auto">
-                  {images.map((img, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        setSelectedImage(i);
-                        setShowVideo(false);
-                      }}
-                      className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-white dark:bg-card p-1 hover:scale-105 ${
-                        selectedImage === i && !showVideo
-                          ? 'border-orange-500 ring-2 ring-orange-500/30 shadow-md scale-105'
-                          : 'border-border/70 hover:border-orange-500/50 opacity-80 hover:opacity-100'
-                      }`}
-                    >
-                      <img
-                        src={img}
-                        alt=""
-                        style={{ imageRendering: "-webkit-optimize-contrast" }}
-                        className="w-full h-full object-contain transition-transform duration-200"
-                        onError={handleImageError}
-                      />
-                    </button>
-                  ))}
-                  {/* Video thumbnail */}
-                  {product.video_url && (
-                    <button
-                      onClick={() => setShowVideo(true)}
-                      className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl overflow-hidden border-2 transition-all flex items-center justify-center bg-muted flex-shrink-0 relative hover:scale-105 ${
-                        showVideo ? 'border-orange-500 ring-2 ring-orange-500/30 shadow-md scale-105' : 'border-border/70 hover:border-orange-500/50 opacity-80 hover:opacity-100'
-                      }`}
-                    >
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-                        <Play className="h-4 w-4 sm:h-6 sm:w-6 text-white fill-white" />
-                      </div>
-                      {getYouTubeEmbedUrl(product.video_url) ? (
+                <div className="relative group/thumb mt-3 sm:mt-4 w-full sm:max-w-[480px] md:max-w-[520px] lg:max-w-[540px] xl:max-w-[580px] mx-auto px-1">
+                  {/* Left scroll chevron button */}
+                  <button
+                    type="button"
+                    onClick={() => scrollThumbnails("left")}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 sm:-translate-x-2 z-20 w-8 h-8 rounded-full bg-white/95 dark:bg-card/95 shadow-md border border-border/80 flex items-center justify-center text-foreground hover:bg-orange-500 hover:text-white transition-all opacity-80 hover:opacity-100 hover:scale-110 active:scale-95 cursor-pointer hidden sm:flex"
+                    aria-label="Scroll left"
+                    title="Previous photos"
+                  >
+                    <ChevronLeft className="h-4 w-4 stroke-[2.5]" />
+                  </button>
+
+                  {/* Thumbnail Scroll Container */}
+                  <div
+                    ref={thumbnailScrollRef}
+                    className="flex gap-2.5 sm:gap-3 overflow-x-auto py-2 px-1 scroll-smooth scrollbar-thin scrollbar-thumb-muted-foreground/30 hover:scrollbar-thumb-muted-foreground/50 w-full"
+                    style={{ scrollbarWidth: "thin" }}
+                  >
+                    {images.map((img, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          setSelectedImage(i);
+                          setShowVideo(false);
+                        }}
+                        className={`w-16 h-16 sm:w-20 sm:h-20 lg:w-[84px] lg:h-[84px] rounded-2xl overflow-hidden border-2 transition-all duration-200 flex-shrink-0 bg-white dark:bg-card p-1.5 cursor-pointer relative ${
+                          selectedImage === i && !showVideo
+                            ? 'border-orange-500 ring-3 ring-orange-500/25 shadow-lg scale-105 z-10'
+                            : 'border-border/80 hover:border-orange-500/60 opacity-80 hover:opacity-100 hover:scale-102'
+                        }`}
+                        title={`View photo ${i + 1}`}
+                      >
                         <img
-                          src={`https://img.youtube.com/vi/${product.video_url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]}/mqdefault.jpg`}
-                          alt="Video thumbnail"
-                          className="w-full h-full object-cover"
+                          src={img}
+                          alt=""
+                          style={{ imageRendering: "-webkit-optimize-contrast" }}
+                          className="w-full h-full object-contain transition-transform duration-200"
+                          onError={handleImageError}
                         />
-                      ) : (
-                        <video src={product.video_url} className="w-full h-full object-cover" muted playsInline />
-                      )}
-                    </button>
-                  )}
+                      </button>
+                    ))}
+
+                    {/* Video thumbnail */}
+                    {product.video_url && (
+                      <button
+                        type="button"
+                        onClick={() => setShowVideo(true)}
+                        className={`w-16 h-16 sm:w-20 sm:h-20 lg:w-[84px] lg:h-[84px] rounded-2xl overflow-hidden border-2 transition-all duration-200 flex items-center justify-center bg-muted flex-shrink-0 relative cursor-pointer ${
+                          showVideo ? 'border-orange-500 ring-3 ring-orange-500/25 shadow-lg scale-105 z-10' : 'border-border/80 hover:border-orange-500/60 opacity-80 hover:opacity-100 hover:scale-102'
+                        }`}
+                        title="Watch product video"
+                      >
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+                          <Play className="h-5 w-5 sm:h-6 sm:w-6 text-white fill-white" />
+                        </div>
+                        {getYouTubeEmbedUrl(product.video_url) ? (
+                          <img
+                            src={`https://img.youtube.com/vi/${product.video_url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]}/mqdefault.jpg`}
+                            alt="Video thumbnail"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <video src={product.video_url} className="w-full h-full object-cover" muted playsInline />
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Right scroll chevron button */}
+                  <button
+                    type="button"
+                    onClick={() => scrollThumbnails("right")}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 sm:translate-x-2 z-20 w-8 h-8 rounded-full bg-white/95 dark:bg-card/95 shadow-md border border-border/80 flex items-center justify-center text-foreground hover:bg-orange-500 hover:text-white transition-all opacity-80 hover:opacity-100 hover:scale-110 active:scale-95 cursor-pointer hidden sm:flex"
+                    aria-label="Scroll right"
+                    title="Next photos"
+                  >
+                    <ChevronRight className="h-4 w-4 stroke-[2.5]" />
+                  </button>
                 </div>
               )}
-
-              {/* Trust & Guarantee Highlights Card (Desktop and Tablet) to fill left column and provide instant trust */}
-              <div className="hidden lg:block mt-4 w-full sm:max-w-[480px] md:max-w-[520px] lg:max-w-[540px] xl:max-w-[580px] mx-auto rounded-2xl border border-border/80 bg-muted/20 p-4 space-y-3">
-                <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/60">
-                  <div className="w-8 h-8 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center shrink-0">
-                    <ShieldCheck className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-foreground">১০০% অথেনটিক কোয়ালিটি নিশ্চয়তা</h4>
-                    <p className="text-[11px] text-muted-foreground">কুরিয়ারের সামনে প্রডাক্ট দেখে নেওয়ার সুবিধা</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  <div className="flex items-center gap-2 p-2 rounded-xl bg-card border border-border/60">
-                    <Truck className="h-3.5 w-3.5 text-orange-600 shrink-0" />
-                    <div>
-                      <span className="font-bold text-foreground block">ক্যাশ অন ডেলিভারি</span>
-                      <span className="text-muted-foreground text-[10px]">সারাদেশের ৬৪ জেলায়</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 p-2 rounded-xl bg-card border border-border/60">
-                    <RotateCcw className="h-3.5 w-3.5 text-orange-600 shrink-0" />
-                    <div>
-                      <span className="font-bold text-foreground block">৭ দিনের রিটার্ন</span>
-                      <span className="text-muted-foreground text-[10px]">সহজ এক্সচেঞ্জ পলিসি</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Award className="h-3.5 w-3.5 text-orange-600" />
-                    ভেরিফায়েড সেলার & অরিজিনাল আইটেম
-                  </span>
-                  <span className="font-bold text-orange-600">Durtup Express</span>
-                </div>
-              </div>
             </div>
 
 
