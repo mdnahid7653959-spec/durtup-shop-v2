@@ -19,7 +19,7 @@ import { RelatedProducts } from "@/components/products/RelatedProducts";
 import { ProductReviews } from "@/components/products/ProductReviews";
 import { StoreDetails } from "@/components/products/StoreDetails";
 import { ProductDescriptionSection } from "@/components/products/ProductDescriptionSection";
-import { getCachedMohasagorProducts, findMohasagorProduct, findMohasagorProductSync, FALLBACK_SUPPLIER_PRODUCTS } from "@/utils/mohasagorCache";
+import { getCachedMohasagorProducts, findMohasagorProduct, findMohasagorProductSync, findSeriesImages, FALLBACK_SUPPLIER_PRODUCTS } from "@/utils/mohasagorCache";
 import { calculateProductPrice } from "@/utils/pricingMargin";
 import { getSmartProductImage, getDirectImageUrl, optimizeImageUrl } from "@/utils/productImageHelper";
 import { getEnhancedProductDescription } from "@/utils/productDescriptionHelper";
@@ -289,6 +289,12 @@ const mapSupplierImages = (raw: any): ProductImage[] => {
   if (raw.photo) addImg(raw.photo);
   if (raw.featured_image) addImg(raw.featured_image);
 
+  // 6. Enrich with all sibling and variant angle photos across the same series
+  if (product_images.length <= 1 && (raw.name || raw.title)) {
+    const seriesUrls = findSeriesImages(raw.name || raw.title, product_images.map(i => i.image_url));
+    seriesUrls.forEach(u => addImg(u));
+  }
+
   return product_images;
 };
 
@@ -475,7 +481,9 @@ function ProductDetailContent() {
     ? [(product as any).image_url || (product as any).image]
     : [getSmartProductImage(product?.name || "", "", product?.category_id || "")];
 
-  const rawResolved = (rawImgList || []).map(resolveImage).filter(Boolean);
+  const enrichedImgList = findSeriesImages(product?.name || "", rawImgList);
+
+  const rawResolved = (enrichedImgList || []).map(resolveImage).filter(Boolean);
   const seenImgKeys = new Set<string>();
   const images: string[] = [];
   for (const u of rawResolved) {

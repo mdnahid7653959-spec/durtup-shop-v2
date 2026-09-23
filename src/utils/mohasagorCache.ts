@@ -183,6 +183,69 @@ export function getLastSyncTime(): string | null {
   return new Date(lastSyncTimestamp).toLocaleTimeString();
 }
 
+/**
+ * Automatically discovers all available photos across the same product series or combo
+ * (e.g. all color variants, model views, and packaging photos from the catalog)
+ */
+export function findSeriesImages(productName: string, existingImages: string[] = []): string[] {
+  const result = [...existingImages.filter(Boolean)];
+  if (!productName || typeof productName !== "string") return result;
+
+  const addedKeys = new Set<string>();
+  const addKey = (url: string) => {
+    if (!url || typeof url !== "string") return "";
+    const clean = url.split("?")[0].split("#")[0].trim().toLowerCase();
+    const parts = clean.split("/").filter(Boolean);
+    return parts.length >= 2 ? parts.slice(-2).join("/") : clean;
+  };
+
+  result.forEach(u => {
+    const k = addKey(u);
+    if (k) addedKeys.add(k);
+  });
+
+  const stopWords = new Set([
+    "men", "mens", "women", "womens", "combo", "piece", "pieces", "pcs", "stylish", 
+    "offer", "hot", "deal", "new", "exclusive", "premium", "best", "quality", "free",
+    "delivery", "pack", "set", "for", "and", "with", "tshirt", "t-shirt", "fashion"
+  ]);
+
+  const cleanName = productName.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, " ");
+  const tokens = cleanName.split(" ").filter(w => w.length > 3 && !stopWords.has(w));
+  if (tokens.length === 0) return result;
+
+  const catalog = (inMemoryProductsCache && inMemoryProductsCache.length > 0) 
+    ? inMemoryProductsCache 
+    : (cachedRawSlimProducts && cachedRawSlimProducts.length > 0)
+    ? cachedRawSlimProducts
+    : FAST_SEED_PRODUCTS;
+
+  const matches = catalog.filter((p: any) => {
+    if (!p || (!p.name && !p.title)) return false;
+    const pName = (p.name || p.title || "").toLowerCase();
+    return tokens.every(t => pName.includes(t));
+  });
+
+  for (const m of matches) {
+    const rawImgs = m.product_images && m.product_images.length > 0
+      ? m.product_images.map((i: any) => typeof i === "string" ? i : (i.image_url || i.product_image || i.image || i.url))
+      : (m.images && Array.isArray(m.images) && m.images.length > 0)
+      ? m.images
+      : (m.image_url || m.image ? [m.image_url || m.image] : []);
+
+    for (const rawUrl of rawImgs) {
+      if (!rawUrl || typeof rawUrl !== "string") continue;
+      const k = addKey(rawUrl);
+      if (k && !addedKeys.has(k)) {
+        addedKeys.add(k);
+        result.push(rawUrl);
+      }
+    }
+  }
+
+  return result;
+}
+
 export const FALLBACK_SUPPLIER_PRODUCTS: Product[] = FAST_SEED_PRODUCTS;
 
 export function startMohasagorAutoSync() {
