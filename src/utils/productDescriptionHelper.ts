@@ -65,9 +65,9 @@ export function generateSmartDescription(context: ProductDescriptionContext): st
     Experience ultimate comfort and daily foot wellness with <strong>${name}</strong>. Specially engineered with ergonomic acupressure massage nodes and therapeutic magnetic points to promote healthy blood circulation, relieve heel and arch pain, and absorb foot shock during walking, standing, or sports.
   </p>
 
-  <div class="bg-primary/5 border border-primary/15 rounded-xl p-4 my-3">
-    <h4 class="font-bold text-sm text-foreground flex items-center gap-2 mb-2.5">
-      ⭐ Key Features & Benefits:
+  <div class="bg-muted/30 border border-border/70 rounded-xl p-4 my-3">
+    <h4 class="font-semibold text-sm text-foreground mb-2.5">
+      Key Features & Benefits:
     </h4>
     <ul class="space-y-1.5 text-xs sm:text-sm text-muted-foreground list-disc pl-5">
       <li><strong>Acupressure & Magnetic Therapy:</strong> Strategically positioned therapeutic magnets stimulate reflexology points on your feet for natural pain relief.</li>
@@ -85,8 +85,8 @@ export function generateSmartDescription(context: ProductDescriptionContext): st
     <div><strong>Quality Guarantee:</strong> 100% Brand New & Verified Quality</div>
   </div>
 
-  <div class="text-xs text-muted-foreground pt-1 border-t">
-    <p>🚚 <strong>Delivery:</strong> Inside Dhaka (24-48 Hours) | Outside Dhaka (48-72 Hours) with Cash on Delivery nationwide.</p>
+  <div class="text-xs text-muted-foreground pt-1 border-t border-border/60">
+    <p><strong>Delivery:</strong> Inside Dhaka (24-48 Hours) | Outside Dhaka (48-72 Hours) with Cash on Delivery nationwide.</p>
   </div>
 </div>
 `.trim();
@@ -111,9 +111,9 @@ export function generateSmartDescription(context: ProductDescriptionContext): st
     Upgrade your modern kitchen convenience with <strong>${name}</strong>. Designed for fast, energy-efficient, and effortless daily food preparation, steaming, boiling, and cooking with premium safety standards.
   </p>
 
-  <div class="bg-primary/5 border border-primary/15 rounded-xl p-4 my-3">
-    <h4 class="font-bold text-sm text-foreground flex items-center gap-2 mb-2.5">
-      ⭐ Key Features & Specifications:
+  <div class="bg-muted/30 border border-border/70 rounded-xl p-4 my-3">
+    <h4 class="font-semibold text-sm text-foreground mb-2.5">
+      Key Features & Specifications:
     </h4>
     <ul class="space-y-1.5 text-xs sm:text-sm text-muted-foreground list-disc pl-5">
       <li><strong>Multi-Functional Versatility:</strong> Perfect for boiling, steaming, simmering, making soup, instant noodles, hot pot, and healthy meals.</li>
@@ -127,12 +127,12 @@ export function generateSmartDescription(context: ProductDescriptionContext): st
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs border rounded-xl p-3 bg-muted/20">
     <div><strong>Category:</strong> Kitchen & Home Appliances</div>
     <div><strong>Body Material:</strong> Food Grade Stainless Steel & Heat-Resistant PP</div>
-    <div><strong>Warranty:</strong> 7 Days Replacement Guarantee</div>
+    <div><strong>Quality Standard:</strong> 100% Quality Checked</div>
     <div><strong>Condition:</strong> 100% Brand New Authentic Unit</div>
   </div>
 
-  <div class="text-xs text-muted-foreground pt-1 border-t">
-    <p>🚚 <strong>Delivery:</strong> 100% Cash on Delivery available across all 64 districts in Bangladesh with secure packaging.</p>
+  <div class="text-xs text-muted-foreground pt-1 border-t border-border/60">
+    <p><strong>Delivery:</strong> Cash on Delivery available across all 64 districts in Bangladesh with secure packaging.</p>
   </div>
 </div>
 `.trim();
@@ -157,9 +157,9 @@ export function generateSmartDescription(context: ProductDescriptionContext): st
     Power up your daily digital lifestyle with <strong>${name}</strong>. Built with premium chipset technology, durable build quality, and smart safety protection to deliver exceptional reliability and high performance.
   </p>
 
-  <div class="bg-primary/5 border border-primary/15 rounded-xl p-4 my-3">
-    <h4 class="font-bold text-sm text-foreground flex items-center gap-2 mb-2.5">
-      ⭐ Key Highlights:
+  <div class="bg-muted/30 border border-border/70 rounded-xl p-4 my-3">
+    <h4 class="font-semibold text-sm text-foreground mb-2.5">
+      Key Highlights:
     </h4>
     <ul class="space-y-1.5 text-xs sm:text-sm text-muted-foreground list-disc pl-5">
       <li><strong>High-Speed & Reliable Performance:</strong> Engineered for optimal efficiency, quick response, and steady continuous output.</li>
@@ -173,12 +173,12 @@ export function generateSmartDescription(context: ProductDescriptionContext): st
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs border rounded-xl p-3 bg-muted/20">
     <div><strong>Device Category:</strong> Electronics & Smart Gadgets</div>
     <div><strong>Build:</strong> High-grade Fireproof ABS & Pure Copper Conductors</div>
-    <div><strong>Warranty:</strong> 7 Days Replacement Warranty</div>
+    <div><strong>Quality Standard:</strong> 100% Quality Checked</div>
     <div><strong>Package:</strong> 1x Original Retail Packaging Unit</div>
   </div>
 
-  <div class="text-xs text-muted-foreground pt-1 border-t">
-    <p>🚚 <strong>Delivery:</strong> Express shipping available across Bangladesh with doorstep inspection upon Cash on Delivery.</p>
+  <div class="text-xs text-muted-foreground pt-1 border-t border-border/60">
+    <p><strong>Delivery:</strong> Express shipping available across Bangladesh with doorstep inspection upon Cash on Delivery.</p>
   </div>
 </div>
 `.trim();
@@ -202,9 +202,9 @@ export function generateSmartDescription(context: ProductDescriptionContext): st
     Elevate your everyday style with <strong>${name}</strong>. Combining premium craftsmanship, comfortable materials, and contemporary design for a confident, fashionable look.
   </p>
 
-  <div class="bg-primary/5 border border-primary/15 rounded-xl p-4 my-3">
-    <h4 class="font-bold text-sm text-foreground flex items-center gap-2 mb-2.5">
-      ⭐ Product Details & Highlights:
+  <div class="bg-muted/30 border border-border/70 rounded-xl p-4 my-3">
+    <h4 class="font-semibold text-sm text-foreground mb-2.5">
+      Product Details & Highlights:
     </h4>
     <ul class="space-y-1.5 text-xs sm:text-sm text-muted-foreground list-disc pl-5">
       <li><strong>Premium Quality Fabric:</strong> Soft, breathable, skin-friendly, and durable for maximum all-day comfort.</li>
@@ -218,11 +218,11 @@ export function generateSmartDescription(context: ProductDescriptionContext): st
     <div><strong>Category:</strong> Fashion & Lifestyle</div>
     <div><strong>Fit & Feel:</strong> Regular Comfortable Fit</div>
     <div><strong>Care Instructions:</strong> Machine wash cold or gentle hand wash</div>
-    <div><strong>Return Policy:</strong> 7 Days Easy Size Exchange / Return</div>
+    <div><strong>Fabric Quality:</strong> Pre-Shrunk & Color Fastness Tested</div>
   </div>
 
-  <div class="text-xs text-muted-foreground pt-1 border-t">
-    <p>🚚 <strong>Delivery:</strong> Fast Cash on Delivery to all 64 districts in Bangladesh.</p>
+  <div class="text-xs text-muted-foreground pt-1 border-t border-border/60">
+    <p><strong>Delivery:</strong> Fast Cash on Delivery to all 64 districts in Bangladesh.</p>
   </div>
 </div>
 `.trim();
@@ -235,9 +235,9 @@ export function generateSmartDescription(context: ProductDescriptionContext): st
     Discover premium quality and unbeatable value with <strong>${name}</strong> on Durtup.shop. Sourced from verified manufacturers and tested for authentic performance, durability, and daily convenience.
   </p>
 
-  <div class="bg-primary/5 border border-primary/15 rounded-xl p-4 my-3">
-    <h4 class="font-bold text-sm text-foreground flex items-center gap-2 mb-2.5">
-      ⭐ Product Highlights:
+  <div class="bg-muted/30 border border-border/70 rounded-xl p-4 my-3">
+    <h4 class="font-semibold text-sm text-foreground mb-2.5">
+      Product Highlights:
     </h4>
     <ul class="space-y-1.5 text-xs sm:text-sm text-muted-foreground list-disc pl-5">
       <li><strong>100% Authentic Quality:</strong> Brand new, genuine product verified for optimal functionality and reliability.</li>
@@ -250,12 +250,12 @@ export function generateSmartDescription(context: ProductDescriptionContext): st
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs border rounded-xl p-3 bg-muted/20">
     <div><strong>Product Name:</strong> ${name}</div>
     <div><strong>Quality Standard:</strong> 100% Quality Checked</div>
-    <div><strong>Warranty:</strong> 7 Days Return & Replacement Guarantee</div>
     <div><strong>Payment:</strong> Cash on Delivery (COD) & Online Payment</div>
+    <div><strong>Availability:</strong> In Stock & Ready to Ship</div>
   </div>
 
-  <div class="text-xs text-muted-foreground pt-1 border-t">
-    <p>🚚 <strong>Fast Delivery:</strong> Express delivery across all 64 districts in Bangladesh with reliable parcel tracking.</p>
+  <div class="text-xs text-muted-foreground pt-1 border-t border-border/60">
+    <p><strong>Fast Delivery:</strong> Express delivery across all 64 districts in Bangladesh with reliable parcel tracking.</p>
   </div>
 </div>
 `.trim();

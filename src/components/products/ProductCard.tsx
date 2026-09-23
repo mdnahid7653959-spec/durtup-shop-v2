@@ -7,6 +7,7 @@ import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { getSmartProductImage } from "@/utils/productImageHelper";
+import { saveFastProduct } from "@/utils/fastProductStorage";
 
 export interface Product {
   id: string;
@@ -65,6 +66,7 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
   };
 
   const handlePreload = () => {
+    saveFastProduct(product);
     if (displayImage) {
       const img = new Image();
       img.src = displayImage;
@@ -111,6 +113,7 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
           state={{ preloadedProduct: product }}
           onMouseEnter={handlePreload}
           onTouchStart={handlePreload}
+          onClick={() => saveFastProduct(product)}
           className="block"
         >
           <div className="relative aspect-square overflow-hidden bg-muted/30">
@@ -139,6 +142,7 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
             state={{ preloadedProduct: product }}
             onMouseEnter={handlePreload}
             onTouchStart={handlePreload}
+            onClick={() => saveFastProduct(product)}
           >
             <h3 className="font-medium text-[12px] sm:text-[13px] leading-tight text-foreground line-clamp-2 mb-1.5 min-h-[2rem] hover:text-orange-600 transition-colors">
               {product.name}

@@ -6,6 +6,7 @@ import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
 export { FAST_SEED_PRODUCTS };
 import { findCategoryOrSubcategory, CATEGORIES_DATA } from "@/data/categoriesData";
 import { EcomsellerEngine } from "@/services/suppliers/ecomsellerEngine";
+import { getFastProduct, saveFastProduct } from "@/utils/fastProductStorage";
 
 const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v13";
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -143,6 +144,13 @@ export function findMohasagorProductSync(slugOrId: string): (Product & { [key: s
   const suffixMatch = targetRaw.match(/-(\d+)$/);
   const suffixId = suffixMatch ? suffixMatch[1] : (/^\d+$/.test(cleanId) ? cleanId : "");
   if (suffixId && productIndexMap.has(suffixId)) return productIndexMap.get(suffixId)!;
+
+  // 0ms instant local/session storage cache
+  const fast = getFastProduct(targetRaw) || (suffixId ? getFastProduct(suffixId) : null) || (cleanId ? getFastProduct(cleanId) : null);
+  if (fast) {
+    updateIndexMap([fast as any]);
+    return fast as any;
+  }
 
   // Fallback scan across in-memory cache
   if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
@@ -332,6 +340,64 @@ if (typeof window !== "undefined") {
   }
 }
 
+let cachedRawSlimProducts: any[] | null = null;
+let ongoingRawSlimPromise: Promise<any[]> | null = null;
+
+export async function getRawSlimCatalog(): Promise<any[]> {
+  if (cachedRawSlimProducts && cachedRawSlimProducts.length > 0) {
+    return cachedRawSlimProducts;
+  }
+  if (ongoingRawSlimPromise) {
+    return ongoingRawSlimPromise;
+  }
+
+  ongoingRawSlimPromise = (async () => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+      const res = await fetch("/mohasagor_catalog_slim.json", { signal: controller.signal });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const raw = await res.json();
+        if (Array.isArray(raw) && raw.length > 0) {
+          cachedRawSlimProducts = raw;
+          return raw;
+        }
+      }
+    } catch (err) {
+      console.warn("Raw slim catalog load error:", err);
+    } finally {
+      ongoingRawSlimPromise = null;
+    }
+    return [];
+  })();
+
+  return ongoingRawSlimPromise;
+}
+
+export function scheduleBackgroundFullMapping(rawProducts: any[]): void {
+  if (inMemoryProductsCache && inMemoryProductsCache.length >= 2000) return;
+  const runner = () => {
+    try {
+      if (inMemoryProductsCache && inMemoryProductsCache.length >= 2000) return;
+      const mapped = mapRawProducts(rawProducts, "https://mohasagor.com.bd");
+      inMemoryProductsCache = mapped;
+      updateIndexMap(mapped);
+      clearCategoryFilterCache();
+      setIdbProducts(mapped).catch(() => {});
+      notifyCatalogUpdated();
+    } catch (e) {
+      console.warn("Background mapping warning:", e);
+    }
+  };
+
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    (window as any).requestIdleCallback(runner, { timeout: 3000 });
+  } else {
+    setTimeout(runner, 150);
+  }
+}
+
 let ongoingSlimCatalogPromise: Promise<Product[]> | null = null;
 
 export async function fetchSlimCatalog(): Promise<Product[]> {
@@ -344,21 +410,15 @@ export async function fetchSlimCatalog(): Promise<Product[]> {
 
   ongoingSlimCatalogPromise = (async () => {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 20000);
-      const res = await fetch("/mohasagor_catalog_slim.json", { signal: controller.signal });
-      clearTimeout(timeout);
-      if (res.ok) {
-        const rawProducts = await res.json();
-        if (Array.isArray(rawProducts) && rawProducts.length > 0) {
-          const mapped = mapRawProducts(rawProducts, "https://mohasagor.com.bd");
-          inMemoryProductsCache = mapped;
-          updateIndexMap(mapped);
-          clearCategoryFilterCache();
-          setIdbProducts(mapped).catch(() => {});
-          notifyCatalogUpdated();
-          return mapped;
-        }
+      const rawProducts = await getRawSlimCatalog();
+      if (Array.isArray(rawProducts) && rawProducts.length > 0) {
+        const mapped = mapRawProducts(rawProducts, "https://mohasagor.com.bd");
+        inMemoryProductsCache = mapped;
+        updateIndexMap(mapped);
+        clearCategoryFilterCache();
+        setIdbProducts(mapped).catch(() => {});
+        notifyCatalogUpdated();
+        return mapped;
       }
     } catch (err) {
       console.warn("Slim catalog load warning:", err);
@@ -448,7 +508,7 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
   return deduplicateProducts(FAST_SEED_PRODUCTS);
 }
 
-export function mapRawProducts(rawProducts: any[], base: string = "https://mohasagor.com.bd"): Product[] {
+export function mapSingleRawProduct(p: any, base: string = "https://mohasagor.com.bd", index: number = 0): Product & { [key: string]: any } {
   const resolveUrl = (url: any): string => {
     if (!url || typeof url !== "string") return "";
     const trimmed = url.trim();
@@ -460,18 +520,18 @@ export function mapRawProducts(rawProducts: any[], base: string = "https://mohas
     return trimmed.startsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
   };
 
-  const extractAnyImg = (p: any): string => {
-    if (!p) return "";
-    if (typeof p === "string") return resolveUrl(p);
+  const extractAnyImg = (item: any): string => {
+    if (!item) return "";
+    if (typeof item === "string") return resolveUrl(item);
 
-    if (p.image && typeof p.image === "string") return resolveUrl(p.image);
-    if (p.thumbnail_img && typeof p.thumbnail_img === "string") return resolveUrl(p.thumbnail_img);
-    if (p.thumbnail && typeof p.thumbnail === "string") return resolveUrl(p.thumbnail);
-    if (p.image_url && typeof p.image_url === "string") return resolveUrl(p.image_url);
-    if (p.photo && typeof p.photo === "string") return resolveUrl(p.photo);
+    if (item.image && typeof item.image === "string") return resolveUrl(item.image);
+    if (item.thumbnail_img && typeof item.thumbnail_img === "string") return resolveUrl(item.thumbnail_img);
+    if (item.thumbnail && typeof item.thumbnail === "string") return resolveUrl(item.thumbnail);
+    if (item.image_url && typeof item.image_url === "string") return resolveUrl(item.image_url);
+    if (item.photo && typeof item.photo === "string") return resolveUrl(item.photo);
 
-    if (Array.isArray(p.product_images) && p.product_images.length > 0) {
-      for (const img of p.product_images) {
+    if (Array.isArray(item.product_images) && item.product_images.length > 0) {
+      for (const img of item.product_images) {
         if (typeof img === "string" && img.trim()) return resolveUrl(img);
         if (img && typeof img === "object") {
           const u = img.product_image || img.image_url || img.image || img.url;
@@ -480,8 +540,8 @@ export function mapRawProducts(rawProducts: any[], base: string = "https://mohas
       }
     }
 
-    if (Array.isArray(p.images) && p.images.length > 0) {
-      for (const img of p.images) {
+    if (Array.isArray(item.images) && item.images.length > 0) {
+      for (const img of item.images) {
         if (typeof img === "string" && img.trim()) return resolveUrl(img);
         if (img && typeof img === "object") {
           const u = img.image_url || img.image || img.url;
@@ -493,77 +553,80 @@ export function mapRawProducts(rawProducts: any[], base: string = "https://mohas
     return "";
   };
 
-  return rawProducts.map((p, index) => {
-    const rawImage = extractAnyImg(p);
-    const firstImage = getSmartProductImage(p.name, rawImage, p.category || "", index);
+  const rawImage = extractAnyImg(p);
+  const firstImage = getSmartProductImage(p.name, rawImage, p.category || "", index);
 
-    // Base supplier price from API (p.price or p.sale_price)
-    const exactRetailPrice = parseFloat(p.price) || parseFloat(p.sale_price) || 0;
-    const rawRegularPrice = parseFloat(p.regular_price) || 0;
+  // Base supplier price from API (p.price or p.sale_price)
+  const exactRetailPrice = parseFloat(p.price) || parseFloat(p.sale_price) || 0;
+  const rawRegularPrice = parseFloat(p.regular_price) || 0;
 
-    // Dynamically calculate price with Admin Profit Margin settings
-    const calc = calculateProductPrice(exactRetailPrice, undefined, rawRegularPrice);
-    const price = calc.price;
-    const originalPrice = calc.originalPrice;
+  // Dynamically calculate price with Admin Profit Margin settings
+  const calc = calculateProductPrice(exactRetailPrice, undefined, rawRegularPrice);
+  const price = calc.price;
+  const originalPrice = calc.originalPrice;
 
-    const allImages: string[] = [];
-    if (Array.isArray(p.product_images) && p.product_images.length > 0) {
-      p.product_images.forEach((imgObj: any) => {
-        const u = typeof imgObj === "string" ? resolveUrl(imgObj) : resolveUrl(imgObj?.product_image || imgObj?.image || imgObj?.url || imgObj?.image_url);
-        if (u && !allImages.includes(u)) allImages.push(u);
-      });
-    }
-    if (allImages.length === 0) {
-      allImages.push(firstImage);
-    }
+  const allImages: string[] = [];
+  if (Array.isArray(p.product_images) && p.product_images.length > 0) {
+    p.product_images.forEach((imgObj: any) => {
+      const u = typeof imgObj === "string" ? resolveUrl(imgObj) : resolveUrl(imgObj?.product_image || imgObj?.image || imgObj?.url || imgObj?.image_url);
+      if (u && !allImages.includes(u)) allImages.push(u);
+    });
+  }
+  if (allImages.length === 0) {
+    allImages.push(firstImage);
+  }
 
-    const formattedImgList = allImages.map((imgUrl, idx) => ({
-      id: `img-${idx}`,
-      image_url: imgUrl,
-      sort_order: idx
-    }));
+  const formattedImgList = allImages.map((imgUrl, idx) => ({
+    id: `img-${idx}`,
+    image_url: imgUrl,
+    sort_order: idx
+  }));
 
-    const rawStock = p.stock_quantity ?? p.stock ?? (p.stock_status === "available" ? 50 : 0);
+  const rawStock = p.stock_quantity ?? p.stock ?? (p.stock_status === "available" ? 50 : 0);
 
-    // Map Product Variants (Size, Color, Options) using robust multi-source extractor
-    const variants = extractProductVariants(p);
+  // Map Product Variants (Size, Color, Options) using robust multi-source extractor
+  const variants = extractProductVariants(p);
 
-    const rawCategory = p.category || "";
-    const inferredSlug = inferCategory(p.name || p.title || "", rawCategory);
-    const matchedCat = CATEGORIES_DATA.find(c => c.slug === inferredSlug);
-    const canonicalCatName = matchedCat ? matchedCat.name : (rawCategory || "Gadgets & Electronics");
+  const rawCategory = p.category || "";
+  const inferredSlug = inferCategory(p.name || p.title || "", rawCategory);
+  const matchedCat = CATEGORIES_DATA.find(c => c.slug === inferredSlug);
+  const canonicalCatName = matchedCat ? matchedCat.name : (rawCategory || "Gadgets & Electronics");
 
-    return {
-      id: String(p.id || `prod_${Date.now()}_${index}`),
-      name: p.name || p.title || "Product",
-      slug: p.slug || `product-${p.id}`,
-      image: firstImage,
-      images: allImages,
-      product_images: formattedImgList,
-      product_variants: variants,
-      variants,
-      price,
-      originalPrice: originalPrice > price ? originalPrice : undefined,
-      regular_price: calc.regularPrice,
-      discount_price: calc.discountPrice,
-      rating: Number(p.rating || p.rating_average || 4.8),
-      reviews: Number(p.reviews || p.rating_count || 15),
-      sold: parseInt(p.sold) || parseInt(p.sold_count) || 45,
-      freeShipping: true,
-      isNew: index < 20,
-      isBestSeller: index % 4 === 0,
-      category: canonicalCatName,
-      category_name: canonicalCatName,
-      category_slug: inferredSlug,
-      description: p.details || p.description || "",
-      short_description: p.short_description || "",
-      stock: Number(rawStock),
-      stock_quantity: Number(rawStock),
-      stock_status: p.stock_status || "available",
-      sku: p.product_code ? String(p.product_code) : (p.sku || ""),
-      product_code: p.product_code
-    } as Product & { [key: string]: any };
-  });
+  return {
+    id: String(p.id || `prod_${Date.now()}_${index}`),
+    name: p.name || p.title || "Product",
+    slug: p.slug || `product-${p.id}`,
+    image: firstImage,
+    images: allImages,
+    product_images: formattedImgList,
+    product_variants: variants,
+    variants,
+    price,
+    originalPrice: originalPrice > price ? originalPrice : undefined,
+    regular_price: calc.regularPrice,
+    discount_price: calc.discountPrice,
+    rating: Number(p.rating || p.rating_average || 4.8),
+    reviews: Number(p.reviews || p.rating_count || 15),
+    sold: parseInt(p.sold) || parseInt(p.sold_count) || 45,
+    freeShipping: true,
+    isNew: index < 20,
+    isBestSeller: index % 4 === 0,
+    category: canonicalCatName,
+    category_name: canonicalCatName,
+    category_slug: inferredSlug,
+    description: p.details || p.description || "",
+    short_description: p.short_description || "",
+    stock: Number(rawStock),
+    stock_quantity: Number(rawStock),
+    stock_status: p.stock_status || "available",
+    sku: p.product_code ? String(p.product_code) : (p.sku || ""),
+    product_code: p.product_code
+  } as Product & { [key: string]: any };
+}
+
+export function mapRawProducts(rawProducts: any[], base: string = "https://mohasagor.com.bd"): Product[] {
+  if (!Array.isArray(rawProducts)) return [];
+  return rawProducts.map((p, index) => mapSingleRawProduct(p, base, index));
 }
 
 async function fetchPageWithFallback(pageNum: number, headers: Record<string, string>, retries = 3): Promise<any[]> {
@@ -748,6 +811,7 @@ export async function findMohasagorProduct(slugOrId: string): Promise<(Product &
     const memFound = inMemoryProductsCache.find(matcher);
     if (memFound) {
       updateIndexMap([memFound as any]);
+      saveFastProduct(memFound);
       return memFound as any;
     }
   }
@@ -759,36 +823,29 @@ export async function findMohasagorProduct(slugOrId: string): Promise<(Product &
       inMemoryProductsCache = idbData;
       updateIndexMap(idbData);
       const found = idbData.find(matcher);
-      if (found) return found as any;
+      if (found) {
+        saveFastProduct(found);
+        return found as any;
+      }
     }
   } catch {}
 
-  // 3. Load slim catalog first (Instant resolution, contains all 2,818 items with images & variants)
+  // 3. Ultra-fast raw search in slim catalog (Instant 1ms resolution without main-thread freeze!)
   try {
-    const slimCatalog = await fetchSlimCatalog();
-    if (slimCatalog && slimCatalog.length > 0) {
-      const found = slimCatalog.find(matcher);
-      if (found) {
-        updateIndexMap([found as any]);
-        return found as any;
+    const rawList = await getRawSlimCatalog();
+    if (rawList && rawList.length > 0) {
+      const rawFound = rawList.find(matcher);
+      if (rawFound) {
+        const singleMapped = mapSingleRawProduct(rawFound);
+        updateIndexMap([singleMapped as any]);
+        saveFastProduct(singleMapped);
+        scheduleBackgroundFullMapping(rawList);
+        return singleMapped as any;
       }
+      scheduleBackgroundFullMapping(rawList);
     }
-  } catch (catalogErr) {
-    console.warn("fetchSlimCatalog lookup error:", catalogErr);
-  }
-
-  // 3b. Load static catalog if needed
-  try {
-    const staticCatalog = await fetchStaticCatalog();
-    if (staticCatalog && staticCatalog.length > 0) {
-      const found = staticCatalog.find(matcher);
-      if (found) {
-        updateIndexMap([found as any]);
-        return found as any;
-      }
-    }
-  } catch (catalogErr) {
-    console.warn("fetchStaticCatalog lookup error:", catalogErr);
+  } catch (rawErr) {
+    console.warn("Raw slim catalog fast lookup warning:", rawErr);
   }
 
   // 4. Check Ecomseller BD products
@@ -798,26 +855,13 @@ export async function findMohasagorProduct(slugOrId: string): Promise<(Product &
       const found = ecomProducts.find(matcher);
       if (found) {
         updateIndexMap([found as any]);
+        saveFastProduct(found);
         return found as any;
       }
     }
   } catch {}
 
-  // 5. Live crawl if product code / suffix exists but not found in catalog (newly added products)
-  try {
-    if (suffixId || cleanId) {
-      const liveCatalog = await fetchAllPagesMohasagorProducts(true);
-      if (liveCatalog && liveCatalog.length > 0) {
-        const found = liveCatalog.find(matcher);
-        if (found) {
-          updateIndexMap([found as any]);
-          return found as any;
-        }
-      }
-    }
-  } catch {}
-
-  // 6. Fuzzy keyword fallback: match keywords in slug
+  // 5. Fuzzy keyword fallback: match keywords in slug
   if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
     const cleanWords = targetLower.replace(/[^a-z0-9]+/g, " ").split(" ").filter(w => w.length > 3 && isNaN(Number(w)));
     if (cleanWords.length >= 2) {
@@ -829,12 +873,13 @@ export async function findMohasagorProduct(slugOrId: string): Promise<(Product &
       });
       if (fuzzy) {
         updateIndexMap([fuzzy as any]);
+        saveFastProduct(fuzzy);
         return fuzzy as any;
       }
     }
   }
 
-  // 7. Fallback to fast seed catalog
+  // 6. Fallback to fast seed catalog
   const fallback = FALLBACK_SUPPLIER_PRODUCTS.find(matcher);
   if (fallback) return fallback as any;
 

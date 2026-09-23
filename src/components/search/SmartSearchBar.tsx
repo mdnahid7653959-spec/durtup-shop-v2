@@ -153,19 +153,12 @@ export function SmartSearchBar({
       >
         <div
           className={cn(
-            "group relative w-full h-11 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700",
-            "rounded-full shadow-2xs transition-all duration-200 flex items-center pl-3.5 pr-2 gap-2",
+            "group relative w-full h-10 sm:h-11 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700",
+            "rounded-full shadow-2xs hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200 flex items-center pl-3.5 pr-1.5 gap-2",
             "focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20"
           )}
         >
-          <button
-            type="submit"
-            aria-label="Search"
-            title="Search"
-            className="p-1 text-slate-400 hover:text-orange-600 active:scale-90 transition-all shrink-0 cursor-pointer focus:outline-none"
-          >
-            <Search className="h-4 w-4 shrink-0" />
-          </button>
+          <Search className="h-4 w-4 text-slate-400 group-focus-within:text-orange-500 shrink-0 pointer-events-none transition-colors" />
 
           {/* Main Search Input */}
           <input
@@ -185,7 +178,7 @@ export function SmartSearchBar({
             }}
             onFocus={() => setOpen(true)}
             onKeyDown={onKeyDown}
-            className="w-full h-full bg-transparent text-foreground placeholder:text-slate-400 text-sm outline-none border-0 leading-none [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none font-medium"
+            className="w-full h-full bg-transparent text-foreground placeholder:text-slate-400 text-xs sm:text-sm outline-none border-0 leading-none [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none font-medium"
           />
 
           {/* Right Actions: Loader / Clear / Search Button */}
@@ -213,7 +206,7 @@ export function SmartSearchBar({
             <button
               type="submit"
               aria-label="Submit search"
-              className="h-8 px-3 rounded-full bg-orange-600 hover:bg-orange-500 active:scale-95 text-white text-xs font-semibold flex items-center gap-1 transition-all shadow-xs shrink-0"
+              className="h-7.5 sm:h-8 px-3.5 sm:px-4 rounded-full bg-orange-600 hover:bg-orange-500 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer"
             >
               <span>Search</span>
             </button>

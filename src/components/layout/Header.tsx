@@ -132,7 +132,7 @@ export function Header() {
 
           {/* Center: Search Bar (Desktop - On ALL pages except Checkout) / Checkout Secure Badge */}
           {!isCheckoutPage ? (
-            <div className="flex-1 max-w-2xl mx-2 hidden md:block">
+            <div className="flex-1 max-w-xl lg:max-w-2xl mx-3 lg:mx-6 hidden md:block">
               <SmartSearchBar variant="desktop" />
             </div>
           ) : (
@@ -232,7 +232,7 @@ export function Header() {
 
         {/* Search Bar (Mobile View - Always visible except on checkout) */}
         {!isCheckoutPage && (
-          <div className="mt-2 md:hidden">
+          <div className="mt-2 mb-2 md:hidden">
             <SmartSearchBar />
           </div>
         )}

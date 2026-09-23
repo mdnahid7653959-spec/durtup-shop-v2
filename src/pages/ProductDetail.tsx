@@ -25,7 +25,8 @@ import { getSmartProductImage } from "@/utils/productImageHelper";
 import { getEnhancedProductDescription } from "@/utils/productDescriptionHelper";
 import { extractProductVariants, getColorHex, sortVariantValues, type ProductVariant } from "@/utils/productVariantHelper";
 import { db } from "@/integrations/firebase/client";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, limit } from "firebase/firestore";
+import { getFastProduct, saveFastProduct } from "@/utils/fastProductStorage";
 import { ProductZoomViewer } from "@/components/products/ProductZoomViewer";
 import { SEOHead } from "@/components/SEOHead";
 import { generateProductSEOTitle, generateProductSEODescription, DEFAULT_BANGLADESH_PRODUCT_FAQS } from "@/utils/seoHelper";
@@ -320,13 +321,21 @@ function ProductDetailContent() {
   const initialProd = (() => {
     if (preloaded) {
       const mappedImages = mapSupplierImages(preloaded);
-      return mapSupplierProduct(preloaded, preloaded.slug || slug || "", mappedImages);
+      const mapped = mapSupplierProduct(preloaded, preloaded.slug || slug || "", mappedImages);
+      saveFastProduct(mapped);
+      return mapped;
     }
     if (slug) {
       const targetLower = String(slug).toLowerCase().trim();
       const suffixMatch = targetLower.match(/-(\d+)$/);
       const cleanId = targetLower.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "").replace(/^ecom-/, "").replace(/^ecom_/, "");
       const extractedId = suffixMatch ? suffixMatch[1] : (/^\d+$/.test(cleanId) ? cleanId : "");
+
+      // 1. Instant 0ms memory & session/local storage check
+      const fast = getFastProduct(slug) || 
+        (extractedId ? getFastProduct(extractedId) : null) || 
+        (cleanId ? getFastProduct(cleanId) : null);
+      if (fast) return fast;
 
       const cached = findMohasagorProductSync(slug) || 
         (extractedId ? findMohasagorProductSync(extractedId) : null) || 
@@ -335,7 +344,9 @@ function ProductDetailContent() {
 
       if (cached) {
         const mappedImages = mapSupplierImages(cached);
-        return mapSupplierProduct(cached, cached.slug || slug, mappedImages);
+        const mapped = mapSupplierProduct(cached, cached.slug || slug, mappedImages);
+        saveFastProduct(mapped);
+        return mapped;
       }
     }
     return null;
@@ -486,6 +497,7 @@ function ProductDetailContent() {
       loaded.product_variants = variants;
     }
     setProduct(loaded);
+    saveFastProduct(loaded);
 
     // Dynamic Title & OpenGraph meta tags for social share previews
     if (typeof document !== "undefined") {
@@ -547,281 +559,306 @@ function ProductDetailContent() {
       const cleanId = targetLower.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "").replace(/^ecom-/, "").replace(/^ecom_/, "");
       const extractedId = suffixMatch ? suffixMatch[1] : (/^\d+$/.test(cleanId) ? cleanId : "");
 
-      // Check synchronous cache / preloadedProduct first to render instantly
-      const syncProduct = findMohasagorProductSync(targetSlug) || 
+      // Check synchronous cache / fast storage / preloadedProduct first to render instantly
+      const syncProduct = (location.state as any)?.preloadedProduct ||
+        getFastProduct(targetSlug) ||
+        (extractedId ? getFastProduct(extractedId) : null) ||
+        (cleanId ? getFastProduct(cleanId) : null) ||
+        findMohasagorProductSync(targetSlug) || 
         (extractedId ? findMohasagorProductSync(extractedId) : null) || 
         (cleanId ? findMohasagorProductSync(cleanId) : null) ||
-        (cleanId ? findMohasagorProductSync(`ecom-${cleanId}`) : null) ||
-        (location.state as any)?.preloadedProduct;
+        (cleanId ? findMohasagorProductSync(`ecom-${cleanId}`) : null);
 
       if (syncProduct && syncProduct.name) {
         const mappedImages = mapSupplierImages(syncProduct);
         const mappedProduct = mapSupplierProduct(syncProduct, syncProduct.slug || targetSlug, mappedImages);
         applyLoadedProduct(mappedProduct);
+        trackView(mappedProduct.id);
+        recordUserProductView(mappedProduct);
         setLoading(false);
+        return;
       } else {
         setLoading(true);
       }
 
       try {
-        // 1. Direct Supplier Master Cache & All-Pages Crawler (Handles all 2,700+ supplier products 100% reliably in any browser)
-        try {
-          const foundSp = await findMohasagorProduct(targetSlug) || 
-            (extractedId ? await findMohasagorProduct(extractedId) : null) || 
-            (cleanId ? await findMohasagorProduct(cleanId) : null);
+        let resolved = false;
+        const handleFound = (p: Product) => {
+          if (resolved || !p) return;
+          resolved = true;
+          applyLoadedProduct(p);
+          trackView(p.id);
+          recordUserProductView(p);
+          setLoading(false);
+        };
 
-          if (foundSp) {
-            const mappedImages = mapSupplierImages(foundSp);
-            const mappedProduct = mapSupplierProduct(foundSp, foundSp.slug || targetSlug, mappedImages);
-            applyLoadedProduct(mappedProduct);
-            trackView(mappedProduct.id);
-            recordUserProductView(mappedProduct);
-            setLoading(false);
-            return;
-          }
-        } catch (spErr) {
-          console.warn("Supplier master lookup warning:", spErr);
-        }
-
-        // 1b. Direct Ecomseller BD Catalog Lookup
-        try {
-          const { EcomsellerEngine } = await import("@/services/suppliers/ecomsellerEngine");
-          const ecomProducts = await EcomsellerEngine.getCachedEcomsellerProducts();
-          let foundEcom = ecomProducts.find((p: any) => 
-            p.slug === targetLower || 
-            p.id === targetLower || 
-            p.id === `ecom-${cleanId}` ||
-            p.id === cleanId ||
-            p.supplier_sku === cleanId ||
-            p.sku?.toLowerCase() === targetLower ||
-            p.sku?.toLowerCase() === `ecom-${cleanId}`
-          );
-
-          // If not in cached list, try live detail fetch from Ecomseller API directly
-          if (!foundEcom) {
-            try {
-              const liveDetail = await EcomsellerEngine.fetchProductDetail(targetSlug || cleanId);
-              if (liveDetail && liveDetail.name) {
-                const { CategoryMappingService } = await import("@/services/suppliers/categoryMappingService");
-                const mappedCategory = CategoryMappingService.resolveCategory(liveDetail.categorySlug || "", liveDetail.category || "");
-                const pricingConfig = EcomsellerEngine.getPricingConfig();
-                const priceInfo = EcomsellerEngine.calculatePrice(liveDetail.price, mappedCategory.slug, liveDetail.id, pricingConfig);
-
-                foundEcom = {
-                  id: `ecom-${liveDetail.id}`,
-                  name: liveDetail.name,
-                  slug: liveDetail.slug || targetSlug,
-                  description: liveDetail.description || liveDetail.name,
-                  regular_price: priceInfo.regularStrikethroughPrice,
-                  discount_price: priceInfo.finalSellingPrice,
-                  price: priceInfo.finalSellingPrice,
-                  stock_quantity: liveDetail.stock || 25,
-                  is_featured: false,
-                  category_id: mappedCategory.id,
-                  category: mappedCategory.name,
-                  images: Array.isArray(liveDetail.images) && liveDetail.images.length > 0 ? liveDetail.images : [],
-                  image: Array.isArray(liveDetail.images) && liveDetail.images.length > 0 ? liveDetail.images[0] : "",
-                  supplier_sku: liveDetail.code,
-                  seller_id: "Ecomseller BD"
-                };
-              }
-            } catch (liveErr) {
-              console.warn("Live Ecomseller detail fetch warning:", liveErr);
+        // 1. Direct Supplier Master Cache & Raw Fast Catalog Lookup
+        const catalogWorker = async () => {
+          try {
+            const foundSp = await findMohasagorProduct(targetSlug);
+            if (foundSp && !resolved) {
+              const mappedImages = mapSupplierImages(foundSp);
+              const mappedProduct = mapSupplierProduct(foundSp, foundSp.slug || targetSlug, mappedImages);
+              handleFound(mappedProduct);
+              return;
             }
+          } catch (spErr) {
+            console.warn("Supplier master lookup warning:", spErr);
           }
 
-          if (foundEcom) {
-            let fullDesc = foundEcom.description;
-            let fullImages = Array.isArray(foundEcom.images) && foundEcom.images.length > 0 ? [...foundEcom.images] : [];
-            try {
-              const detail = await EcomsellerEngine.fetchProductDetail(foundEcom.slug || targetSlug);
-              if (detail) {
-                if (detail.description) fullDesc = detail.description;
-                if (Array.isArray(detail.images) && detail.images.length > 0) {
-                  detail.images.forEach((u: string) => {
-                    if (u && !fullImages.includes(u)) fullImages.push(u);
-                  });
-                }
-              }
-            } catch {}
+          // Direct Ecomseller BD Catalog Lookup
+          try {
+            const { EcomsellerEngine } = await import("@/services/suppliers/ecomsellerEngine");
+            const ecomProducts = await EcomsellerEngine.getCachedEcomsellerProducts();
+            let foundEcom = ecomProducts.find((p: any) => 
+              p.slug === targetLower || 
+              p.id === targetLower || 
+              p.id === `ecom-${cleanId}` ||
+              p.id === cleanId ||
+              p.supplier_sku === cleanId ||
+              p.sku?.toLowerCase() === targetLower ||
+              p.sku?.toLowerCase() === `ecom-${cleanId}`
+            );
 
-            if (fullImages.length === 0 && foundEcom.image) {
-              fullImages = [foundEcom.image];
-            }
-
-            const imgList: ProductImage[] = fullImages.map((imgUrl: string, idx: number) => ({
-              id: `ecom-img-${idx}`,
-              image_url: imgUrl,
-              is_primary: idx === 0,
-              sort_order: idx
-            }));
-
-            const formatted: Product = {
-              id: foundEcom.id,
-              name: foundEcom.name,
-              slug: foundEcom.slug || targetSlug,
-              short_description: null,
-              description: fullDesc || foundEcom.name,
-              regular_price: foundEcom.regular_price,
-              discount_price: foundEcom.discount_price || foundEcom.price,
-              stock_quantity: foundEcom.stock_quantity || 25,
-              free_shipping: true,
-              rating_average: 4.8,
-              rating_count: 18,
-              sold_count: 52,
-              is_featured: Boolean(foundEcom.is_featured),
-              warranty_info: "7 Days Replacement Warranty",
-              return_policy: "Standard 7 days return policy",
-              color: null,
-              video_url: null,
-              product_images: imgList,
-              product_variants: [],
-              category_id: foundEcom.category_id || foundEcom.category || null,
-              seller_id: "Ecomseller BD"
-            };
-
-            applyLoadedProduct(formatted);
-            trackView(formatted.id);
-            recordUserProductView(formatted);
-            setLoading(false);
-            return;
-          }
-        } catch (ecomErr) {
-          console.warn("Ecomseller product lookup warning:", ecomErr);
-        }
-
-        // 2. Query Supabase Database by slug, ID, or cleanId
-        try {
-          const { data, error } = await supabase.from("products").select(`
-              *,
-              product_images (
-                id,
-                image_url,
-                is_primary,
-                sort_order
-              ),
-              product_variants (
-                id,
-                product_id,
-                name,
-                color,
-                size,
-                storage,
-                price,
-                image_url
-              ),
-              supplier_product_mappings (
-                supplier_id,
-                supplier_sku
-              )
-            `).or(`slug.eq.${targetSlug},id.eq.${targetSlug},slug.eq.${targetLower},id.eq.${cleanId}`).maybeSingle();
-
-          if (data) {
-            const dbVariants = extractProductVariants(data);
-            data.product_variants = dbVariants;
-
-            const mapping = data.supplier_product_mappings && data.supplier_product_mappings[0];
-            const isMohasagor = data.sku?.startsWith("MOH-") || (mapping && mapping.supplier_sku);
-            if (isMohasagor) {
+            if (!foundEcom && (targetSlug || cleanId)) {
               try {
-                const supplierSku = mapping?.supplier_sku || data.sku.replace("MOH-", "");
-                const { data: responseData, error: apiError } = await supabase.functions.invoke("supplier-api", {
-                  body: { 
-                    action: "get-product-details", 
-                    supplierId: mapping?.supplier_id || "da929859-f7fa-4590-a3ad-f7012eac5b8c", 
-                    payload: { productId: supplierSku } 
-                  }
-                });
+                const liveDetail = await EcomsellerEngine.fetchProductDetail(targetSlug || cleanId);
+                if (liveDetail && liveDetail.name) {
+                  const { CategoryMappingService } = await import("@/services/suppliers/categoryMappingService");
+                  const mappedCategory = CategoryMappingService.resolveCategory(liveDetail.categorySlug || "", liveDetail.category || "");
+                  const pricingConfig = EcomsellerEngine.getPricingConfig();
+                  const priceInfo = EcomsellerEngine.calculatePrice(liveDetail.price, mappedCategory.slug, liveDetail.id, pricingConfig);
 
-                if (!apiError && responseData?.success && responseData.data) {
-                  const raw = responseData.data;
-                  let mappedImages = mapSupplierImages(raw);
-                  if (mappedImages.length === 0 && data.product_images && data.product_images.length > 0) {
-                    mappedImages = data.product_images;
-                  }
-                  const mappedProduct = mapSupplierProduct(raw, targetSlug, mappedImages);
-                  mappedProduct.id = data.id;
-                  if (data.seller_id) mappedProduct.seller_id = data.seller_id;
-                  if ((!mappedProduct.product_variants || mappedProduct.product_variants.length === 0) && dbVariants.length > 0) {
-                    mappedProduct.product_variants = dbVariants;
-                  }
-                  applyLoadedProduct(mappedProduct);
-                  trackView(data.id);
-                  setLoading(false);
-                  return;
+                  foundEcom = {
+                    id: `ecom-${liveDetail.id}`,
+                    name: liveDetail.name,
+                    slug: liveDetail.slug || targetSlug,
+                    description: liveDetail.description || liveDetail.name,
+                    regular_price: priceInfo.regularStrikethroughPrice,
+                    discount_price: priceInfo.finalSellingPrice,
+                    price: priceInfo.finalSellingPrice,
+                    stock_quantity: liveDetail.stock || 25,
+                    is_featured: false,
+                    category_id: mappedCategory.id,
+                    category: mappedCategory.name,
+                    images: Array.isArray(liveDetail.images) && liveDetail.images.length > 0 ? liveDetail.images : [],
+                    image: Array.isArray(liveDetail.images) && liveDetail.images.length > 0 ? liveDetail.images[0] : "",
+                    supplier_sku: liveDetail.code,
+                    seller_id: "Ecomseller BD"
+                  };
                 }
-              } catch (err) {
-                console.warn("Failed to fetch live supplier product details:", err);
+              } catch (liveErr) {
+                console.warn("Live Ecomseller detail fetch warning:", liveErr);
               }
             }
 
-            applyLoadedProduct(data as unknown as Product);
-            if (data.id) trackView(data.id);
-            recordUserProductView(data);
-            setLoading(false);
-            return;
-          }
-        } catch (dbErr) {
-          console.warn("Supabase product lookup warning:", dbErr);
-        }
+            if (foundEcom && !resolved) {
+              let fullDesc = foundEcom.description;
+              let fullImages = Array.isArray(foundEcom.images) && foundEcom.images.length > 0 ? [...foundEcom.images] : [];
+              try {
+                const detail = await EcomsellerEngine.fetchProductDetail(foundEcom.slug || targetSlug);
+                if (detail) {
+                  if (detail.description) fullDesc = detail.description;
+                  if (Array.isArray(detail.images) && detail.images.length > 0) {
+                    detail.images.forEach((u: string) => {
+                      if (u && !fullImages.includes(u)) fullImages.push(u);
+                    });
+                  }
+                }
+              } catch {}
 
-        // 3. Query Firestore DB
-        try {
-          const snap = await getDocs(collection(db, "products"));
-          if (!snap.empty) {
-            const foundDoc = snap.docs.find(d => {
-              const data = d.data();
-              const dId = String(d.id || "").toLowerCase();
-              const dSlug = String(data.slug || "").toLowerCase();
-              const dName = String(data.name || data.title || "").toLowerCase();
-              return dId === targetLower || dId === cleanId || dSlug === targetLower || dSlug === `product-${cleanId}` || (extractedId && dSlug.endsWith(`-${extractedId}`)) || (targetLower.length > 6 && dName.includes(targetLower));
-            });
-            if (foundDoc) {
-              const data = foundDoc.data();
-              const rawImgs = Array.isArray(data.images) && data.images.length > 0
-                ? data.images
-                : [data.image_url || data.image || defaultImages[0]];
+              if (fullImages.length === 0 && foundEcom.image) {
+                fullImages = [foundEcom.image];
+              }
 
-              const imgList: ProductImage[] = rawImgs.map((imgUrl: string, idx: number) => ({
-                id: `img-${idx}`,
+              const imgList: ProductImage[] = fullImages.map((imgUrl: string, idx: number) => ({
+                id: `ecom-img-${idx}`,
                 image_url: imgUrl,
                 is_primary: idx === 0,
                 sort_order: idx
               }));
 
               const formatted: Product = {
-                id: foundDoc.id,
-                name: data.title || data.name || "Product",
-                slug: data.slug || targetSlug,
-                short_description: data.short_description || data.shortDescription || null,
-                description: data.description || "High quality product.",
-                regular_price: Number(data.regular_price || data.price || 0),
-                discount_price: data.discount_price ? Number(data.discount_price) : null,
-                stock_quantity: Number(data.stock_quantity ?? data.stock ?? 50),
+                id: foundEcom.id,
+                name: foundEcom.name,
+                slug: foundEcom.slug || targetSlug,
+                short_description: null,
+                description: fullDesc || foundEcom.name,
+                regular_price: foundEcom.regular_price,
+                discount_price: foundEcom.discount_price || foundEcom.price,
+                stock_quantity: foundEcom.stock_quantity || 25,
                 free_shipping: true,
-                rating_average: Number(data.rating_average || 4.8),
-                rating_count: Number(data.rating_count || 15),
-                sold_count: Number(data.sold_count || 40),
-                is_featured: Boolean(data.is_featured || data.isFeatured),
-                warranty_info: data.warranty_info || null,
-                return_policy: data.return_policy || null,
-                color: data.color || null,
-                video_url: data.video_url || null,
+                rating_average: 4.8,
+                rating_count: 18,
+                sold_count: 52,
+                is_featured: Boolean(foundEcom.is_featured),
+                warranty_info: "7 Days Replacement Warranty",
+                return_policy: "Standard 7 days return policy",
+                color: null,
+                video_url: null,
                 product_images: imgList,
-                product_variants: extractProductVariants({ ...data, id: foundDoc.id }),
-                category_id: data.category_id || data.category || null,
-                seller_id: data.seller_id || "Admin"
+                product_variants: [],
+                category_id: foundEcom.category_id || foundEcom.category || null,
+                seller_id: "Ecomseller BD"
               };
-              applyLoadedProduct(formatted);
-              trackView(formatted.id);
-              recordUserProductView(formatted);
-              setLoading(false);
+
+              handleFound(formatted);
+            }
+          } catch (ecomErr) {
+            console.warn("Ecomseller product lookup warning:", ecomErr);
+          }
+        };
+
+        // 2. Query Supabase Database by slug, ID, or cleanId
+        const supabaseWorker = async () => {
+          try {
+            const { data } = await supabase.from("products").select(`
+                *,
+                product_images (
+                  id,
+                  image_url,
+                  is_primary,
+                  sort_order
+                ),
+                product_variants (
+                  id,
+                  product_id,
+                  name,
+                  color,
+                  size,
+                  storage,
+                  price,
+                  image_url
+                ),
+                supplier_product_mappings (
+                  supplier_id,
+                  supplier_sku
+                )
+              `).or(`slug.eq.${targetSlug},id.eq.${targetSlug},slug.eq.${targetLower},id.eq.${cleanId}`).maybeSingle();
+
+            if (data && !resolved) {
+              const dbVariants = extractProductVariants(data);
+              data.product_variants = dbVariants;
+
+              const mapping = data.supplier_product_mappings && data.supplier_product_mappings[0];
+              const isMohasagor = data.sku?.startsWith("MOH-") || (mapping && mapping.supplier_sku);
+              if (isMohasagor) {
+                try {
+                  const supplierSku = mapping?.supplier_sku || data.sku.replace("MOH-", "");
+                  const { data: responseData, error: apiError } = await supabase.functions.invoke("supplier-api", {
+                    body: { 
+                      action: "get-product-details", 
+                      supplierId: mapping?.supplier_id || "da929859-f7fa-4590-a3ad-f7012eac5b8c", 
+                      payload: { productId: supplierSku } 
+                    }
+                  });
+
+                  if (!apiError && responseData?.success && responseData.data) {
+                    const raw = responseData.data;
+                    let mappedImages = mapSupplierImages(raw);
+                    if (mappedImages.length === 0 && data.product_images && data.product_images.length > 0) {
+                      mappedImages = data.product_images;
+                    }
+                    const mappedProduct = mapSupplierProduct(raw, targetSlug, mappedImages);
+                    mappedProduct.id = data.id;
+                    if (data.seller_id) mappedProduct.seller_id = data.seller_id;
+                    if ((!mappedProduct.product_variants || mappedProduct.product_variants.length === 0) && dbVariants.length > 0) {
+                      mappedProduct.product_variants = dbVariants;
+                    }
+                    handleFound(mappedProduct);
+                    return;
+                  }
+                } catch (err) {
+                  console.warn("Failed to fetch live supplier product details:", err);
+                }
+              }
+
+              handleFound(data as unknown as Product);
+            }
+          } catch (dbErr) {
+            console.warn("Supabase product lookup warning:", dbErr);
+          }
+        };
+
+        // 3. Fast Targeted Query Firestore DB
+        const firestoreWorker = async () => {
+          try {
+            const directRef = doc(db, "products", targetSlug);
+            const directSnap = await getDoc(directRef);
+            if (directSnap.exists() && !resolved) {
+              handleFirestoreDoc(directSnap.id, directSnap.data());
               return;
             }
+
+            const q = query(collection(db, "products"), where("slug", "==", targetSlug), limit(1));
+            const snap = await getDocs(q);
+            if (!snap.empty && !resolved) {
+              const d = snap.docs[0];
+              handleFirestoreDoc(d.id, d.data());
+              return;
+            }
+
+            if (cleanId) {
+              const q2 = query(collection(db, "products"), where("slug", "==", `product-${cleanId}`), limit(1));
+              const snap2 = await getDocs(q2);
+              if (!snap2.empty && !resolved) {
+                const d = snap2.docs[0];
+                handleFirestoreDoc(d.id, d.data());
+                return;
+              }
+            }
+          } catch (fsErr) {
+            console.warn("Firestore product lookup warning:", fsErr);
           }
-        } catch (fsErr) {
-          console.warn("Firestore product lookup warning:", fsErr);
-        }
+        };
+
+        const handleFirestoreDoc = (docId: string, data: any) => {
+          if (resolved || !data) return;
+          const rawImgs = Array.isArray(data.images) && data.images.length > 0
+            ? data.images
+            : [data.image_url || data.image || defaultImages[0]];
+
+          const imgList: ProductImage[] = rawImgs.map((imgUrl: string, idx: number) => ({
+            id: `img-${idx}`,
+            image_url: imgUrl,
+            is_primary: idx === 0,
+            sort_order: idx
+          }));
+
+          const formatted: Product = {
+            id: docId,
+            name: data.title || data.name || "Product",
+            slug: data.slug || targetSlug,
+            short_description: data.short_description || data.shortDescription || null,
+            description: data.description || "High quality product.",
+            regular_price: Number(data.regular_price || data.price || 0),
+            discount_price: data.discount_price ? Number(data.discount_price) : null,
+            stock_quantity: Number(data.stock_quantity ?? data.stock ?? 50),
+            free_shipping: true,
+            rating_average: Number(data.rating_average || 4.8),
+            rating_count: Number(data.rating_count || 15),
+            sold_count: Number(data.sold_count || 40),
+            is_featured: Boolean(data.is_featured || data.isFeatured),
+            warranty_info: data.warranty_info || null,
+            return_policy: data.return_policy || null,
+            color: data.color || null,
+            video_url: data.video_url || null,
+            product_images: imgList,
+            product_variants: extractProductVariants({ ...data, id: docId }),
+            category_id: data.category_id || data.category || null,
+            seller_id: data.seller_id || "Admin"
+          };
+          handleFound(formatted);
+        };
+
+        // Launch all high-speed parallel workers concurrently
+        await Promise.allSettled([
+          catalogWorker(),
+          supabaseWorker(),
+          firestoreWorker()
+        ]);
+
+        if (resolved) return;
 
         // 4. Check Local Storage Admin Products (if available in this browser session)
         try {
@@ -1802,31 +1839,7 @@ function ProductDetailContent() {
               </div>
 
 
-              {/* Inline Store Info + Chat */}
-              {product.seller_id ? (
-                <InlineStoreBar 
-                  sellerId={product.seller_id}
-                  onContactSeller={handleContactSeller}
-                  contactingSeller={contactingSeller}
-                />
-              ) : (
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl border mt-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-                    <Store className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-semibold text-foreground">Durtup Official</span>
-                      <ShieldCheck className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                    </div>
-                    <span className="text-xs text-muted-foreground">Official Store</span>
-                  </div>
-                  <Button size="sm" variant="outline" className="gap-1.5 flex-shrink-0" onClick={handleContactSeller} disabled={contactingSeller}>
-                    {contactingSeller ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5" />}
-                    <span className="hidden sm:inline">Chat</span>
-                  </Button>
-                </div>
-              )}
+
 
               {/* Product Highlighted Description Section */}
               {(() => {
@@ -1871,53 +1884,7 @@ function ProductDetailContent() {
             />
           </div>
 
-          {/* Store Information */}
-          <div className="mt-8 w-full max-w-full min-w-0">
-            {product.seller_id ? (
-              <StoreDetails
-                sellerId={product.seller_id}
-                onContactSeller={handleContactSeller}
-                contactingSeller={contactingSeller}
-              />
-            ) : (
-              <div className="bg-card rounded-2xl border p-4 sm:p-6 max-w-xl">
-                <h3 className="text-lg font-bold text-foreground mb-4">Store Information</h3>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center flex-shrink-0">
-                    <Store className="h-6 w-6 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-foreground text-base">Durtup Official</h4>
-                      <ShieldCheck className="h-4 w-4 text-primary flex-shrink-0" />
-                    </div>
-                    <p className="text-xs text-muted-foreground">Official Store</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="text-center p-3 bg-muted/50 rounded-xl">
-                    <Star className="h-4 w-4 mx-auto text-warning mb-1" />
-                    <p className="text-sm font-semibold text-foreground">5.0</p>
-                    <p className="text-xs text-muted-foreground">Rating</p>
-                  </div>
-                  <div className="text-center p-3 bg-muted/50 rounded-xl">
-                    <Shield className="h-4 w-4 mx-auto text-primary mb-1" />
-                    <p className="text-sm font-semibold text-foreground">100%</p>
-                    <p className="text-xs text-muted-foreground">Authentic</p>
-                  </div>
-                  <div className="text-center p-3 bg-muted/50 rounded-xl">
-                    <RotateCcw className="h-4 w-4 mx-auto text-primary mb-1" />
-                    <p className="text-sm font-semibold text-foreground">Easy</p>
-                    <p className="text-xs text-muted-foreground">Returns</p>
-                  </div>
-                </div>
-                <Button className="w-full gap-2" onClick={handleContactSeller} disabled={contactingSeller}>
-                  {contactingSeller ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                  Chat with Store
-                </Button>
-              </div>
-            )}
-          </div>
+
 
           {/* Related Products - Full width below product grid */}
           <div className="w-full max-w-full min-w-0">
