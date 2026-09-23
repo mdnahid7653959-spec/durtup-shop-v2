@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Heart, Star, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { getSmartProductImage } from "@/utils/productImageHelper";
+import { getProductImageCandidates, getSmartProductImage } from "@/utils/productImageHelper";
 import { saveFastProduct } from "@/utils/fastProductStorage";
 
 export interface Product {
@@ -30,7 +30,11 @@ interface ProductCardProps {
 }
 
 function ProductCardComponent({ product, priority = false }: ProductCardProps) {
-  const displayImage = getSmartProductImage(product.name, product.image, (product as any).category || "");
+  const imageCandidates = useMemo(() => getProductImageCandidates(product, 600), [product]);
+  const [candidateIdx, setCandidateIdx] = useState(0);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  const displayImage = imageCandidates[candidateIdx] || getSmartProductImage(product.name, product.image, (product as any).category || "");
   const navigate = useNavigate();
   const discount = product.originalPrice ? Math.round((1 - product.price / product.originalPrice) * 100) : 0;
   const { addToCart } = useCart();
@@ -73,6 +77,18 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
     }
   };
 
+  const handleImageError = () => {
+    if (candidateIdx + 1 < imageCandidates.length) {
+      setCandidateIdx(prev => prev + 1);
+    } else {
+      // Final fallback
+      const finalFallback = getSmartProductImage(product.name, "", (product as any).category || "");
+      if (displayImage !== finalFallback) {
+        setImageLoaded(true);
+      }
+    }
+  };
+
   return (
     <div className="group relative bg-card rounded-xl overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 w-full border border-border flex flex-col justify-between">
       <div>
@@ -107,7 +123,7 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
           <Heart className={cn("h-4 w-4", inWishlist && "fill-current")} />
         </button>
 
-        {/* Product Image */}
+        {/* Product Image with smooth skeleton backdrop */}
         <Link 
           to={`/product/${product.slug || product.id}`} 
           state={{ preloadedProduct: product }}
@@ -116,21 +132,22 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
           onClick={() => saveFastProduct(product)}
           className="block"
         >
-          <div className="relative aspect-square overflow-hidden bg-muted/30">
+          <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-slate-800/60">
+            {!imageLoaded && (
+              <div className="absolute inset-0 bg-muted/40 animate-pulse" />
+            )}
             <img
               src={displayImage || "/placeholder.svg"}
               alt={product.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
+              className={cn(
+                "w-full h-full object-cover group-hover:scale-105 transition-all duration-300",
+                imageLoaded ? "opacity-100" : "opacity-90"
+              )}
               loading={priority ? "eager" : "lazy"}
               {...({ fetchpriority: priority ? "high" : "auto" } as any)}
               decoding="async"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                const fallback = getSmartProductImage(product.name, "", (product as any).category || "");
-                if (target.src !== fallback) {
-                  target.src = fallback;
-                }
-              }}
+              onLoad={() => setImageLoaded(true)}
+              onError={handleImageError}
             />
           </div>
         </Link>

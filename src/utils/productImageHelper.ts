@@ -1,7 +1,17 @@
 // Smart Product Image Matcher & Resolver Utility
-// Ensures every product displays a real, relevant image matching its name & category.
+// Ensures every product displays a real, relevant image matching its name & category with ultra-fast Edge WebP CDN caching.
 
 const CATEGORY_IMAGES = {
+  panjabi: [
+    "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=600&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=600&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&h=600&fit=crop",
+  ],
+  pajama: [
+    "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=600&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=600&h=600&fit=crop",
+  ],
   shirt: [
     "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&h=600&fit=crop",
     "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&h=600&fit=crop",
@@ -14,6 +24,14 @@ const CATEGORY_IMAGES = {
     "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=600&h=600&fit=crop",
     "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&h=600&fit=crop",
     "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=600&h=600&fit=crop",
+  ],
+  saree: [
+    "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=600&h=600&fit=crop",
+  ],
+  kurti: [
+    "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=600&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&h=600&fit=crop",
   ],
   watch: [
     "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=600&fit=crop",
@@ -79,13 +97,12 @@ const GENERIC_GADGET_FALLBACKS = [
 
 /**
  * Converts heavy raw supplier images to ultra-fast, edge-cached WebP CDN images via Cloudflare/wsrv.nl
- * Uses fit=inside and full 800px resolution to ensure zero cropping and crystal-clear HD clarity.
+ * Uses fit=cover and dynamic resolution to ensure crystal-clear HD clarity with tiny file size.
  */
-export function optimizeImageUrl(url?: string, width: number = 1000, quality: number = 88): string {
+export function optimizeImageUrl(url?: string, width: number = 800, quality: number = 85): string {
   if (!url || typeof url !== "string") return "";
   let trimmed = url.trim();
   if (!trimmed) return "";
-
 
   if (trimmed.startsWith("data:") || trimmed.startsWith("blob:") || trimmed.includes(".svg")) {
     return trimmed;
@@ -96,33 +113,75 @@ export function optimizeImageUrl(url?: string, width: number = 1000, quality: nu
     return trimmed;
   }
 
-  // Mohasagor direct images - direct loading is reliable (wsrv.nl fails with 404 on high-resolution camera images exceeding 71Mpx)
-  if (trimmed.includes("mohasagor.com.bd")) {
-    return trimmed;
-  }
-
-  // Supabase direct storage images - already high quality WebP from CDN
-  if (trimmed.includes("supabase.co/storage")) {
-    return trimmed;
-  }
-
   // Unsplash images - use native high-speed dynamic CDN parameters with full uncropped aspect ratio
   if (trimmed.includes("images.unsplash.com")) {
     const clean = trimmed.split("?")[0];
     return `${clean}?w=${width}&q=${quality}&auto=format`;
   }
 
-  // External supplier images - route through Cloudflare Edge CDN (wsrv.nl) with fit=inside and we=0 for crisp HD clarity
+  // Route external supplier images (Mohasagor, Ecomseller, external CDNs) through Cloudflare Global Edge CDN
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return `https://wsrv.nl/?url=${encodeURIComponent(trimmed)}&w=${width}&fit=inside&we=0&output=webp&q=${quality}`;
+    return `https://wsrv.nl/?url=${encodeURIComponent(trimmed)}&w=${width}&output=webp&q=${quality}&we=0`;
   }
 
   if (trimmed.startsWith("//")) {
     const full = `https:${trimmed}`;
-    return `https://wsrv.nl/?url=${encodeURIComponent(full)}&w=${width}&fit=inside&we=0&output=webp&q=${quality}`;
+    return `https://wsrv.nl/?url=${encodeURIComponent(full)}&w=${width}&output=webp&q=${quality}&we=0`;
   }
 
   return trimmed;
+}
+
+/**
+ * Returns raw unproxied URL (direct supplier origin link)
+ */
+export function getDirectImageUrl(url?: string): string {
+  if (!url || typeof url !== "string") return "";
+  let trimmed = url.trim();
+  if (trimmed.includes("wsrv.nl/?url=") || trimmed.includes("wsrv.nl?url=")) {
+    const match = trimmed.match(/[?&]url=([^&]+)/);
+    if (match) {
+      return decodeURIComponent(match[1]);
+    }
+  }
+  return trimmed;
+}
+
+export function detectCategoryKey(name: string = "", category: string = ""): keyof typeof CATEGORY_IMAGES | null {
+  const text = `${name} ${category}`.toLowerCase();
+
+  if (text.match(/panjabi|punjabi|katua|kabli|kurta/i)) {
+    return "panjabi";
+  } else if (text.match(/pajama|pyjama|trouser|pant|salwar/i)) {
+    return "pajama";
+  } else if (text.match(/saree|sharee|lehenga|georgette/i)) {
+    return "saree";
+  } else if (text.match(/kurti|kameez|abaya|borkha|burqa|khimar|hijab|three.*piece|ladies/i)) {
+    return "kurti";
+  } else if (text.match(/smart.*watch|fitness.*watch|apple.*watch|ultra.*watch|t800|t900|d20|hw8|hw9|fitness.*band|smart.*band/i)) {
+    return "smartwatch";
+  } else if (text.match(/watch|clock|jewel|luxury|wrist|oliya|olevs|skmei|binbond|curren|naviforce|casio|quartz|chronograph|dial|butter.*fly.*lock|butterfly|leather.*strap|mesh.*strap|analog/i)) {
+    return "watch";
+  } else if (text.match(/trimmer|clipper|shaver|grooming|hair.*beard|beard|at-1210|htc|vintage.*t9|kemei|vgr|nova|shaving|hair.*cut/i)) {
+    return "trimmer";
+  } else if (text.match(/earbud|airpod|headphone|earphone|headset|audio|bluetooth.*sound|wireless.*audio|tws|pro.*4|m10|f9|anc|soundbar/i)) {
+    return "earbuds";
+  } else if (text.match(/keyboard|mouse|gaming|pc|laptop|computer|router|wifi/i)) {
+    return "keyboard";
+  } else if (text.match(/shoe|sneaker|footwear|sandal|boot|loafer|slipper/i)) {
+    return "shoes";
+  } else if (text.match(/bag|backpack|wallet|purse|handbag|travel.*bag|crossbody/i)) {
+    return "bags";
+  } else if (text.match(/perfume|attar|body.*spray|fragrance|lotion|cream|serum|shampoo|face.*wash|skin.*care|lipstick|makeup/i)) {
+    return "beauty";
+  } else if (text.match(/shirt|t-shirt|tshirt|polo|jacket|suit|cloth|men's|mens|wear|sleeve|combo.*shirt|denim|jeans|hoodie/i)) {
+    return "shirt";
+  } else if (text.match(/home|kitchen|mug|pump|fan|lamp|dispenser|blender|grinder|bottle|flask|pillow|cushion|shelf|rack|mop/i)) {
+    return "home";
+  } else if (text.match(/screwdriver|drill|tool|hardware|wrench|hammer|plier|screw|repair.*kit|machine|saw|socket/i)) {
+    return "tools";
+  }
+  return null;
 }
 
 export function getSmartProductImage(
@@ -131,57 +190,16 @@ export function getSmartProductImage(
   category: string = "",
   index: number = 0
 ): string {
-  const text = `${name} ${category}`.toLowerCase();
-
-  // Determine category key from product name & category
-  let key: keyof typeof CATEGORY_IMAGES | null = null;
-  
-  if (text.match(/smart.*watch|fitness.*watch|apple.*watch|ultra.*watch|t800|t900|d20|hw8|hw9|fitness.*band|smart.*band/i)) {
-    key = "smartwatch";
-  } else if (text.match(/watch|clock|jewel|luxury|wrist|oliya|olevs|skmei|binbond|curren|naviforce|casio|quartz|chronograph|dial|butter.*fly.*lock|butterfly|leather.*strap|mesh.*strap|analog/i)) {
-    key = "watch";
-  } else if (text.match(/trimmer|clipper|shaver|grooming|hair.*beard|beard|at-1210|htc|vintage.*t9|kemei|vgr|nova|shaving|hair.*cut/i)) {
-    key = "trimmer";
-  } else if (text.match(/earbud|airpod|headphone|earphone|headset|audio|bluetooth.*sound|wireless.*audio|tws|pro.*4|m10|f9|anc|soundbar/i)) {
-    key = "earbuds";
-  } else if (text.match(/keyboard|mouse|gaming|pc|laptop|computer|router|wifi/i)) {
-    key = "keyboard";
-  } else if (text.match(/shoe|sneaker|footwear|sandal|boot|loafer|slipper/i)) {
-    key = "shoes";
-  } else if (text.match(/bag|backpack|wallet|purse|handbag|travel.*bag|crossbody/i)) {
-    key = "bags";
-  } else if (text.match(/perfume|attar|body.*spray|fragrance|lotion|cream|serum|shampoo|face.*wash|skin.*care|lipstick|makeup/i)) {
-    key = "beauty";
-  } else if (text.match(/saree|sharee|kurti|abaya|borkha|burqa|khimar|hijab|three.*piece|salwar|kameez|palazzo|lehenga|dress|ladies/i)) {
-    key = "women_fashion";
-  } else if (text.match(/shirt|t-shirt|tshirt|polo|panjabi|punjabi|pant|trouser|clothing|fashion|jacket|suit|cloth|men's|mens|wear|sleeve|combo.*shirt|denim|jeans|hoodie/i)) {
-    key = "shirt";
-  } else if (text.match(/home|kitchen|mug|pump|fan|lamp|dispenser|blender|grinder|bottle|flask|pillow|cushion|shelf|rack|mop/i)) {
-    key = "home";
-  } else if (text.match(/screwdriver|drill|tool|hardware|wrench|hammer|plier|screw|repair.*kit|machine|saw|socket/i)) {
-    key = "tools";
-  }
+  const key = detectCategoryKey(name, category);
 
   // Check if currentImageUrl is a genuine uploaded/supplier image URL (not a generic Unsplash placeholder)
   if (currentImageUrl && typeof currentImageUrl === "string" && currentImageUrl.trim() !== "") {
     const trimmed = currentImageUrl.trim();
     const isUnsplashGeneric = GENERIC_GADGET_FALLBACKS.some(pattern => trimmed.includes(pattern));
 
-    // If it is a real image from Mohasagor, Supabase, Cloudinary, or valid external host (not an Unsplash generic fallback)
+    // If it is a real image from Mohasagor, Supabase, Cloudinary, or valid external host
     if (!isUnsplashGeneric) {
       if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("//") || trimmed.startsWith("data:")) {
-        return optimizeImageUrl(trimmed);
-      }
-    } else if (key) {
-      // If it's a generic Unsplash image, only keep it if it actually matches the detected category
-      if (
-        (key === "earbuds" && trimmed.includes("photo-1590658268037")) ||
-        (key === "watch" && trimmed.includes("photo-1523275335684")) ||
-        (key === "smartwatch" && trimmed.includes("photo-1546868871")) ||
-        (key === "keyboard" && trimmed.includes("photo-1618384887929")) ||
-        (key === "shoes" && trimmed.includes("photo-1560472355")) ||
-        (key === "shirt" && trimmed.includes("photo-1596755094514"))
-      ) {
         return optimizeImageUrl(trimmed);
       }
     }
@@ -193,8 +211,50 @@ export function getSmartProductImage(
     return optimizeImageUrl(images[index % images.length]);
   }
 
-  const defaultPool = CATEGORY_IMAGES.watch;
+  const defaultPool = CATEGORY_IMAGES.panjabi;
   return optimizeImageUrl(defaultPool[index % defaultPool.length]);
+}
+
+/**
+ * Returns an array of candidate image URLs in priority order:
+ * 1. Edge-optimized WebP CDN URL
+ * 2. Raw origin direct supplier URL
+ * 3. Alternate product images (if available)
+ * 4. Smart category fallback
+ */
+export function getProductImageCandidates(product: any, width: number = 600): string[] {
+  const candidates: string[] = [];
+  const primaryRaw = product.image || (product.images && product.images[0]) || (product.product_images && product.product_images[0]?.image_url) || "";
+
+  if (primaryRaw && typeof primaryRaw === "string" && primaryRaw.trim()) {
+    const rawClean = primaryRaw.trim();
+    const cdnUrl = optimizeImageUrl(rawClean, width);
+    const directUrl = getDirectImageUrl(rawClean);
+
+    if (cdnUrl) candidates.push(cdnUrl);
+    if (directUrl && directUrl !== cdnUrl) candidates.push(directUrl);
+  }
+
+  // Additional secondary images from supplier
+  if (Array.isArray(product.images)) {
+    product.images.forEach((img: any) => {
+      const u = typeof img === "string" ? img : img?.image_url;
+      if (u && typeof u === "string") {
+        const cdn = optimizeImageUrl(u, width);
+        const dir = getDirectImageUrl(u);
+        if (cdn && !candidates.includes(cdn)) candidates.push(cdn);
+        if (dir && !candidates.includes(dir)) candidates.push(dir);
+      }
+    });
+  }
+
+  // Final category fallback
+  const fallback = getSmartProductImage(product.name || "", "", product.category || (product as any).category_id || "");
+  if (fallback && !candidates.includes(fallback)) {
+    candidates.push(fallback);
+  }
+
+  return candidates;
 }
 
 // Lightweight Proactive Image Preloader - Only warms top few items on idle

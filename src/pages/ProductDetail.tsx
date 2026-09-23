@@ -21,7 +21,7 @@ import { StoreDetails } from "@/components/products/StoreDetails";
 import { ProductDescriptionSection } from "@/components/products/ProductDescriptionSection";
 import { getCachedMohasagorProducts, findMohasagorProduct, findMohasagorProductSync, FALLBACK_SUPPLIER_PRODUCTS } from "@/utils/mohasagorCache";
 import { calculateProductPrice } from "@/utils/pricingMargin";
-import { getSmartProductImage } from "@/utils/productImageHelper";
+import { getSmartProductImage, getDirectImageUrl, optimizeImageUrl } from "@/utils/productImageHelper";
 import { getEnhancedProductDescription } from "@/utils/productDescriptionHelper";
 import { extractProductVariants, getColorHex, sortVariantValues, type ProductVariant } from "@/utils/productVariantHelper";
 import { db } from "@/integrations/firebase/client";
