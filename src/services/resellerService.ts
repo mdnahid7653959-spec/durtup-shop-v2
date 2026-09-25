@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/firebaseAdapter";
-import { fastCatalogProducts } from "@/data/fastSeedCatalog";
+import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
 import { calculateProductPrice } from "@/utils/pricingMargin";
 
 export interface ResellerProfile {
@@ -210,8 +210,8 @@ export const ResellerService = {
    * Fetch Reseller Products with calculated wholesale & profit margins
    */
   async getProducts(): Promise<ResellerProduct[]> {
-    const products: ResellerProduct[] = fastCatalogProducts.map((p, idx) => {
-      const calculated = calculateProductPrice(p.price, p.cost_price, p.category);
+    const products: ResellerProduct[] = FAST_SEED_PRODUCTS.map((p, idx) => {
+      const calculated = calculateProductPrice(p.price, (p as any).cost_price, p.category);
       const mrp = Math.round(calculated.salePrice || p.price * 115 || 850);
       // Wholesale price is roughly 65% of MRP, providing high profit margins (৳200-৳600 per sale)
       const wholesalePrice = Math.max(Math.round(mrp * 0.65), 150);

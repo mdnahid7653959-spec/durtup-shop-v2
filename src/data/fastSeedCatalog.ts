@@ -632,3 +632,5 @@ export const FAST_SEED_PRODUCTS: Product[] = [
     "isBestSeller": true
   }
 ];
+
+export const fastCatalogProducts = FAST_SEED_PRODUCTS;
