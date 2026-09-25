@@ -127,6 +127,7 @@ const ResellerOrders = lazy(() => import("./pages/reseller/ResellerOrders"));
 const ResellerWallet = lazy(() => import("./pages/reseller/ResellerWallet"));
 const ResellerMarketing = lazy(() => import("./pages/reseller/ResellerMarketing"));
 const ResellerSettings = lazy(() => import("./pages/reseller/ResellerSettings"));
+const ResellerApi = lazy(() => import("./pages/reseller/ResellerApi"));
 const Seller = lazy(() => import("./pages/Seller"));
 const SellerRegister = lazy(() => import("./pages/seller/SellerRegister"));
 const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
@@ -278,6 +279,8 @@ const App = () => (
                               <Route path="/reseller/wallet" element={<ResellerWallet />} />
                               <Route path="/reseller/marketing" element={<ResellerMarketing />} />
                               <Route path="/reseller/settings" element={<ResellerSettings />} />
+                              <Route path="/reseller/api" element={<ResellerApi />} />
+                              <Route path="/reseller/integration" element={<ResellerApi />} />
 
                               <Route path="/seller" element={<Seller />} />
                               <Route path="/seller/:id" element={<Seller />} />

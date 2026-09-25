@@ -18,7 +18,8 @@ import {
   Share2,
   Download,
   Flame,
-  Check
+  Check,
+  Zap
 } from "lucide-react";
 import { ResellerLayout } from "@/components/reseller/ResellerLayout";
 import { ResellerService, ResellerProfile, ResellerProduct, ResellerOrder } from "@/services/resellerService";
@@ -204,20 +205,20 @@ export default function ResellerDashboard() {
 
         </div>
 
-        {/* 3 Quick Reseller Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 4 Quick Reseller Action Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           <div className="bg-gradient-to-br from-orange-500/10 to-amber-500/5 p-5 rounded-2xl border border-orange-500/20 flex flex-col justify-between">
             <div>
               <div className="h-10 w-10 rounded-xl bg-orange-600 text-white flex items-center justify-center mb-3 shadow-md shadow-orange-600/20">
                 <PlusCircle className="h-5 w-5" />
               </div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-white">১. কাস্টমারের নামে অর্ডার দিন</h3>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">১. কাস্টমার অর্ডার দিন</h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                ফেসবুকে কাস্টমার পেলে তাদের নাম-ঠিকানা ও আপনার নির্ধারিত বিক্রয় মূল্য দিয়ে সরাসরি ড্রপশিপ অর্ডার প্লেস করুন।
+                ফেসবুকে কাস্টমার পেলে তাদের নাম-ঠিকানা ও নির্ধারিত লাভে সরাসরি ড্রপশিপ অর্ডার প্লেস করুন।
               </p>
             </div>
-            <Button asChild size="sm" className="bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl mt-4 w-full">
+            <Button asChild size="sm" className="bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl mt-4 w-full text-xs">
               <Link to="/reseller/orders/new">অর্ডার ফর্ম খুলুন</Link>
             </Button>
           </div>
@@ -227,13 +228,13 @@ export default function ResellerDashboard() {
               <div className="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center mb-3 shadow-md shadow-blue-600/20">
                 <ShoppingBag className="h-5 w-5" />
               </div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-white">২. পাইকারি রেটে প্রোডাক্ট বাছাই</h3>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">২. হোলসেল ক্যাটালগ</h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                আমাদের গ্যাজেট, ঘড়ি ও ফ্যাশন আইটেমগুলোর হোলসেল প্রাইস ও প্রফিট মার্জিন চেক করে ট্রেন্ডিং পণ্য বেছে নিন।
+                গ্যাজেট ও ফ্যাশন আইটেমগুলোর হোলসেল প্রাইস ও লাভ মার্জিন দেখে ট্রেন্ডিং পণ্য বাছাই করুন।
               </p>
             </div>
-            <Button asChild size="sm" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-bold rounded-xl mt-4 w-full">
-              <Link to="/reseller/products">হোলসেল ক্যাটালগ দেখুন</Link>
+            <Button asChild size="sm" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-bold rounded-xl mt-4 w-full text-xs">
+              <Link to="/reseller/products">ক্যাটালগ দেখুন</Link>
             </Button>
           </div>
 
@@ -242,13 +243,28 @@ export default function ResellerDashboard() {
               <div className="h-10 w-10 rounded-xl bg-purple-600 text-white flex items-center justify-center mb-3 shadow-md shadow-purple-600/20">
                 <Sparkles className="h-5 w-5" />
               </div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-white">৩. এক ক্লিকে ছবি ও ক্যাপশন কপি</h3>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">৩. ছবি ও ক্যাপশন কপি</h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                রেডিমেড প্রমোশনাল পোস্ট ও হাই-রেজুলেশন ছবি নিয়ে সরাসরি আপনার ফেসবুক পেজ, গ্রুপ বা টিকটকে পোস্ট করুন।
+                রেডিমেড প্রমোশনাল পোস্ট ও হাই-রেজুলেশন ছবি দিয়ে ফেসবুক ও টিকটকে পোস্ট করুন।
               </p>
             </div>
-            <Button asChild size="sm" variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 font-bold rounded-xl mt-4 w-full">
-              <Link to="/reseller/marketing">মার্কেটিং কিট দেখুন</Link>
+            <Button asChild size="sm" variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 font-bold rounded-xl mt-4 w-full text-xs">
+              <Link to="/reseller/marketing">মার্কেটিং কিট</Link>
+            </Button>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/5 p-5 rounded-2xl border border-emerald-500/20 flex flex-col justify-between">
+            <div>
+              <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center mb-3 shadow-md shadow-emerald-600/20">
+                <Zap className="h-5 w-5" />
+              </div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">৪. API ও অটোমেশন</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                আপনার WooCommerce বা নিজস্ব ওয়েবসাইট ইন্টিগ্রেশন করে অটোমেটিক অর্ডার সেল করুন।
+              </p>
+            </div>
+            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl mt-4 w-full text-xs shadow-xs">
+              <Link to="/reseller/api">API সেটিংস ও কোড</Link>
             </Button>
           </div>
 

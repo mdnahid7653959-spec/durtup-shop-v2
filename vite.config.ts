@@ -81,6 +81,37 @@ function sigmaDevApiPlugin() {
           }
         }
 
+        if (req.url && req.url.startsWith("/api/reseller")) {
+          if (req.method === "OPTIONS") {
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE");
+            res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-reseller-key");
+            res.statusCode = 200;
+            return res.end();
+          }
+
+          let bodyStr = "";
+          req.on("data", (chunk: any) => { bodyStr += chunk; });
+          req.on("end", async () => {
+            try {
+              const body = bodyStr ? JSON.parse(bodyStr) : {};
+              const { handleResellerApiRequest } = await server.ssrLoadModule("./src/server/resellerServerEngine.ts");
+              const result = await handleResellerApiRequest(req.url, req.method, req.headers, body);
+              
+              res.setHeader("Content-Type", "application/json");
+              res.setHeader("Access-Control-Allow-Origin", "*");
+              res.statusCode = result.status || 200;
+              return res.end(JSON.stringify(result.body));
+            } catch (err: any) {
+              console.error("[Reseller Dev API Error]:", err);
+              res.statusCode = 500;
+              res.setHeader("Content-Type", "application/json");
+              return res.end(JSON.stringify({ error: err.message || "Reseller API error" }));
+            }
+          });
+          return;
+        }
+
         next();
       });
     }

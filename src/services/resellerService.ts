@@ -18,6 +18,9 @@ export interface ResellerProfile {
   deliveredOrders: number;
   defaultPaymentMethod: "bkash" | "nagad" | "rocket" | "bank";
   defaultPaymentAccount: string;
+  apiKey: string;
+  apiSecret: string;
+  webhookUrl?: string;
   createdAt: string;
 }
 
@@ -124,6 +127,9 @@ export const ResellerService = {
       deliveredOrders: 0,
       defaultPaymentMethod: "bkash",
       defaultPaymentAccount: "",
+      apiKey: "dt_live_res_" + userId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10) + "_" + Math.floor(100000 + Math.random() * 900000),
+      apiSecret: "dts_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
+      webhookUrl: "",
       createdAt: new Date().toISOString(),
     };
 
@@ -157,6 +163,9 @@ export const ResellerService = {
           deliveredOrders: Number(data.delivered_orders || 0),
           defaultPaymentMethod: data.default_payment_method || "bkash",
           defaultPaymentAccount: data.default_payment_account || "",
+          apiKey: data.api_key || defaultProfile.apiKey,
+          apiSecret: data.api_secret || defaultProfile.apiSecret,
+          webhookUrl: data.webhook_url || "",
           createdAt: data.created_at || defaultProfile.createdAt,
         };
         localStorage.setItem(STORAGE_KEYS.PROFILE_PREFIX + userId, JSON.stringify(remoteProfile));
@@ -172,6 +181,8 @@ export const ResellerService = {
           wallet_balance: 0,
           pending_balance: 0,
           total_earnings: 0,
+          api_key: defaultProfile.apiKey,
+          api_secret: defaultProfile.apiSecret,
           created_at: defaultProfile.createdAt,
         }).catch(() => {});
       }
@@ -200,10 +211,35 @@ export const ResellerService = {
         whatsapp: updated.whatsapp,
         default_payment_method: updated.defaultPaymentMethod,
         default_payment_account: updated.defaultPaymentAccount,
+        api_key: updated.apiKey,
+        api_secret: updated.apiSecret,
+        webhook_url: updated.webhookUrl,
       }).eq("user_id", userId);
     } catch {}
 
     return updated;
+  },
+
+  /**
+   * Regenerate API Key & Secret for Reseller
+   */
+  async generateNewApiKey(userId: string): Promise<{ apiKey: string; apiSecret: string }> {
+    const newApiKey = "dt_live_res_" + userId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10) + "_" + Math.floor(100000 + Math.random() * 900000);
+    const newApiSecret = "dts_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+    await this.updateProfile(userId, {
+      apiKey: newApiKey,
+      apiSecret: newApiSecret,
+    });
+
+    return { apiKey: newApiKey, apiSecret: newApiSecret };
+  },
+
+  /**
+   * Update Webhook URL
+   */
+  async updateWebhook(userId: string, webhookUrl: string): Promise<void> {
+    await this.updateProfile(userId, { webhookUrl });
   },
 
   /**

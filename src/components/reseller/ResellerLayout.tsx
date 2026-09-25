@@ -18,7 +18,8 @@ import {
   TrendingUp, 
   Bell,
   HelpCircle,
-  ExternalLink
+  ExternalLink,
+  Zap
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ResellerService, ResellerProfile } from "@/services/resellerService";
@@ -100,6 +101,12 @@ export function ResellerLayout({ children }: ResellerLayoutProps) {
       icon: Sparkles,
       path: "/reseller/marketing",
       badge: "রেডিমেড",
+    },
+    {
+      title: "API ও অটোমেশন",
+      icon: Zap,
+      path: "/reseller/api",
+      badge: "REST API",
     },
     {
       title: "শপ সেটিংস",
