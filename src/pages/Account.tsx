@@ -251,6 +251,27 @@ export default function Account() {
             </Button>
           </div>
 
+          {/* Reseller Banner Card */}
+          <Link to="/reseller/dashboard" className="block mb-6">
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 text-white shadow-md shadow-orange-600/15 flex items-center justify-between gap-4 hover:opacity-95 transition-all">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
+                  <Store className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-black text-sm sm:text-base">রিসেলার প্যানেল (Dropship Hub)</p>
+                    <Badge className="bg-white text-orange-700 font-extrabold text-[10px] px-1.5 py-0">এক্টিভ</Badge>
+                  </div>
+                  <p className="text-xs text-white/90 mt-0.5">পাইকারি দামে পণ্য বিক্রি করুন এবং নিশ্চিত প্রফিট নিন</p>
+                </div>
+              </div>
+              <Button size="sm" className="bg-white text-orange-700 hover:bg-white/90 font-extrabold rounded-xl shrink-0 text-xs shadow-xs hidden sm:flex">
+                ড্যাশবোর্ডে যান
+              </Button>
+            </div>
+          </Link>
+
           {/* Quick Account Navigation Cards */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             <Link to="/referrals">

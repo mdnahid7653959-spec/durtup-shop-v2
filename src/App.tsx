@@ -119,6 +119,14 @@ const About = lazy(() => import("./pages/About"));
 const Careers = lazy(() => import("./pages/Careers"));
 const Press = lazy(() => import("./pages/Press"));
 const Affiliate = lazy(() => import("./pages/Affiliate"));
+const ResellerLanding = lazy(() => import("./pages/Reseller"));
+const ResellerDashboard = lazy(() => import("./pages/reseller/ResellerDashboard"));
+const ResellerProducts = lazy(() => import("./pages/reseller/ResellerProducts"));
+const ResellerNewOrder = lazy(() => import("./pages/reseller/ResellerNewOrder"));
+const ResellerOrders = lazy(() => import("./pages/reseller/ResellerOrders"));
+const ResellerWallet = lazy(() => import("./pages/reseller/ResellerWallet"));
+const ResellerMarketing = lazy(() => import("./pages/reseller/ResellerMarketing"));
+const ResellerSettings = lazy(() => import("./pages/reseller/ResellerSettings"));
 const Seller = lazy(() => import("./pages/Seller"));
 const SellerRegister = lazy(() => import("./pages/seller/SellerRegister"));
 const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
@@ -259,6 +267,18 @@ const App = () => (
                               <Route path="/careers" element={<Careers />} />
                               <Route path="/press" element={<Press />} />
                               <Route path="/affiliate" element={<Affiliate />} />
+                              
+                              {/* Reseller & Dropshipping Hub Routes */}
+                              <Route path="/reseller" element={<ResellerLanding />} />
+                              <Route path="/reseller/register" element={<ResellerLanding />} />
+                              <Route path="/reseller/dashboard" element={<ResellerDashboard />} />
+                              <Route path="/reseller/products" element={<ResellerProducts />} />
+                              <Route path="/reseller/orders" element={<ResellerOrders />} />
+                              <Route path="/reseller/orders/new" element={<ResellerNewOrder />} />
+                              <Route path="/reseller/wallet" element={<ResellerWallet />} />
+                              <Route path="/reseller/marketing" element={<ResellerMarketing />} />
+                              <Route path="/reseller/settings" element={<ResellerSettings />} />
+
                               <Route path="/seller" element={<Seller />} />
                               <Route path="/seller/:id" element={<Seller />} />
                               <Route path="/seller/register" element={<SellerRegister />} />

@@ -8,7 +8,8 @@ import {
   MessageCircle, 
   LogOut,
   ArrowLeft,
-  Search
+  Search,
+  Store
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -148,10 +149,18 @@ export function Header() {
             </div>
           )}
 
-          {/* Right Action Icons (Search for mobile, Wishlist, Messages, Cart, Account) */}
+          {/* Right Action Icons (Search for mobile, Reseller Hub, Wishlist, Messages, Cart, Account) */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
 
-
+            {/* Reseller Hub Quick Link */}
+            <Link
+              to="/reseller/dashboard"
+              className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-orange-500/10 to-amber-500/15 hover:from-orange-500/20 hover:to-amber-500/25 text-orange-600 border border-orange-500/30 px-2.5 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95"
+              title="রিসেলার প্যানেল"
+            >
+              <Store className="h-3.5 w-3.5" />
+              <span>রিসেলার হাব</span>
+            </Link>
 
             {/* Messages / Sigma AI Assistant */}
             <Link to="/messages" className="flex flex-col items-center justify-center p-1 sm:px-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-orange-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all relative group" title="Sigma AI Assistant">
@@ -197,6 +206,12 @@ export function Header() {
                         <p className="text-sm font-bold text-foreground">{profile?.full_name || 'Welcome!'}</p>
                         <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                       </div>
+                      <DropdownMenuItem asChild className="bg-orange-500/10 text-orange-600 font-bold focus:bg-orange-500/20 focus:text-orange-600">
+                        <Link to="/reseller/dashboard" className="cursor-pointer flex items-center justify-between w-full">
+                          <span className="flex items-center gap-1.5"><Store className="h-4 w-4" /> রিসেলার প্যানেল</span>
+                          <span className="text-[9px] bg-orange-600 text-white font-black px-1.5 py-0.5 rounded">লাইভ</span>
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/orders" className="cursor-pointer">My Orders</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/wishlist" className="cursor-pointer">Wishlist</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/referrals" className="cursor-pointer flex items-center justify-between"><span>Refer & Earn</span><span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded">৳৫০ বোনাস</span></Link></DropdownMenuItem>
@@ -216,6 +231,12 @@ export function Header() {
                           <Button asChild variant="outline" size="sm" className="flex-1"><Link to="/register">Register</Link></Button>
                         </div>
                       </div>
+                      <DropdownMenuItem asChild className="bg-orange-500/10 text-orange-600 font-bold focus:bg-orange-500/20 focus:text-orange-600">
+                        <Link to="/reseller" className="cursor-pointer flex items-center justify-between w-full">
+                          <span className="flex items-center gap-1.5"><Store className="h-4 w-4" /> রিসেলার প্রোগ্রাম</span>
+                          <span className="text-[9px] bg-orange-600 text-white font-black px-1.5 py-0.5 rounded">আয় করুন</span>
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/referrals" className="cursor-pointer flex items-center justify-between"><span>Refer & Earn</span><span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded">৳৫০ বোনাস</span></Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/orders" className="cursor-pointer">My Orders</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/wishlist" className="cursor-pointer">Wishlist</Link></DropdownMenuItem>

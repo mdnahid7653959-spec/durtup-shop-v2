@@ -52,10 +52,10 @@ export default function Register() {
     try {
       await signUp(email, password, fullName);
       toast({
-        title: "Account created!",
-        description: "Welcome to Durtup.shop! You can now start shopping."
+        title: "🎉 অভিনন্দন! একাউন্ট সফলভাবে তৈরি হয়েছে!",
+        description: "আপনার রিসেলার প্যানেল সক্রিয় করা হয়েছে। ড্যাশবোর্ডে প্রবেশ করছেন..."
       });
-      navigate(nextPath || "/");
+      navigate(nextPath || "/reseller/dashboard");
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -72,10 +72,10 @@ export default function Register() {
     try {
       await signInWithGoogle();
       toast({
-        title: "Signed up with Google!",
-        description: "Welcome to Durtup.shop!"
+        title: "🎉 গুগল সাইনআপ সফল হয়েছে!",
+        description: "স্বাগতম! আপনার রিসেলার ড্যাশবোর্ডে নিয়ে যাওয়া হচ্ছে..."
       });
-      navigate(nextPath || "/");
+      navigate(nextPath || "/reseller/dashboard");
     } catch (error: any) {
       const isUnauthDomain = error?.code === "auth/unauthorized-domain" || error?.message?.includes("unauthorized-domain");
       toast({
