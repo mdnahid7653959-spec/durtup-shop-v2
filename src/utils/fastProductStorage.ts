@@ -2,7 +2,7 @@
  * High-performance Instant Product Storage Cache
  * Provides 0ms first-render hydration for direct URLs, page reloads, and fast navigation.
  */
-import { Product } from "@/types";
+import type { Product } from "@/components/products/ProductCard";
 
 const PREFIX = "durtup_fp_";
 const MAX_LOCAL_ITEMS = 40;
