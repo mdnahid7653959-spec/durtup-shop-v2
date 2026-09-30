@@ -9,14 +9,18 @@ import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import type { CombinedProduct } from "@/hooks/useCombinedSearch";
-import { getSmartProductImage } from "@/utils/productImageHelper";
+import { getSmartProductImage, getResponsiveImageSrcSet, PRODUCT_CARD_SIZES } from "@/utils/productImageHelper";
 
 interface CombinedProductCardProps {
   product: CombinedProduct;
+  priority?: boolean;
 }
 
-const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ product }) => {
+const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ product, priority = false }) => {
   const displayImage = getSmartProductImage(product.name, product.image, (product as any).category || "");
+  const imageSrcSet = React.useMemo(() => {
+    return getResponsiveImageSrcSet(displayImage, [240, 360, 480, 640], 75);
+  }, [displayImage]);
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { addToCart: addToCJCart } = useCJCart();
@@ -83,8 +87,6 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
     <Link 
       to={productLink} 
       state={{ preloadedProduct: product }}
-      onMouseEnter={() => { if (displayImage) { const i = new Image(); i.src = displayImage; } }}
-      onTouchStart={() => { if (displayImage) { const i = new Image(); i.src = displayImage; } }}
       className="group block"
     >
       <div className="bg-card border rounded-xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-primary/20">
@@ -92,9 +94,14 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
         <div className="relative aspect-square overflow-hidden bg-muted">
           <img
             src={displayImage}
+            srcSet={imageSrcSet || undefined}
+            sizes={PRODUCT_CARD_SIZES}
+            width="300"
+            height="300"
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
+            loading={priority ? "eager" : "lazy"}
+            {...({ fetchpriority: priority ? "high" : "auto" } as any)}
             decoding="async"
             onError={(e) => {
               (e.target as HTMLImageElement).src = getSmartProductImage(product.name, "", "");

@@ -16,6 +16,7 @@ export interface ProductSEOData {
   stock_quantity?: number;
   rating_average?: number;
   rating_count?: number;
+  has_real_reviews?: boolean;
   sku?: string;
   brand?: string;
   category?: string;
@@ -214,6 +215,14 @@ export function buildProductJsonLd(product: ProductSEOData, canonicalUrl: string
         name: SITE_NAME,
         url: BASE_URL,
       },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "BD",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 7,
+        returnMethod: "https://schema.org/ReturnByMail",
+        returnFees: "https://schema.org/FreeReturn"
+      },
       shippingDetails: {
         "@type": "OfferShippingDetails",
         shippingRate: {
@@ -238,8 +247,8 @@ export function buildProductJsonLd(product: ProductSEOData, canonicalUrl: string
     },
   };
 
-  // Only include real aggregateRating if positive rating and count exist
-  if (product.rating_average && product.rating_average > 0 && product.rating_count && product.rating_count > 0) {
+  // STRICT GOOGLE COMPLIANCE: Only include aggregateRating if real, verified user reviews exist on the product
+  if (product.has_real_reviews && product.rating_average && product.rating_average > 0 && product.rating_count && product.rating_count > 0) {
     schema.aggregateRating = {
       "@type": "AggregateRating",
       ratingValue: product.rating_average.toFixed(1),

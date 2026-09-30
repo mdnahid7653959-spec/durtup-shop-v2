@@ -19,27 +19,22 @@ const routeLoaders: Record<string, () => Promise<any>> = {
   "/search": () => import("@/pages/Search"),
   "/login": () => import("@/pages/Login"),
   "/register": () => import("@/pages/Register"),
-  "/admin": () => import("@/pages/admin/AdminDashboard"),
-  "/admin/login": () => import("@/pages/admin/AdminLogin"),
-  "/admin/dashboard": () => import("@/pages/admin/AdminDashboard"),
-  "/admin/products": () => import("@/pages/admin/AdminProducts"),
-  "/admin/orders": () => import("@/pages/admin/AdminOrders"),
-  "/admin/categories": () => import("@/pages/admin/AdminCategories"),
-  "/admin/brands": () => import("@/pages/admin/AdminBrands"),
-  "/admin/inventory": () => import("@/pages/admin/AdminInventory"),
-  "/admin/returns": () => import("@/pages/admin/AdminReturns"),
-  "/admin/users": () => import("@/pages/admin/AdminUsers"),
-  "/admin/settings": () => import("@/pages/admin/AdminSettings"),
 };
 
 const prefetchedSet = new Set<string>();
 
 /**
  * Instantly prefetch a route component chunk on hover/touch before the user finishes clicking
+ * (Strictly excludes admin/staff modules to keep public storefront lightweight)
  */
 export function prefetchRoute(href: string) {
   if (!href) return;
   const path = href.split("?")[0].split("#")[0].toLowerCase();
+
+  // Block admin, staff, and internal dashboard routes from public prefetch
+  if (path.startsWith("/admin") || path.startsWith("/staff") || path.startsWith("/seller") || path.startsWith("/reseller")) {
+    return;
+  }
   
   // Direct match
   if (routeLoaders[path] && !prefetchedSet.has(path)) {
@@ -51,17 +46,13 @@ export function prefetchRoute(href: string) {
   // Prefix match (e.g., /category/electronics, /product/item-1)
   if (path.startsWith("/category/") && !prefetchedSet.has("/category")) {
     prefetchedSet.add("/category");
-    routeLoaders["/category"]().catch(() => {});
+    routeLoaders["/category"]?.()?.catch(() => {});
     return;
   }
   if ((path.startsWith("/product/") || path.startsWith("/p/") || path.startsWith("/item/")) && !prefetchedSet.has("/product")) {
     prefetchedSet.add("/product");
-    routeLoaders["/product"]().catch(() => {});
+    routeLoaders["/product"]?.()?.catch(() => {});
     return;
-  }
-  if (path.startsWith("/admin/") && !prefetchedSet.has("/admin/dashboard")) {
-    prefetchedSet.add("/admin/dashboard");
-    routeLoaders["/admin/dashboard"]().catch(() => {});
   }
 }
 

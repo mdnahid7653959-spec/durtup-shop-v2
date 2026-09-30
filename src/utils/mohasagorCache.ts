@@ -252,10 +252,15 @@ export function startMohasagorAutoSync() {
   if (typeof window === "undefined") return;
   if (autoSyncTimer !== null) return;
 
-  // Run auto-sync from live API every 5 minutes
+  const SIX_HOURS = 6 * 60 * 60 * 1000;
+  // Run background sync safely with staleness checks to protect customer bandwidth & supplier rate limits
   autoSyncTimer = window.setInterval(async () => {
     try {
-      console.log("[Mohasagor Auto-Sync] Refreshing latest products (5-min interval)...");
+      const now = Date.now();
+      if (lastSyncTimestamp && now - lastSyncTimestamp < SIX_HOURS && inMemoryProductsCache && inMemoryProductsCache.length >= 100) {
+        return; // Valid cached products exist; do not spam supplier API
+      }
+      console.log("[Mohasagor Auto-Sync] Refreshing catalog in background...");
       await fetchAllPagesMohasagorProducts(true);
     } catch (err) {
       console.warn("[Mohasagor Auto-Sync] Background sync error:", err);
@@ -389,11 +394,15 @@ function notifyCatalogUpdated() {
 }
 
 if (typeof window !== "undefined") {
-  // Eagerly initiate slim catalog load so all 2,818 products are available for live search immediately
-  fetchSlimCatalog().catch(() => {});
-
   const scheduleHydration = () => {
-    hydrateCatalog().catch(() => {});
+    const run = () => {
+      hydrateCatalog().catch(() => {});
+    };
+    if ("requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(run, { timeout: 4000 });
+    } else {
+      setTimeout(run, 2000);
+    }
   };
 
   if (document.readyState === "complete") {
@@ -550,10 +559,6 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
         EcomsellerEngine.getCachedEcomsellerProducts().catch(() => [])
       ]);
       const base = (idbItems && idbItems.length > 0) ? deduplicateProducts(idbItems) : await fetchSlimCatalog();
-      if (!idbItems || idbItems.length === 0) {
-        // Trigger detailed catalog hydration in background without blocking initial search
-        setTimeout(() => fetchStaticCatalog().catch(() => {}), 1500);
-      }
       const combined = interleaveCatalogs(base, ecomItems || []);
       if (combined && combined.length > 0) {
         inMemoryProductsCache = combined;

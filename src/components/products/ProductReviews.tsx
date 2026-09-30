@@ -32,43 +32,7 @@ interface ReviewItem {
   helpful_count?: number;
 }
 
-const defaultMockReviews: ReviewItem[] = [
-  {
-    id: "rev-mock-1",
-    product_id: "default",
-    rating: 5,
-    user_name: "Tanvir Ahmed",
-    title: "Excellent quality & fast delivery!",
-    comment: "The product is 100% authentic and exactly as shown in the picture. Build quality is top-notch and battery backup is amazing. Highly recommended!",
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    is_verified: true,
-    helpful_count: 12
-  },
-  {
-    id: "rev-mock-2",
-    product_id: "default",
-    rating: 5,
-    user_name: "Sadia Rahman",
-    title: "Great value for money",
-    comment: "Very pleased with the purchase. Packaging was secure and delivered within 2 days. Working perfectly.",
-    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    is_verified: true,
-    helpful_count: 8
-  },
-  {
-    id: "rev-mock-3",
-    product_id: "default",
-    rating: 4,
-    user_name: "Mahmudul Hasan",
-    title: "Good product, helpful seller",
-    comment: "Everything works great. Light is very bright and battery life is reliable. Satisfied with the service.",
-    created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
-    is_verified: true,
-    helpful_count: 5
-  }
-];
-
-export function ProductReviews({ productId, ratingAverage = 4.8, ratingCount = 15, productName }: ProductReviewsProps) {
+export function ProductReviews({ productId, ratingAverage, ratingCount, productName }: ProductReviewsProps) {
   const [showReviewsList, setShowReviewsList] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [rating, setRating] = useState(5);
@@ -123,14 +87,14 @@ export function ProductReviews({ productId, ratingAverage = 4.8, ratingCount = 1
   }, [productId]);
 
   const allReviews = [...localReviews, ...dbReviews];
-  const displayReviewsList = allReviews.length > 0 ? allReviews : defaultMockReviews;
+  const displayReviewsList = allReviews;
 
   // Calculate actual rating average and distribution
   const avgRating = allReviews.length > 0 
     ? allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length
-    : ratingAverage;
+    : (ratingAverage || 0);
 
-  const totalReviewsCount = allReviews.length > 0 ? allReviews.length : ratingCount;
+  const totalReviewsCount = allReviews.length > 0 ? allReviews.length : (ratingCount || 0);
 
   const distribution = [5, 4, 3, 2, 1].map((star) => {
     const count = displayReviewsList.filter((r) => r.rating === star).length;
@@ -453,84 +417,92 @@ export function ProductReviews({ productId, ratingAverage = 4.8, ratingCount = 1
             </Button>
           </div>
 
-          {/* Scrollable container with max height so it never blocks page scrolling */}
-          <div className="max-h-[420px] overflow-y-auto pr-1 space-y-3">
-            {displayReviewsList.map((rev) => {
-              const isLiked = helpfulLiked[rev.id];
-              const likes = (rev.helpful_count || 0) + (isLiked ? 1 : 0);
+          {/* Reviews list or clean empty state */}
+          {displayReviewsList.length === 0 ? (
+            <div className="py-8 text-center bg-muted/20 rounded-xl border border-dashed border-border/60 p-4">
+              <MessageSquare className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+              <p className="text-xs font-semibold text-foreground">No customer reviews yet</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Be the first to share your experience with this product!</p>
+            </div>
+          ) : (
+            <div className="max-h-[420px] overflow-y-auto pr-1 space-y-3">
+              {displayReviewsList.map((rev) => {
+                const isLiked = helpfulLiked[rev.id];
+                const likes = (rev.helpful_count || 0) + (isLiked ? 1 : 0);
 
-              return (
-                <div key={rev.id} className="p-3.5 sm:p-4 rounded-xl bg-muted/20 hover:bg-muted/30 border border-border/40 transition-all space-y-2.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                        {rev.user_name ? rev.user_name.charAt(0).toUpperCase() : "U"}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-xs sm:text-sm font-bold text-foreground">
-                            {rev.user_name || "Verified Customer"}
-                          </p>
-                          {rev.is_verified && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-600 font-semibold bg-emerald-500/10 px-1.5 py-0.2 rounded">
-                              <CheckCircle2 className="h-2.5 w-2.5" /> Verified Purchase
-                            </span>
-                          )}
+                return (
+                  <div key={rev.id} className="p-3.5 sm:p-4 rounded-xl bg-muted/20 hover:bg-muted/30 border border-border/40 transition-all space-y-2.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                          {rev.user_name ? rev.user_name.charAt(0).toUpperCase() : "U"}
                         </div>
-                        <p className="text-[10px] text-muted-foreground">
-                          {new Date(rev.created_at).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </p>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs sm:text-sm font-bold text-foreground">
+                              {rev.user_name || "Verified Customer"}
+                            </p>
+                            {rev.is_verified && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-600 font-semibold bg-emerald-500/10 px-1.5 py-0.2 rounded">
+                                <CheckCircle2 className="h-2.5 w-2.5" /> Verified Purchase
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            {new Date(rev.created_at).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Rating Stars */}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${
+                              i < rev.rating
+                                ? "fill-warning text-warning"
+                                : "fill-muted text-muted-foreground/30"
+                            }`}
+                          />
+                        ))}
                       </div>
                     </div>
 
-                    {/* Rating Stars */}
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${
-                            i < rev.rating
-                              ? "fill-warning text-warning"
-                              : "fill-muted text-muted-foreground/30"
-                          }`}
-                        />
-                      ))}
+                    {rev.title && (
+                      <p className="font-bold text-xs sm:text-sm text-foreground">
+                        {rev.title}
+                      </p>
+                    )}
+
+                    <p className="text-xs text-foreground/80 leading-relaxed">
+                      {rev.comment}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground">
+                      <span className="text-[10px]">Was this review helpful?</span>
+                      <button
+                        type="button"
+                        onClick={() => toggleHelpful(rev.id)}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border transition-colors ${
+                          isLiked 
+                            ? "bg-primary/10 border-primary/30 text-primary font-semibold" 
+                            : "bg-background/80 hover:bg-muted border-border/60 text-muted-foreground"
+                        }`}
+                      >
+                        <ThumbsUp className="h-3 w-3" />
+                        <span>Helpful ({likes})</span>
+                      </button>
                     </div>
                   </div>
-
-                  {rev.title && (
-                    <p className="font-bold text-xs sm:text-sm text-foreground">
-                      {rev.title}
-                    </p>
-                  )}
-
-                  <p className="text-xs text-foreground/80 leading-relaxed">
-                    {rev.comment}
-                  </p>
-
-                  <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground">
-                    <span className="text-[10px]">Was this review helpful?</span>
-                    <button
-                      type="button"
-                      onClick={() => toggleHelpful(rev.id)}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border transition-colors ${
-                        isLiked 
-                          ? "bg-primary/10 border-primary/30 text-primary font-semibold" 
-                          : "bg-background/80 hover:bg-muted border-border/60 text-muted-foreground"
-                      }`}
-                    >
-                      <ThumbsUp className="h-3 w-3" />
-                      <span>Helpful ({likes})</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
           <Button
             type="button"

@@ -6,7 +6,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { getProductImageCandidates, getSmartProductImage } from "@/utils/productImageHelper";
+import { getProductImageCandidates, getSmartProductImage, getResponsiveImageSrcSet, PRODUCT_CARD_SIZES } from "@/utils/productImageHelper";
 import { saveFastProduct } from "@/utils/fastProductStorage";
 
 export interface Product {
@@ -30,11 +30,15 @@ interface ProductCardProps {
 }
 
 function ProductCardComponent({ product, priority = false }: ProductCardProps) {
-  const imageCandidates = useMemo(() => getProductImageCandidates(product, 600), [product]);
+  const imageCandidates = useMemo(() => getProductImageCandidates(product, 400), [product]);
   const [candidateIdx, setCandidateIdx] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const displayImage = imageCandidates[candidateIdx] || getSmartProductImage(product.name, product.image, (product as any).category || "");
+  const imageSrcSet = useMemo(() => {
+    return getResponsiveImageSrcSet(displayImage, [240, 360, 480, 640], 75);
+  }, [displayImage]);
+
   const navigate = useNavigate();
   const discount = product.originalPrice ? Math.round((1 - product.price / product.originalPrice) * 100) : 0;
   const { addToCart } = useCart();
@@ -71,10 +75,6 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
 
   const handlePreload = () => {
     saveFastProduct(product);
-    if (displayImage) {
-      const img = new Image();
-      img.src = displayImage;
-    }
   };
 
   const handleImageError = () => {
@@ -123,7 +123,7 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
           <Heart className={cn("h-4 w-4", inWishlist && "fill-current")} />
         </button>
 
-        {/* Product Image with smooth skeleton backdrop */}
+        {/* Product Image with smooth skeleton backdrop and zero CLS layout container */}
         <Link 
           to={`/product/${product.slug || product.id}`} 
           state={{ preloadedProduct: product }}
@@ -138,7 +138,11 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
             )}
             <img
               src={displayImage || "/placeholder.svg"}
+              srcSet={imageSrcSet || undefined}
+              sizes={PRODUCT_CARD_SIZES}
               alt={product.name}
+              width="300"
+              height="300"
               className={cn(
                 "w-full h-full object-cover group-hover:scale-105 transition-all duration-300",
                 imageLoaded ? "opacity-100" : "opacity-90"

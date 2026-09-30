@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams, useLocation } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -8,16 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Filter, ChevronRight, Globe, X, SlidersHorizontal, ArrowUpDown, Tag, Sparkles, Camera, Store, Search } from "lucide-react";
+import { Filter, ChevronRight, Globe, X, SlidersHorizontal, ArrowUpDown, Tag, Sparkles, Camera, Store, Search, Loader2 } from "lucide-react";
 import { useCombinedSearch } from "@/hooks/useCombinedSearch";
 import { useCategories } from "@/hooks/useProductSearch";
 import { useCJSettings } from "@/hooks/useCJSettings";
 import { SEOHead } from "@/components/SEOHead";
 
+const PRODUCTS_PER_PAGE = 24;
+
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const [showFilters, setShowFilters] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PER_PAGE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const pathFilter = location.pathname.includes("flash-sale") ? "flash-sale"
     : location.pathname.includes("new-arrivals") ? "new"
@@ -49,6 +53,28 @@ export default function Products() {
   const { data: searchResults, isLoading } = useCombinedSearch(params);
   const { data: categories } = useCategories();
   const { data: cjSettings } = useCJSettings();
+
+  const localProducts = searchResults?.local || [];
+  const cjProducts = searchResults?.cj || [];
+  const totalCount = localProducts.length + cjProducts.length;
+
+  // Reset visible pagination count whenever search or filters change
+  useEffect(() => {
+    setVisibleCount(PRODUCTS_PER_PAGE);
+  }, [searchQuery, currentCategory, currentSupplier, currentSort, currentFilter, minPrice, maxPrice]);
+
+  // Infinite scroll observer for smooth pagination streaming
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && visibleCount < localProducts.length) {
+        setVisibleCount(prev => Math.min(prev + PRODUCTS_PER_PAGE, localProducts.length));
+      }
+    }, { rootMargin: "600px" });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visibleCount, localProducts.length]);
 
   const updateFilter = (key: string, value: string | null) => {
     const newParams = new URLSearchParams(searchParams);
@@ -91,9 +117,6 @@ export default function Products() {
   };
 
   const hasFilters = searchParams.toString().length > 0;
-  const localProducts = searchResults?.local || [];
-  const cjProducts = searchResults?.cj || [];
-  const totalCount = localProducts.length + cjProducts.length;
 
   const activeCategoryObj = categories?.find(c => 
     c.slug === currentCategory || 
@@ -524,10 +547,26 @@ export default function Products() {
                   {localProducts.length > 0 && (
                     <div className="space-y-4 mb-8">
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                        {localProducts.map((product) => (
-                          <ProductCard key={product.id} product={product} />
+                        {localProducts.slice(0, visibleCount).map((product, idx) => (
+                          <ProductCard key={product.id} product={product} priority={idx < 4} />
                         ))}
                       </div>
+                      {visibleCount < localProducts.length && (
+                        <div ref={sentinelRef} className="py-6 flex flex-col items-center justify-center gap-2">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+                            <Loader2 className="h-4 w-4 animate-spin text-orange-600" />
+                            <span>লোড হচ্ছে আরও পণ্য... ({Math.min(visibleCount, localProducts.length)} of {localProducts.length})</span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setVisibleCount(prev => Math.min(prev + PRODUCTS_PER_PAGE, localProducts.length))}
+                            className="text-xs"
+                          >
+                            আরও দেখুন (Load More)
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
 

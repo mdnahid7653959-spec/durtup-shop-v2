@@ -96,10 +96,15 @@ const GENERIC_GADGET_FALLBACKS = [
 ];
 
 /**
- * Converts heavy raw supplier images to ultra-fast, edge-cached WebP CDN images via Cloudflare/wsrv.nl
+ * Converts heavy raw supplier images to ultra-fast, edge-cached WebP/AVIF CDN images via Cloudflare/wsrv.nl
  * Uses fit=cover and dynamic resolution to ensure crystal-clear HD clarity with tiny file size.
  */
-export function optimizeImageUrl(url?: string, width: number = 800, quality: number = 85): string {
+export function optimizeImageUrl(
+  url?: string,
+  width: number = 400,
+  quality: number = 75,
+  format: "webp" | "avif" = "webp"
+): string {
   if (!url || typeof url !== "string") return "";
   let trimmed = url.trim();
   if (!trimmed) return "";
@@ -108,25 +113,29 @@ export function optimizeImageUrl(url?: string, width: number = 800, quality: num
     return trimmed;
   }
 
-  // Already an optimized proxy URL
-  if (trimmed.includes("wsrv.nl")) {
-    return trimmed;
+  // If already a wsrv.nl proxy URL, extract raw origin to re-apply target width/format cleanly
+  if (trimmed.includes("wsrv.nl/?url=") || trimmed.includes("wsrv.nl?url=")) {
+    const rawDirect = getDirectImageUrl(trimmed);
+    if (rawDirect && rawDirect !== trimmed) {
+      trimmed = rawDirect;
+    }
   }
 
-  // Unsplash images - use native high-speed dynamic CDN parameters with full uncropped aspect ratio
+  // Unsplash images - use native high-speed dynamic CDN parameters
   if (trimmed.includes("images.unsplash.com")) {
     const clean = trimmed.split("?")[0];
-    return `${clean}?w=${width}&q=${quality}&auto=format`;
+    return `${clean}?w=${width}&q=${quality}&auto=format&fit=crop`;
+  }
+
+  let full = trimmed;
+  if (full.startsWith("//")) {
+    full = `https:${full}`;
   }
 
   // Route external supplier images (Mohasagor, Ecomseller, external CDNs) through Cloudflare Global Edge CDN
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return `https://wsrv.nl/?url=${encodeURIComponent(trimmed)}&w=${width}&output=webp&q=${quality}&we=0`;
-  }
-
-  if (trimmed.startsWith("//")) {
-    const full = `https:${trimmed}`;
-    return `https://wsrv.nl/?url=${encodeURIComponent(full)}&w=${width}&output=webp&q=${quality}&we=0`;
+  if (full.startsWith("http://") || full.startsWith("https://")) {
+    const cleanSource = full.split("#")[0];
+    return `https://wsrv.nl/?url=${encodeURIComponent(cleanSource)}&w=${width}&output=${format}&q=${quality}&we=0&fit=cover`;
   }
 
   return trimmed;
@@ -146,6 +155,40 @@ export function getDirectImageUrl(url?: string): string {
   }
   return trimmed;
 }
+
+/**
+ * Generates responsive srcset string for any image URL
+ */
+export function getResponsiveImageSrcSet(
+  url?: string,
+  widths: number[] = [240, 360, 480, 640],
+  quality: number = 75,
+  format: "webp" | "avif" = "webp"
+): string {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.startsWith("data:") || trimmed.startsWith("blob:") || trimmed.includes(".svg")) {
+    return "";
+  }
+  return widths
+    .map((w) => `${optimizeImageUrl(trimmed, w, quality, format)} ${w}w`)
+    .join(", ");
+}
+
+/**
+ * Standard sizes string for product cards (mobile 2 cols: ~180px, tablet 3-4 cols: ~220px, desktop 4-6 cols: ~200-240px)
+ */
+export const PRODUCT_CARD_SIZES = "(max-width: 640px) 48vw, (max-width: 1024px) 30vw, (max-width: 1280px) 22vw, 240px";
+
+/**
+ * Standard sizes string for Deal of the Day / Mini Carousels (~125-185px)
+ */
+export const MINI_CARD_SIZES = "(max-width: 640px) 140px, (max-width: 1024px) 160px, 185px";
+
+/**
+ * Standard sizes string for Product Detail Page hero image
+ */
+export const PRODUCT_DETAIL_SIZES = "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px";
 
 export function detectCategoryKey(name: string = "", category: string = ""): keyof typeof CATEGORY_IMAGES | null {
   const text = `${name} ${category}`.toLowerCase();
@@ -222,7 +265,7 @@ export function getSmartProductImage(
  * 3. Alternate product images (if available)
  * 4. Smart category fallback
  */
-export function getProductImageCandidates(product: any, width: number = 600): string[] {
+export function getProductImageCandidates(product: any, width: number = 400): string[] {
   const candidates: string[] = [];
   const primaryRaw = product.image || (product.images && product.images[0]) || (product.product_images && product.product_images[0]?.image_url) || "";
 

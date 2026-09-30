@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { Home, Heart, ShoppingCart, Star, Shield, RotateCcw, Minus, Plus, Loader2, Play, ChevronLeft, ChevronRight, Share2, Zap, MessageSquare, ShieldCheck, Store, Truck, Award, Sparkles, TrendingUp, Package, ZoomIn, ZoomOut, X, Maximize2, Ruler, Check } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -21,15 +21,15 @@ import { StoreDetails } from "@/components/products/StoreDetails";
 import { ProductDescriptionSection } from "@/components/products/ProductDescriptionSection";
 import { getCachedMohasagorProducts, findMohasagorProduct, findMohasagorProductSync, findSeriesImages, FALLBACK_SUPPLIER_PRODUCTS } from "@/utils/mohasagorCache";
 import { calculateProductPrice } from "@/utils/pricingMargin";
-import { getSmartProductImage, getDirectImageUrl, optimizeImageUrl } from "@/utils/productImageHelper";
+import { getSmartProductImage, getDirectImageUrl, optimizeImageUrl, getResponsiveImageSrcSet, PRODUCT_DETAIL_SIZES } from "@/utils/productImageHelper";
 import { getEnhancedProductDescription } from "@/utils/productDescriptionHelper";
 import { extractProductVariants, getColorHex, sortVariantValues, type ProductVariant } from "@/utils/productVariantHelper";
 import { db } from "@/integrations/firebase/client";
-import { collection, getDocs, doc, getDoc, query, where, limit } from "firebase/firestore";
 import { getFastProduct, saveFastProduct } from "@/utils/fastProductStorage";
 import { ProductZoomViewer } from "@/components/products/ProductZoomViewer";
 import { SEOHead } from "@/components/SEOHead";
 import { generateProductSEOTitle, generateProductSEODescription, DEFAULT_BANGLADESH_PRODUCT_FAQS } from "@/utils/seoHelper";
+import { getCanonicalProductUrl } from "@/utils/productSlugHelper";
 import { trackViewContent, trackAddToCart } from "@/components/FacebookPixel";
 
 interface ProductImage {
@@ -504,17 +504,24 @@ function ProductDetailContent() {
   }
   if (images.length === 0) images.push(getSmartProductImage(product?.name || "", "", product?.category_id || ""));
 
-  // Eagerly prefetch all product images into memory for instant transitions
+  // Warm the next photo gently on idle for zero-lag gallery navigation
   useEffect(() => {
-    if (images && images.length > 0) {
-      images.forEach((imgUrl) => {
-        if (imgUrl) {
+    if (images && images.length > selectedImage + 1) {
+      const nextImg = images[selectedImage + 1];
+      if (nextImg) {
+        const timer = setTimeout(() => {
           const img = new Image();
-          img.src = imgUrl;
-        }
-      });
+          img.src = nextImg;
+        }, 1200);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [images]);
+  }, [images, selectedImage]);
+
+  const heroSrcSet = useMemo(() => {
+    const cur = images[selectedImage];
+    return cur ? getResponsiveImageSrcSet(cur, [400, 600, 800, 1000], 80) : "";
+  }, [images, selectedImage]);
 
   // Touch swipe handling for images
   const [touchStart, setTouchStart] = useState(0);
@@ -547,6 +554,13 @@ function ProductDetailContent() {
     }
     setProduct(loaded);
     saveFastProduct(loaded);
+
+    // Ensure browser URL synchronizes cleanly with canonical product slug
+    if (loaded.slug && slug && slug !== loaded.slug && typeof window !== "undefined") {
+      try {
+        window.history.replaceState(null, "", `/product/${loaded.slug}`);
+      } catch {}
+    }
 
     // Dynamic Title & OpenGraph meta tags for social share previews
     if (typeof document !== "undefined") {
@@ -1397,7 +1411,7 @@ function ProductDetailContent() {
         title={generateProductSEOTitle(product)}
         description={generateProductSEODescription(product)}
         image={images[0]}
-        url={`https://durtup.shop/product/${product.slug || product.id}`}
+        url={getCanonicalProductUrl(product.slug || product.id)}
         type="product"
         product={{
           id: product.id,
@@ -1408,8 +1422,9 @@ function ProductDetailContent() {
           regular_price: product.regular_price,
           discount_price: product.discount_price,
           stock_quantity: product.stock_quantity,
-          rating_average: product.rating_average,
-          rating_count: product.rating_count,
+          rating_average: (product as any).has_real_reviews ? product.rating_average : undefined,
+          rating_count: (product as any).has_real_reviews ? product.rating_count : undefined,
+          has_real_reviews: Boolean((product as any).has_real_reviews),
           brand: (product as any).brand_name || "Durtup",
           category: (product as any).category_name || "Products",
           image: images[0],
@@ -1473,7 +1488,11 @@ function ProductDetailContent() {
                     ) : (
                       <img
                         src={images[selectedImage]}
+                        srcSet={heroSrcSet || undefined}
+                        sizes={PRODUCT_DETAIL_SIZES}
                         alt={product.name}
+                        width="540"
+                        height="540"
                         style={{
                           imageRendering: "-webkit-optimize-contrast",
                           ...(hoverPos
@@ -1631,8 +1650,12 @@ function ProductDetailContent() {
                         title={`View photo ${i + 1}`}
                       >
                         <img
-                          src={img}
-                          alt=""
+                          src={optimizeImageUrl(img, 120, 75)}
+                          alt={`${product.name} photo ${i + 1}`}
+                          width="84"
+                          height="84"
+                          loading="lazy"
+                          decoding="async"
                           style={{ imageRendering: "-webkit-optimize-contrast" }}
                           className="w-full h-full object-contain transition-transform duration-200"
                           onError={handleImageError}

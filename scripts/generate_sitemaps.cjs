@@ -128,24 +128,42 @@ function getGuideUrls() {
   }));
 }
 
-// 4. Dynamic Product Detail Pages
+// 4. Dynamic Product Detail Pages (Aggregated across all supplier catalogs)
 function getProductUrls() {
-  const catalogPath = path.join(__dirname, '..', 'public', 'mohasagor_catalog.json');
-  let products = [];
-  if (fs.existsSync(catalogPath)) {
+  const publicDir = path.join(__dirname, '..', 'public');
+  const mohasagorPath = path.join(publicDir, 'mohasagor_catalog.json');
+  const ecomsellerPath = path.join(publicDir, 'ecomseller_catalog.json');
+  
+  let allProducts = [];
+
+  if (fs.existsSync(mohasagorPath)) {
     try {
-      const data = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
-      if (Array.isArray(data)) products = data;
+      const data = JSON.parse(fs.readFileSync(mohasagorPath, 'utf8'));
+      if (Array.isArray(data)) allProducts.push(...data);
     } catch (e) {
-      console.error('Error reading catalog file:', e.message);
+      console.error('Error reading mohasagor catalog:', e.message);
+    }
+  }
+
+  if (fs.existsSync(ecomsellerPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(ecomsellerPath, 'utf8'));
+      if (Array.isArray(data)) allProducts.push(...data);
+    } catch (e) {
+      console.error('Error reading ecomseller catalog:', e.message);
     }
   }
 
   const urls = [];
   const seen = new Set();
 
-  for (const p of products) {
-    const rawSlug = (p.slug || p.id || '').toString().trim();
+  for (const p of allProducts) {
+    if (!p) continue;
+    let rawSlug = (p.slug || p.id || '').toString().trim();
+    if (!rawSlug) continue;
+
+    // Clean slug for URL safety
+    rawSlug = rawSlug.toLowerCase().replace(/[^\w\u0980-\u09FF-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
     if (!rawSlug || seen.has(rawSlug)) continue;
     seen.add(rawSlug);
 
@@ -176,6 +194,7 @@ function generateMasterIndex(sitemaps) {
 
 function main() {
   const publicDir = path.join(__dirname, '..', 'public');
+  const distDir = path.join(__dirname, '..', 'dist');
   if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
 
   console.log('Generating Production Dynamic XML Sitemaps for Durtup.shop...');
@@ -187,11 +206,20 @@ function main() {
 
   console.log(`Found ${pageUrls.length} pages, ${categoryUrls.length} categories, ${guideUrls.length} guides, and ${productUrls.length} products.`);
 
+  const sitemapsData = [
+    { file: 'sitemap-pages.xml', content: buildUrlSetXml(pageUrls) },
+    { file: 'sitemap-categories.xml', content: buildUrlSetXml(categoryUrls) },
+    { file: 'sitemap-guides.xml', content: buildUrlSetXml(guideUrls) },
+    { file: 'sitemap-products.xml', content: buildUrlSetXml(productUrls) },
+  ];
+
   // Write sub-sitemaps
-  fs.writeFileSync(path.join(publicDir, 'sitemap-pages.xml'), buildUrlSetXml(pageUrls), 'utf8');
-  fs.writeFileSync(path.join(publicDir, 'sitemap-categories.xml'), buildUrlSetXml(categoryUrls), 'utf8');
-  fs.writeFileSync(path.join(publicDir, 'sitemap-guides.xml'), buildUrlSetXml(guideUrls), 'utf8');
-  fs.writeFileSync(path.join(publicDir, 'sitemap-products.xml'), buildUrlSetXml(productUrls), 'utf8');
+  for (const item of sitemapsData) {
+    fs.writeFileSync(path.join(publicDir, item.file), item.content, 'utf8');
+    if (fs.existsSync(distDir)) {
+      fs.writeFileSync(path.join(distDir, item.file), item.content, 'utf8');
+    }
+  }
 
   // Master Sitemap Index
   const activeSitemaps = [
@@ -201,7 +229,11 @@ function main() {
     'sitemap-products.xml',
   ];
 
-  fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), generateMasterIndex(activeSitemaps), 'utf8');
+  const masterIndexContent = generateMasterIndex(activeSitemaps);
+  fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), masterIndexContent, 'utf8');
+  if (fs.existsSync(distDir)) {
+    fs.writeFileSync(path.join(distDir, 'sitemap.xml'), masterIndexContent, 'utf8');
+  }
 
   console.log('✅ Master Sitemap Index (sitemap.xml) and all clean sub-sitemaps generated successfully!');
 }

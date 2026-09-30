@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "node scripts/generate_sitemaps.cjs && tsc --noEmit && vite build && node scripts/prerender_products.cjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
     "sitemap": "node scripts/generate_sitemaps.cjs",
+    "prerender": "node scripts/prerender_products.cjs",
     "test:seo": "node scripts/validate_seo.cjs"
   },
   "dependencies": {

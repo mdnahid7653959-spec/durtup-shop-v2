@@ -4,11 +4,14 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { getCachedMohasagorProducts, getSyncProducts, filterProductsByCategory } from "@/utils/mohasagorCache";
 import { SEOHead } from "@/components/SEOHead";
 import { generateCategorySEOTitle, generateCategorySEODescription, DEFAULT_BANGLADESH_PRODUCT_FAQS } from "@/utils/seoHelper";
 import { findCategoryOrSubcategory, CATEGORIES_DATA } from "@/data/categoriesData";
 import { cn } from "@/lib/utils";
+
+const PRODUCTS_PER_PAGE = 24;
 
 interface Category {
 
@@ -52,6 +55,27 @@ export default function CategoryPage() {
     const syncList = getSyncProducts();
     return filterProductsByCategory(syncList, filterKey, formattedName);
   });
+
+  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PER_PAGE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset pagination when category or subcategory changes
+  useEffect(() => {
+    setVisibleCount(PRODUCTS_PER_PAGE);
+  }, [slug, subcategoryParam]);
+
+  // Infinite scroll observer for pagination
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && visibleCount < products.length) {
+        setVisibleCount(prev => Math.min(prev + PRODUCTS_PER_PAGE, products.length));
+      }
+    }, { rootMargin: "600px" });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visibleCount, products.length]);
 
   // Subcategory Water Droplet Sliding State (সাব-ক্যাটাগরি পানির ফোঁটা মুভমেন্ট)
   const subScrollRef = useRef<HTMLDivElement | null>(null);
@@ -328,10 +352,28 @@ export default function CategoryPage() {
 
           {/* Product Grid */}
           {products.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-              {products.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
+                {products.slice(0, visibleCount).map((product, idx) => (
+                  <ProductCard key={product.id} product={product} priority={idx < 4} />
+                ))}
+              </div>
+              {visibleCount < products.length && (
+                <div ref={sentinelRef} className="py-6 flex flex-col items-center justify-center gap-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+                    <Loader2 className="h-4 w-4 animate-spin text-orange-600" />
+                    <span>লোড হচ্ছে আরও পণ্য... ({Math.min(visibleCount, products.length)} of {products.length})</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVisibleCount(prev => Math.min(prev + PRODUCTS_PER_PAGE, products.length))}
+                    className="text-xs"
+                  >
+                    আরও দেখুন (Load More)
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-12 sm:py-16 bg-card rounded-2xl border border-dashed p-8">

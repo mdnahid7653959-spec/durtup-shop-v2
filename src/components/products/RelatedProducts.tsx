@@ -72,10 +72,10 @@ function RelatedProductsComponent({
     return uniqueList;
   }, [products]);
 
-  // Proactively warm all related product images in advance
+  // Gently warm the first few visible related product images
   useEffect(() => {
     if (mappedProducts.length > 0) {
-      prefetchProductImages(mappedProducts, 60);
+      prefetchProductImages(mappedProducts.slice(0, 6), 6);
     }
   }, [mappedProducts]);
 
@@ -137,8 +137,8 @@ function RelatedProductsComponent({
           ) : (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
-                {visibleProducts.map((prod, idx) => (
-                  <ProductCard key={prod.id} product={prod} priority={idx < 12} />
+                {visibleProducts.map((prod) => (
+                  <ProductCard key={prod.id} product={prod} priority={false} />
                 ))}
               </div>
 

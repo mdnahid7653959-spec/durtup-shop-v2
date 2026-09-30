@@ -1,7 +1,7 @@
 import { memo, useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
-import { getSmartProductImage } from "@/utils/productImageHelper";
+import { getSmartProductImage, optimizeImageUrl, getResponsiveImageSrcSet, MINI_CARD_SIZES } from "@/utils/productImageHelper";
 import { type Product } from "@/components/products/ProductCard";
 
 interface DealOfTheDayProps {
@@ -18,6 +18,9 @@ function ProductDealCard({
   isDraggingRef: React.MutableRefObject<boolean>;
 }) {
   const displayImage = getSmartProductImage(product.name, product.image);
+  const imageSrcSet = useMemo(() => {
+    return getResponsiveImageSrcSet(product.image || displayImage, [160, 240, 360], 75);
+  }, [product.image, displayImage]);
   const discountPercentages = [24, 19, 15, 21, 18, 20, 25, 30, 22, 17];
   const discount = product.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
@@ -57,14 +60,19 @@ function ProductDealCard({
           </span>
         </div>
 
-        {/* Product Image Container */}
+        {/* Product Image Container with aspect ratio protection */}
         <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-950 mb-1.5 flex items-center justify-center p-1 pointer-events-none">
           <img
             src={displayImage}
+            srcSet={imageSrcSet || undefined}
+            sizes={MINI_CARD_SIZES}
+            width="180"
+            height="180"
             alt={product.name}
             draggable={false}
             className="w-full h-full object-contain filter drop-shadow-xs group-hover/card:scale-108 transition-transform duration-300 pointer-events-none select-none"
-            loading="lazy"
+            loading={idx < 4 ? "eager" : "lazy"}
+            {...({ fetchpriority: idx < 4 ? "high" : "auto" } as any)}
             decoding="async"
             onError={(e) => {
               (e.target as HTMLImageElement).src = getSmartProductImage(product.name, "", "");

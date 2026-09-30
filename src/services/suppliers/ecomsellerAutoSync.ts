@@ -53,21 +53,34 @@ class EcomsellerAutoSyncService {
     if (this.isInitialized) return;
     this.isInitialized = true;
 
-    // Run first sync shortly after startup (after 3 seconds so initial render isn't blocked)
-    window.setTimeout(() => {
-      this.runSyncAndAnalysis().catch((err) => {
-        console.warn("[Ecomseller AutoSync] Initial background sync error:", err);
-      });
-    }, 3000);
+    const SIX_HOURS = 6 * 60 * 60 * 1000;
+    const lastTime = this.lastAnalysis?.timestamp ? new Date(this.lastAnalysis.timestamp).getTime() : 0;
+    const isStale = !lastTime || (Date.now() - lastTime > SIX_HOURS);
 
-    // Setup 5-minute recurring interval
+    if (isStale) {
+      // Defer sync to idle time so initial rendering and interactions are never blocked
+      const runIdle = () => {
+        this.runSyncAndAnalysis().catch((err) => {
+          console.warn("[Ecomseller AutoSync] Background sync warning:", err);
+        });
+      };
+      if ("requestIdleCallback" in window) {
+        (window as any).requestIdleCallback(runIdle, { timeout: 8000 });
+      } else {
+        window.setTimeout(runIdle, 6000);
+      }
+    }
+
+    // Setup recurring interval with staleness check
     this.timer = window.setInterval(() => {
-      this.runSyncAndAnalysis().catch((err) => {
-        console.warn("[Ecomseller AutoSync] Recurring 5-min sync error:", err);
-      });
+      const now = Date.now();
+      const last = this.lastAnalysis?.timestamp ? new Date(this.lastAnalysis.timestamp).getTime() : 0;
+      if (!last || now - last > SIX_HOURS) {
+        this.runSyncAndAnalysis().catch((err) => {
+          console.warn("[Ecomseller AutoSync] Recurring sync error:", err);
+        });
+      }
     }, SYNC_INTERVAL_MS);
-
-    console.log("[Ecomseller AutoSync] 5-minute live analyzer engine initialized.");
   }
 
   /**

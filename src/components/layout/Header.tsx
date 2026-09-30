@@ -149,18 +149,8 @@ export function Header() {
             </div>
           )}
 
-          {/* Right Action Icons (Search for mobile, Reseller Hub, Wishlist, Messages, Cart, Account) */}
+          {/* Right Action Icons (Messages, Wishlist, Account) */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-
-            {/* Reseller Hub Quick Link */}
-            <Link
-              to="/reseller/dashboard"
-              className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-orange-500/10 to-amber-500/15 hover:from-orange-500/20 hover:to-amber-500/25 text-orange-600 border border-orange-500/30 px-2.5 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs hover:scale-105 active:scale-95"
-              title="রিসেলার প্যানেল"
-            >
-              <Store className="h-3.5 w-3.5" />
-              <span>রিসেলার হাব</span>
-            </Link>
 
             {/* Messages / Sigma AI Assistant */}
             <Link to="/messages" className="flex flex-col items-center justify-center p-1 sm:px-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-orange-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all relative group" title="Sigma AI Assistant">
