@@ -11,8 +11,9 @@ import {
 import { synonymManager } from "../SynonymManager";
 import { fuzzyMatchToken, tokenizeText, normalizeText, getEditDistance } from "../FuzzySearchEngine";
 import { searchAnalytics } from "../SearchAnalyticsService";
-import { getCachedMohasagorProducts, getInMemoryProducts, FALLBACK_SUPPLIER_PRODUCTS, inferCategory } from "@/utils/mohasagorCache";
+import { getCachedMohasagorProducts, getInMemoryProducts, fetchSlimCatalog, FALLBACK_SUPPLIER_PRODUCTS, inferCategory } from "@/utils/mohasagorCache";
 import { getSmartProductImage } from "@/utils/productImageHelper";
+import { productMatchesCategory, normalizeCategory } from "@/utils/categoryHelper";
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&h=600&fit=crop",
@@ -162,7 +163,10 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
           // If in-memory had only seed items, await cached catalog
           if (productMap.size < 100) {
             try {
-              const cached = await getCachedMohasagorProducts();
+              let cached = await getCachedMohasagorProducts();
+              if (!cached || cached.length < 100) {
+                cached = await fetchSlimCatalog();
+              }
               if (cached && cached.length > 0) {
                 cached.forEach((p: any, idx: number) => {
                   const pid = String(p.id);
@@ -712,13 +716,7 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
     let filtered = scoredProducts;
 
     if (options.category && options.category !== "all") {
-      const targetSlug = normalizeCategorySlug(options.category);
-
-      filtered = filtered.filter((p) => {
-        const detected = inferProductCategory(p.name, p.category);
-        const pCatNorm = normalizeCategorySlug(p.category || "");
-        return detected === targetSlug || pCatNorm === targetSlug || (p.category || "").toLowerCase().includes(targetSlug);
-      });
+      filtered = filtered.filter((p) => productMatchesCategory(p, options.category));
     }
     if (options.brand && options.brand !== "all") {
       const b = options.brand.toLowerCase();

@@ -83,16 +83,19 @@ async function searchLocalProducts(params: SearchParams): Promise<CombinedProduc
 
     // Fallback: If search or browsing returned empty, directly search and filter across master supplier catalogs
     if (mapped.length === 0) {
-      const { getCachedMohasagorProducts, filterProductsByCategory, interleaveCatalogs, FAST_SEED_PRODUCTS } = await import("@/utils/mohasagorCache");
+      const { getCachedMohasagorProducts, filterProductsByCategory, interleaveCatalogs, FAST_SEED_PRODUCTS, fetchSlimCatalog, getInMemoryProducts } = await import("@/utils/mohasagorCache");
       const { EcomsellerEngine } = await import("@/services/suppliers/ecomsellerEngine");
       const { normalizeText, tokenizeText } = await import("@/services/search/FuzzySearchEngine");
+      const { productMatchesCategory } = await import("@/utils/categoryHelper");
       
-      const [allMohasagor, allEcom] = await Promise.all([
-        getCachedMohasagorProducts().catch(() => []),
-        EcomsellerEngine.getCachedEcomsellerProducts().catch(() => [])
-      ]);
-      const combinedAll = interleaveCatalogs(allMohasagor, allEcom);
-      const allPool = [...FAST_SEED_PRODUCTS, ...combinedAll];
+      let allMohasagor = await getCachedMohasagorProducts().catch(() => []);
+      if (!allMohasagor || allMohasagor.length < 100) {
+        allMohasagor = await fetchSlimCatalog().catch(() => []);
+      }
+      const inMem = getInMemoryProducts();
+      const allEcom = await EcomsellerEngine.getCachedEcomsellerProducts().catch(() => []);
+      const combinedAll = interleaveCatalogs(allMohasagor.length > 0 ? allMohasagor : inMem, allEcom);
+      const allPool = [...FAST_SEED_PRODUCTS, ...inMem, ...combinedAll];
 
       let fallbackList = allPool;
       if (params.search) {
@@ -111,7 +114,7 @@ async function searchLocalProducts(params: SearchParams): Promise<CombinedProduc
           return false;
         });
       } else if (params.category && params.category !== "all") {
-        fallbackList = filterProductsByCategory(combinedAll, params.category);
+        fallbackList = allPool.filter((p: any) => productMatchesCategory(p, params.category));
       }
 
       if (fallbackList && fallbackList.length > 0) {
@@ -275,7 +278,13 @@ export function useCombinedSearch(params: SearchParams) {
 
     if (typeof window !== "undefined") {
       window.addEventListener("mohasagor_products_updated", handleUpdate);
-      return () => window.removeEventListener("mohasagor_products_updated", handleUpdate);
+      window.addEventListener("ecomseller_products_updated", handleUpdate);
+      window.addEventListener("admin_products_updated", handleUpdate);
+      return () => {
+        window.removeEventListener("mohasagor_products_updated", handleUpdate);
+        window.removeEventListener("ecomseller_products_updated", handleUpdate);
+        window.removeEventListener("admin_products_updated", handleUpdate);
+      };
     }
   }, [queryClient]);
 

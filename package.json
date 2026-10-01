@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "sitemap": "node scripts/generate_sitemaps.cjs",
+    "icons": "node scripts/generate_favicons.cjs",
     "prerender": "node scripts/prerender_products.cjs",
     "test:seo": "node scripts/validate_seo.cjs"
   },

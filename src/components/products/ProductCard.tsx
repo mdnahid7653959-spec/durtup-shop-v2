@@ -77,7 +77,10 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
     saveFastProduct(product);
   };
 
-  const handleImageError = () => {
+  const handleImageError = (e?: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    if (e?.currentTarget) {
+      e.currentTarget.srcset = "";
+    }
     if (candidateIdx + 1 < imageCandidates.length) {
       setCandidateIdx(prev => prev + 1);
     } else {
@@ -134,7 +137,9 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
         >
           <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-slate-800/60">
             {!imageLoaded && (
-              <div className="absolute inset-0 bg-muted/40 animate-pulse" />
+              <div className="absolute inset-0 bg-muted/50 animate-pulse pointer-events-none flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-muted-foreground/10" />
+              </div>
             )}
             <img
               src={displayImage || "/placeholder.svg"}
@@ -144,8 +149,8 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
               width="300"
               height="300"
               className={cn(
-                "w-full h-full object-cover group-hover:scale-105 transition-all duration-300",
-                imageLoaded ? "opacity-100" : "opacity-90"
+                "w-full h-full object-cover group-hover:scale-105 transition-all duration-300 relative z-1",
+                imageLoaded ? "opacity-100" : "opacity-0"
               )}
               loading={priority ? "eager" : "lazy"}
               {...({ fetchpriority: priority ? "high" : "auto" } as any)}

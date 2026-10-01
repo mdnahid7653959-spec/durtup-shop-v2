@@ -410,6 +410,9 @@ function ProductDetailContent() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
+  const [loadedMainImages, setLoadedMainImages] = useState<Record<string, boolean>>({});
+  const [loadedThumbnails, setLoadedThumbnails] = useState<Record<string, boolean>>({});
+  const [prevImage, setPrevImage] = useState<string>("");
   const [addingToCart, setAddingToCart] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>(initialVariantState);
@@ -480,14 +483,44 @@ function ProductDetailContent() {
     } catch {}
   };
 
-  // Get images from product or use defaults
-  const rawImgList = product?.product_images && product.product_images.length > 0
-    ? product.product_images.map(img => typeof img === "string" ? img : img.image_url)
-    : (product as any)?.images && Array.isArray((product as any).images) && (product as any).images.length > 0
-    ? (product as any).images
-    : (product as any)?.image_url || (product as any)?.image
-    ? [(product as any).image_url || (product as any).image]
-    : [getSmartProductImage(product?.name || "", "", product?.category_id || "")];
+  // Safely extract all image fields from product schema across all suppliers & formats
+  const rawImgList = useMemo(() => {
+    if (!product) return [];
+    const list: string[] = [];
+    const add = (u: any) => {
+      if (!u) return;
+      if (typeof u === "string" && u.trim() && !list.includes(u.trim())) {
+        list.push(u.trim());
+      } else if (typeof u === "object") {
+        const val = u.image_url || u.url || u.image || u.product_image || u.path || u.src;
+        if (typeof val === "string" && val.trim() && !list.includes(val.trim())) {
+          list.push(val.trim());
+        }
+      }
+    };
+
+    if (Array.isArray(product.product_images)) product.product_images.forEach(add);
+    if (Array.isArray((product as any).images)) (product as any).images.forEach(add);
+    if (Array.isArray((product as any).gallery)) (product as any).gallery.forEach(add);
+    if (Array.isArray((product as any).photos)) (product as any).photos.forEach(add);
+    if (Array.isArray((product as any).gallery_images)) (product as any).gallery_images.forEach(add);
+    if (Array.isArray((product as any).product_variants)) {
+      (product as any).product_variants.forEach((v: any) => v && add(v.image || v.image_url || v.variant_image || v.photo));
+    }
+    if (Array.isArray((product as any).variants)) {
+      (product as any).variants.forEach((v: any) => v && add(v.image || v.image_url || v.variant_image || v.photo));
+    }
+    if ((product as any).image) add((product as any).image);
+    if ((product as any).image_url) add((product as any).image_url);
+    if ((product as any).thumbnail) add((product as any).thumbnail);
+    if ((product as any).thumbnail_img) add((product as any).thumbnail_img);
+    if ((product as any).featured_image) add((product as any).featured_image);
+
+    if (list.length === 0) {
+      list.push(getSmartProductImage(product.name || "", "", product.category_id || (product as any).category || ""));
+    }
+    return list;
+  }, [product]);
 
   const enrichedImgList = findSeriesImages(product?.name || "", rawImgList);
 
@@ -503,6 +536,24 @@ function ProductDetailContent() {
     }
   }
   if (images.length === 0) images.push(getSmartProductImage(product?.name || "", "", product?.category_id || ""));
+
+  // Preload hero above-the-fold image immediately
+  useEffect(() => {
+    if (images && images.length > 0 && images[0]) {
+      const heroUrl = images[0];
+      const link = document.createElement("link");
+      link.rel = "preload";
+      link.as = "image";
+      link.href = heroUrl;
+      link.setAttribute("fetchpriority", "high");
+      document.head.appendChild(link);
+      return () => {
+        try {
+          document.head.removeChild(link);
+        } catch {}
+      };
+    }
+  }, [images]);
 
   // Warm the next photo gently on idle for zero-lag gallery navigation
   useEffect(() => {
@@ -522,6 +573,9 @@ function ProductDetailContent() {
     const cur = images[selectedImage];
     return cur ? getResponsiveImageSrcSet(cur, [400, 600, 800, 1000], 80) : "";
   }, [images, selectedImage]);
+
+  const currentImage = images[selectedImage] || "";
+  const isCurrentMainLoaded = Boolean(loadedMainImages[currentImage]);
 
   // Touch swipe handling for images
   const [touchStart, setTouchStart] = useState(0);
@@ -1486,32 +1540,93 @@ function ProductDetailContent() {
                         <video src={product.video_url} controls className="w-full h-full object-contain object-center bg-black/5" playsInline />
                       )
                     ) : (
-                      <img
-                        src={images[selectedImage]}
-                        srcSet={heroSrcSet || undefined}
-                        sizes={PRODUCT_DETAIL_SIZES}
-                        alt={product.name}
-                        width="540"
-                        height="540"
-                        style={{
-                          imageRendering: "-webkit-optimize-contrast",
-                          ...(hoverPos
-                            ? {
-                                transformOrigin: `${hoverPos.x}% ${hoverPos.y}%`,
-                                transform: "scale(2)",
-                                transition: "transform 0.08s ease-out",
-                              }
-                            : {
-                                transform: "scale(1)",
-                                transition: "transform 0.25s ease-out",
-                              }),
-                        }}
-                        className="w-full h-full max-h-full object-contain object-center select-none will-change-transform drop-shadow-sm"
-                        loading="eager"
-                        fetchPriority="high"
-                        decoding="async"
-                        onError={handleImageError}
-                      />
+                      <>
+                        {/* Instant Skeleton Placeholder - prevents any blank white image area */}
+                        <div
+                          className={cn(
+                            "absolute inset-0 z-0 bg-slate-100 dark:bg-slate-800/60 flex flex-col items-center justify-center transition-opacity duration-300 pointer-events-none",
+                            isCurrentMainLoaded ? "opacity-0" : "opacity-100"
+                          )}
+                        >
+                          <div className="w-14 h-14 rounded-2xl bg-slate-200 dark:bg-slate-700/60 flex items-center justify-center shadow-inner animate-pulse">
+                            <Package className="w-7 h-7 text-slate-400 dark:text-slate-500 animate-pulse" />
+                          </div>
+                          <span className="text-[11px] text-muted-foreground mt-2 font-medium tracking-wide animate-pulse">
+                            Loading image...
+                          </span>
+                        </div>
+
+                        {/* Retained previous image to prevent ANY white flash on thumbnail change */}
+                        {prevImage && prevImage !== currentImage && !isCurrentMainLoaded && (
+                          <img
+                            src={prevImage}
+                            alt="Previous photo"
+                            className="absolute inset-0 w-full h-full object-contain object-center z-1 pointer-events-none opacity-30 blur-[2px] transition-opacity duration-300"
+                          />
+                        )}
+
+                        {/* Main Product Image with instant eager loading & smooth fade-in */}
+                        <img
+                          key={currentImage}
+                          src={currentImage}
+                          srcSet={heroSrcSet || undefined}
+                          sizes={PRODUCT_DETAIL_SIZES}
+                          alt={product.name}
+                          width="540"
+                          height="540"
+                          style={{
+                            imageRendering: "-webkit-optimize-contrast",
+                            ...(hoverPos
+                              ? {
+                                  transformOrigin: `${hoverPos.x}% ${hoverPos.y}%`,
+                                  transform: "scale(2)",
+                                  transition: "transform 0.08s ease-out",
+                                }
+                              : {
+                                  transform: "scale(1)",
+                                  transition: "transform 0.25s ease-out",
+                                }),
+                          }}
+                          className={cn(
+                            "w-full h-full max-h-full object-contain object-center select-none will-change-transform drop-shadow-sm transition-opacity duration-300 relative z-2",
+                            isCurrentMainLoaded ? "opacity-100" : "opacity-0"
+                          )}
+                          loading="eager"
+                          {...({ fetchpriority: "high" } as any)}
+                          decoding="async"
+                          onLoad={() => {
+                            setLoadedMainImages(prev => ({ ...prev, [currentImage]: true }));
+                            setPrevImage(currentImage);
+                          }}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.onerror = null;
+                            // Clear srcset immediately so browser drops failing responsive proxy
+                            target.srcset = "";
+
+                            const direct = getDirectImageUrl(currentImage);
+                            if (direct && direct !== target.src && direct !== currentImage) {
+                              target.src = direct;
+                              return;
+                            }
+
+                            const alternate = images.find(img => img && img !== currentImage);
+                            if (alternate) {
+                              target.src = getDirectImageUrl(alternate);
+                              return;
+                            }
+
+                            const catFallback = getSmartProductImage(product?.name || "", "", product?.category_id || "");
+                            if (catFallback && catFallback !== target.src) {
+                              target.src = catFallback;
+                              return;
+                            }
+
+                            target.src = defaultImages[0];
+                            setLoadedMainImages(prev => ({ ...prev, [currentImage]: true }));
+                          }}
+                        />
+                      </>
                     )}
 
                     {/* Tap to Zoom Premium Badge */}
@@ -1634,34 +1749,55 @@ function ProductDetailContent() {
                     className="flex gap-2.5 sm:gap-3 overflow-x-auto py-2 px-1 scroll-smooth scrollbar-thin scrollbar-thumb-muted-foreground/30 hover:scrollbar-thumb-muted-foreground/50 w-full"
                     style={{ scrollbarWidth: "thin" }}
                   >
-                    {images.map((img, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => {
-                          setSelectedImage(i);
-                          setShowVideo(false);
-                        }}
-                        className={`w-16 h-16 sm:w-20 sm:h-20 lg:w-[84px] lg:h-[84px] rounded-2xl overflow-hidden border-2 transition-all duration-200 flex-shrink-0 bg-white dark:bg-card p-1.5 cursor-pointer relative ${
-                          selectedImage === i && !showVideo
-                            ? 'border-orange-500 ring-3 ring-orange-500/25 shadow-lg scale-105 z-10'
-                            : 'border-border/80 hover:border-orange-500/60 opacity-80 hover:opacity-100 hover:scale-102'
-                        }`}
-                        title={`View photo ${i + 1}`}
-                      >
-                        <img
-                          src={optimizeImageUrl(img, 120, 75)}
-                          alt={`${product.name} photo ${i + 1}`}
-                          width="84"
-                          height="84"
-                          loading="lazy"
-                          decoding="async"
-                          style={{ imageRendering: "-webkit-optimize-contrast" }}
-                          className="w-full h-full object-contain transition-transform duration-200"
-                          onError={handleImageError}
-                        />
-                      </button>
-                    ))}
+                    {images.map((img, i) => {
+                      const isThumbLoaded = Boolean(loadedThumbnails[img]);
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            setSelectedImage(i);
+                            setShowVideo(false);
+                          }}
+                          className={`w-16 h-16 sm:w-20 sm:h-20 lg:w-[84px] lg:h-[84px] rounded-2xl overflow-hidden border-2 transition-all duration-200 flex-shrink-0 bg-white dark:bg-card p-1.5 cursor-pointer relative ${
+                            selectedImage === i && !showVideo
+                              ? 'border-orange-500 ring-3 ring-orange-500/25 shadow-lg scale-105 z-10'
+                              : 'border-border/80 hover:border-orange-500/60 opacity-80 hover:opacity-100 hover:scale-102'
+                          }`}
+                          title={`View photo ${i + 1}`}
+                        >
+                          {!isThumbLoaded && (
+                            <div className="absolute inset-0 bg-muted/40 animate-pulse pointer-events-none rounded-xl" />
+                          )}
+                          <img
+                            src={optimizeImageUrl(img, 120, 75)}
+                            alt={`${product.name} photo ${i + 1}`}
+                            width="84"
+                            height="84"
+                            loading={i < 4 ? "eager" : "lazy"}
+                            decoding="async"
+                            style={{ imageRendering: "-webkit-optimize-contrast" }}
+                            className={cn(
+                              "w-full h-full object-contain transition-opacity duration-200 relative z-1",
+                              isThumbLoaded ? "opacity-100" : "opacity-0"
+                            )}
+                            onLoad={() => setLoadedThumbnails(prev => ({ ...prev, [img]: true }))}
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.onerror = null;
+                              target.srcset = "";
+                              const direct = getDirectImageUrl(img);
+                              if (direct && direct !== target.src) {
+                                target.src = direct;
+                              } else {
+                                target.src = defaultImages[0];
+                              }
+                              setLoadedThumbnails(prev => ({ ...prev, [img]: true }));
+                            }}
+                          />
+                        </button>
+                      );
+                    })}
 
                     {/* Video thumbnail */}
                     {product.video_url && (

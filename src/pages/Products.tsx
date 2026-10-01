@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Link, useSearchParams, useLocation } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Filter, ChevronRight, Globe, X, SlidersHorizontal, ArrowUpDown, Tag, Sparkles, Camera, Store, Search, Loader2 } from "lucide-react";
+import { Filter, ChevronRight, Globe, X, SlidersHorizontal, ArrowUpDown, Tag, Sparkles, Camera, Store, Search, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { useCombinedSearch } from "@/hooks/useCombinedSearch";
 import { useCategories } from "@/hooks/useProductSearch";
 import { useCJSettings } from "@/hooks/useCJSettings";
 import { SEOHead } from "@/components/SEOHead";
+import { normalizeCategory } from "@/utils/categoryHelper";
 
 const PRODUCTS_PER_PAGE = 24;
 
@@ -50,7 +51,7 @@ export default function Products() {
     maxPrice,
   };
 
-  const { data: searchResults, isLoading } = useCombinedSearch(params);
+  const { data: searchResults, isLoading, isError, refetch } = useCombinedSearch(params);
   const { data: categories } = useCategories();
   const { data: cjSettings } = useCJSettings();
 
@@ -118,12 +119,20 @@ export default function Products() {
 
   const hasFilters = searchParams.toString().length > 0;
 
-  const activeCategoryObj = categories?.find(c => 
-    c.slug === currentCategory || 
-    c.id === currentCategory || 
-    c.name.toLowerCase() === (currentCategory || "").toLowerCase() ||
-    c.slug === (currentCategory || "").toLowerCase()
-  );
+  const normalizedCategory = useMemo(() => normalizeCategory(currentCategory), [currentCategory]);
+
+  const activeCategoryObj = useMemo(() => {
+    if (!currentCategory) return null;
+    return categories?.find(c => 
+      c.slug === currentCategory || 
+      c.id === currentCategory || 
+      c.name.toLowerCase() === (currentCategory || "").toLowerCase() ||
+      c.slug === (currentCategory || "").toLowerCase() ||
+      (normalizedCategory && (c.slug === normalizedCategory.slug || c.slug === normalizedCategory.parentSlug))
+    );
+  }, [categories, currentCategory, normalizedCategory]);
+
+  const selectedCategoryValue = activeCategoryObj?.slug || normalizedCategory?.slug || (currentCategory ? currentCategory.toLowerCase() : "all");
 
   const fallbackCategoryName = currentCategory
     ? currentCategory.toLowerCase() === "home"
@@ -134,10 +143,12 @@ export default function Products() {
       ? "Fashion & Clothing"
       : currentCategory.toLowerCase() === "beauty"
       ? "Health & Beauty"
-      : currentCategory.toLowerCase() === "watches"
-      ? "Watches & Accessories"
+      : currentCategory.toLowerCase() === "watches" || currentCategory.toLowerCase() === "watch"
+      ? "Watch"
       : currentCategory.toLowerCase() === "kids"
       ? "Toys & Baby Care"
+      : normalizedCategory
+      ? normalizedCategory.name
       : currentCategory.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
     : null;
 
@@ -149,6 +160,8 @@ export default function Products() {
     ? "Mohasagor BD Products"
     : activeCategoryObj 
     ? activeCategoryObj.name 
+    : normalizedCategory
+    ? normalizedCategory.name
     : fallbackCategoryName
     ? fallbackCategoryName
     : currentFilter === "flash-sale"
@@ -198,7 +211,7 @@ export default function Products() {
                       Category
                     </label>
                     <Select 
-                      value={currentCategory || "all"} 
+                      value={selectedCategoryValue} 
                       onValueChange={(v) => updateFilter("category", v === "all" ? null : v)}
                     >
                       <SelectTrigger className="h-9 text-xs">
@@ -531,6 +544,21 @@ export default function Products() {
                       <div className="h-4 bg-muted rounded w-1/2" />
                     </div>
                   ))}
+                </div>
+              ) : isError ? (
+                <div className="text-center py-16 px-4 max-w-md mx-auto">
+                  <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+                    <AlertCircle className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground mb-1">
+                    প্রোডাক্ট লোড করতে সমস্যা হয়েছে
+                  </h3>
+                  <p className="text-xs text-muted-foreground mb-5">
+                    ইন্টারনেট সংযোগ চেক করুন অথবা পুনরায় চেষ্টা করুন।
+                  </p>
+                  <Button onClick={() => refetch()} variant="outline" size="sm" className="gap-2">
+                    <RefreshCw className="h-4 w-4" /> পুনরায় চেষ্টা করুন (Retry)
+                  </Button>
                 </div>
               ) : totalCount > 0 ? (
                 <>
