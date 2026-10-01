@@ -14,6 +14,7 @@ import { useCategories } from "@/hooks/useProductSearch";
 import { useCJSettings } from "@/hooks/useCJSettings";
 import { SEOHead } from "@/components/SEOHead";
 import { normalizeCategory } from "@/utils/categoryHelper";
+import { CATEGORIES_DATA } from "@/data/categoriesData";
 
 const PRODUCTS_PER_PAGE = 24;
 
@@ -119,36 +120,51 @@ export default function Products() {
 
   const hasFilters = searchParams.toString().length > 0;
 
+  const availableCategories = useMemo(() => {
+    if (categories && categories.length > 0) return categories;
+    return CATEGORIES_DATA.map(c => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      bangla: c.bangla,
+      image_url: c.image,
+      icon: c.iconName
+    }));
+  }, [categories]);
+
   const normalizedCategory = useMemo(() => normalizeCategory(currentCategory), [currentCategory]);
 
   const activeCategoryObj = useMemo(() => {
     if (!currentCategory) return null;
-    return categories?.find(c => 
+    const targetSlug = normalizedCategory?.slug;
+    return availableCategories.find(c => 
       c.slug === currentCategory || 
       c.id === currentCategory || 
+      (targetSlug && (c.slug === targetSlug || c.id === targetSlug)) ||
       c.name.toLowerCase() === (currentCategory || "").toLowerCase() ||
-      c.slug === (currentCategory || "").toLowerCase() ||
-      (normalizedCategory && (c.slug === normalizedCategory.slug || c.slug === normalizedCategory.parentSlug))
+      (normalizedCategory && (c.slug === normalizedCategory.parentSlug || c.id === normalizedCategory.parentSlug))
     );
-  }, [categories, currentCategory, normalizedCategory]);
+  }, [availableCategories, currentCategory, normalizedCategory]);
 
   const selectedCategoryValue = activeCategoryObj?.slug || normalizedCategory?.slug || (currentCategory ? currentCategory.toLowerCase() : "all");
 
   const fallbackCategoryName = currentCategory
-    ? currentCategory.toLowerCase() === "home"
-      ? "Home & Kitchen"
+    ? normalizedCategory
+      ? normalizedCategory.name
+      : currentCategory.toLowerCase() === "home"
+      ? "Home & Lifestyle"
       : currentCategory.toLowerCase() === "electronics"
-      ? "Electronics & Gadgets"
-      : currentCategory.toLowerCase() === "fashion"
-      ? "Fashion & Clothing"
+      ? "Gadgets & Electronics"
+      : currentCategory.toLowerCase().includes("women")
+      ? "Women's Fashion"
+      : currentCategory.toLowerCase().includes("men")
+      ? "Men's Fashion"
       : currentCategory.toLowerCase() === "beauty"
       ? "Health & Beauty"
-      : currentCategory.toLowerCase() === "watches" || currentCategory.toLowerCase() === "watch"
+      : currentCategory.toLowerCase().includes("watch")
       ? "Watch"
       : currentCategory.toLowerCase() === "kids"
-      ? "Toys & Baby Care"
-      : normalizedCategory
-      ? normalizedCategory.name
+      ? "Kids Zone"
       : currentCategory.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
     : null;
 
@@ -219,8 +235,8 @@ export default function Products() {
                       </SelectTrigger>
                       <SelectContent className="bg-popover">
                         <SelectItem value="all">All Categories</SelectItem>
-                        {categories?.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
+                        {availableCategories.map((cat) => (
+                          <SelectItem key={cat.id || cat.slug} value={cat.slug}>{cat.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

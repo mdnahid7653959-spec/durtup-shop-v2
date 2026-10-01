@@ -11,24 +11,22 @@ export interface NormalizedCategoryInfo {
 
 /**
  * Normalizes any category string (from URL query, route param, or product field)
- * safely handling case, whitespace, hyphens, underscores, and common aliases.
- * 
- * Examples:
- * "Watch" -> slug: "watch", name: "Watch"
- * "watch-" -> slug: "watch", name: "Watch"
- * "WATCH" -> slug: "watch", name: "Watch"
- * "Mobile" -> slug: "mobile-accessories", name: "Mobile Accessories", parentSlug: "gadgets-electronics"
- * "Electronics" -> slug: "gadgets-electronics", name: "Gadgets & Electronics"
- * "Fashion" -> slug: "mens-fashion" (or matched fashion)
- * "Beauty" -> slug: "health-beauty"
- * "Home" -> slug: "home-lifestyle"
- * "Kitchen" -> slug: "kitchen-dining", parentSlug: "home-lifestyle"
+ * safely handling URI encoding (%27, %20), case, whitespace, hyphens, underscores,
+ * apostrophes (Women's -> womens), and common aliases.
  */
 export function normalizeCategory(raw?: string | null): NormalizedCategoryInfo | null {
   if (!raw || typeof raw !== "string") return null;
 
-  // Clean raw string: trim, remove leading/trailing hyphens/underscores/slashes
-  const cleaned = raw.trim().replace(/^[-_/\s]+|[-_/\s]+$/g, "");
+  // Safely decode URI encoded string (e.g. "Women%27s%20Fashion" -> "Women's Fashion")
+  let decoded = raw.trim();
+  try {
+    decoded = decodeURIComponent(decoded);
+    if (decoded.includes("%")) {
+      try { decoded = decodeURIComponent(decoded); } catch {}
+    }
+  } catch {}
+
+  const cleaned = decoded.trim().replace(/^[-_/\s]+|[-_/\s]+$/g, "");
   if (!cleaned || cleaned.toLowerCase() === "all") return null;
 
   // 1. Check with existing findCategoryOrSubcategory
@@ -55,12 +53,41 @@ export function normalizeCategory(raw?: string | null): NormalizedCategoryInfo |
   }
 
   // 2. Direct lookup in CATEGORIES_DATA by normalized slug or name
-  const normKey = cleaned.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  for (const cat of CATEGORIES_DATA) {
-    const catSlugNorm = cat.slug.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    const catNameNorm = cat.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  // Stripping apostrophes so "Women's" -> "womens", "Men's" -> "mens"
+  const cleanKey = cleaned.toLowerCase().replace(/['’"]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
-    if (catSlugNorm === normKey || catNameNorm === normKey || cat.id.toLowerCase() === normKey) {
+  // Priority alias mappings
+  if (cleanKey === "women" || cleanKey === "womens" || cleanKey === "women-s" || cleanKey === "womens-fashion" || cleanKey === "women-s-fashion" || cleanKey.includes("women")) {
+    const cat = CATEGORIES_DATA.find(c => c.slug === "womens-fashion")!;
+    if (cat) {
+      return {
+        slug: cat.slug,
+        name: cat.name,
+        bangla: cat.bangla || "",
+        isSubcategory: false,
+        keywords: cat.subcategories?.flatMap(s => s.keywords || []) || []
+      };
+    }
+  }
+
+  if (cleanKey === "men" || cleanKey === "mens" || cleanKey === "men-s" || cleanKey === "mens-fashion" || cleanKey === "men-s-fashion" || (cleanKey.includes("men") && !cleanKey.includes("women"))) {
+    const cat = CATEGORIES_DATA.find(c => c.slug === "mens-fashion")!;
+    if (cat) {
+      return {
+        slug: cat.slug,
+        name: cat.name,
+        bangla: cat.bangla || "",
+        isSubcategory: false,
+        keywords: cat.subcategories?.flatMap(s => s.keywords || []) || []
+      };
+    }
+  }
+
+  for (const cat of CATEGORIES_DATA) {
+    const catSlugNorm = cat.slug.toLowerCase().replace(/['’"]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const catNameNorm = cat.name.toLowerCase().replace(/['’"]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+    if (catSlugNorm === cleanKey || catNameNorm === cleanKey || cat.id.toLowerCase() === cleanKey) {
       return {
         slug: cat.slug,
         name: cat.name,
@@ -71,10 +98,10 @@ export function normalizeCategory(raw?: string | null): NormalizedCategoryInfo |
     }
 
     for (const sub of cat.subcategories) {
-      const subSlugNorm = sub.slug.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-      const subNameNorm = sub.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      const subSlugNorm = sub.slug.toLowerCase().replace(/['’"]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      const subNameNorm = sub.name.toLowerCase().replace(/['’"]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
-      if (subSlugNorm === normKey || subNameNorm === normKey || sub.id.toLowerCase() === normKey) {
+      if (subSlugNorm === cleanKey || subNameNorm === cleanKey || sub.id.toLowerCase() === cleanKey) {
         return {
           slug: sub.slug,
           name: sub.name,
@@ -88,7 +115,7 @@ export function normalizeCategory(raw?: string | null): NormalizedCategoryInfo |
   }
 
   // 3. Fallback normalized representation
-  const fallbackSlug = normKey;
+  const fallbackSlug = cleanKey;
   const fallbackName = cleaned.split(/[-_\s]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 
   return {
@@ -130,13 +157,101 @@ export function productMatchesCategory(product: any, categoryQuery?: string | nu
   const pCatId = String(product.category_id || product.categoryId || "").toLowerCase().trim();
   const pName = String(product.name || product.title || "").toLowerCase();
 
-  // 1. Direct Slug or Name exact matches
-  if (pCatSlug && (pCatSlug === targetSlug || pCatSlug === targetParentSlug)) return true;
-  if (pCat && (pCat === targetSlug || pCat === targetName || pCat.includes(targetSlug) || targetName.includes(pCat))) return true;
-  if (pCatName && (pCatName === targetSlug || pCatName === targetName || pCatName.includes(targetSlug))) return true;
-  if (pCatId && (pCatId === targetSlug || pCatId === targetParentSlug)) return true;
+  // Clean strings without punctuation/apostrophes for robust cross-format matching
+  const cleanCat = (s: string) => s.toLowerCase().trim().replace(/['’"]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const pCatClean = cleanCat(pCat);
+  const pCatNameClean = cleanCat(pCatName);
+  const pCatSlugClean = cleanCat(pCatSlug);
+  const targetSlugClean = cleanCat(targetSlug);
+  const targetParentClean = targetParentSlug ? cleanCat(targetParentSlug) : "";
 
-  // 2. Special Category Identifiers (e.g. "watch", "smartwatch", "clock", "ঘড়ি")
+  // 1. Direct Slug or Name exact matches (raw and cleaned)
+  if (pCatSlug && (pCatSlug === targetSlug || pCatSlug === targetParentSlug)) return true;
+  if (pCatSlugClean && (pCatSlugClean === targetSlugClean || (targetParentClean && pCatSlugClean === targetParentClean))) return true;
+
+  if (pCat && (pCat === targetSlug || pCat === targetName || pCat.includes(targetSlug) || targetName.includes(pCat))) return true;
+  if (pCatClean && (pCatClean === targetSlugClean || (targetParentClean && pCatClean === targetParentClean))) return true;
+
+  if (pCatName && (pCatName === targetSlug || pCatName === targetName || pCatName.includes(targetSlug))) return true;
+  if (pCatNameClean && (pCatNameClean === targetSlugClean || (targetParentClean && pCatNameClean === targetParentClean))) return true;
+
+  if (pCatId && (pCatId === targetSlug || pCatId === targetParentSlug || cleanCat(pCatId) === targetSlugClean)) return true;
+
+  // 2. Women's Fashion Comprehensive Match
+  if (targetSlug === "womens-fashion" || targetSlugClean === "womens-fashion") {
+    if (
+      pCat.includes("women") ||
+      pCatClean.includes("women") ||
+      pCatSlug.includes("women") ||
+      pCatName.includes("women") ||
+      pName.includes("saree") ||
+      pName.includes("sari") ||
+      pName.includes("sharee") ||
+      pName.includes("kurti") ||
+      pName.includes("lehenga") ||
+      pName.includes("salwar") ||
+      pName.includes("kameez") ||
+      pName.includes("kamiz") ||
+      pName.includes("tunic") ||
+      pName.includes("palazzo") ||
+      pName.includes("two piece") ||
+      pName.includes("three piece") ||
+      pName.includes("hijab") ||
+      pName.includes("abaya") ||
+      pName.includes("borkha") ||
+      pName.includes("burqa") ||
+      pName.includes("khimar") ||
+      pName.includes("niqab") ||
+      pName.includes("jewelry") ||
+      pName.includes("jewellery") ||
+      pName.includes("ring") ||
+      pName.includes("necklace") ||
+      pName.includes("earring") ||
+      pName.includes("bracelet") ||
+      pName.includes("bangle") ||
+      pName.includes("bra") ||
+      pName.includes("lingerie") ||
+      pName.includes("nighty") ||
+      pName.includes("মহিলা") ||
+      pName.includes("লেহেঙ্গা") ||
+      pName.includes("বোরকা") ||
+      pName.includes("হিজাব") ||
+      pName.includes("শাড়ি")
+    ) {
+      if (!pName.includes("panjabi") && !pName.includes("boxer") && !pName.includes("lungi")) {
+        return true;
+      }
+    }
+  }
+
+  // 3. Men's Fashion Comprehensive Match
+  if (targetSlug === "mens-fashion" || targetSlugClean === "mens-fashion") {
+    const isMenCat = (pCat.includes("men") || pCatClean.includes("men") || pCatSlug.includes("men")) && !pCat.includes("women") && !pCatClean.includes("women");
+    const isMenKeyword = 
+      pName.includes("panjabi") ||
+      pName.includes("punjabi") ||
+      pName.includes("pajama") ||
+      pName.includes("payjama") ||
+      pName.includes("kabli") ||
+      pName.includes("kurta") ||
+      pName.includes("polo") ||
+      pName.includes("boxer") ||
+      pName.includes("boxers") ||
+      pName.includes("brief") ||
+      pName.includes("lungi") ||
+      pName.includes("fatua") ||
+      pName.includes("পাঞ্জাবি") ||
+      pName.includes("পায়জামা") ||
+      ((pName.includes("shirt") || pName.includes("pant") || pName.includes("t-shirt") || pName.includes("tshirt") || pName.includes("trouser") || pName.includes("jogger")) && !pName.includes("women") && !pName.includes("lady") && !pName.includes("ladies") && !pName.includes("ring") && !pName.includes("jewelry"));
+    
+    if (isMenCat || isMenKeyword) {
+      if (!pName.includes("women") && !pName.includes("lady") && !pName.includes("ladies") && !pName.includes("saree") && !pName.includes("kurti") && !pName.includes("ring")) {
+        return true;
+      }
+    }
+  }
+
+  // 4. Special Category Identifiers (e.g. "watch", "smartwatch", "clock", "ঘড়ি")
   if (targetSlug === "watch" || targetSlug === "watches" || targetSlug.includes("watch")) {
     const isWatch = 
       pCat.includes("watch") ||
@@ -159,9 +274,8 @@ export function productMatchesCategory(product: any, categoryQuery?: string | nu
     if (isWatch) return true;
   }
 
-  // 3. Gadgets & Electronics / Mobile Accessories
+  // 5. Gadgets & Electronics / Mobile Accessories
   if (targetSlug === "gadgets-electronics" || targetSlug === "mobile-accessories" || targetSlug === "electronics" || targetSlug === "mobile") {
-    // If target is specific subcategory "mobile-accessories" or "mobile"
     if (targetSlug === "mobile-accessories" || targetSlug === "mobile") {
       const isMobileAcc = 
         pName.match(/\b(mobile|phone|charger|cable|cover|power bank|otg|adapter|battery|type-c|casing|protector|holder|stand)\b/i) ||
@@ -171,9 +285,7 @@ export function productMatchesCategory(product: any, categoryQuery?: string | nu
     }
 
     if (targetSlug === "gadgets-electronics" || targetSlug === "electronics") {
-      // Products in gadgets-electronics but not watches
       if (pCatSlug === "gadgets-electronics" || pCat.includes("gadget") || pCat.includes("electronic")) {
-        // Exclude watches from general electronics
         if (!pName.includes("watch") && !pName.includes("smartwatch") && !pName.includes("ঘড়ি")) {
           return true;
         }
@@ -181,14 +293,12 @@ export function productMatchesCategory(product: any, categoryQuery?: string | nu
     }
   }
 
-  // 4. Subcategory keyword match
+  // 6. Subcategory keyword match
   if (target.isSubcategory && targetKeywords.length > 0) {
     const matchesKeyword = targetKeywords.some(kw => kw.length >= 3 && (pName.includes(kw) || pCat.includes(kw)));
     if (matchesKeyword) {
       if (targetParentSlug) {
-        // If parent category is specified, verify it doesn't conflict
         if (pCatSlug && pCatSlug !== targetParentSlug && pCatSlug !== targetSlug) {
-          // Allow cross-match if pCat is generic or empty
           if (pCatSlug === "general" || !pCatSlug) return true;
         } else {
           return true;
@@ -199,10 +309,10 @@ export function productMatchesCategory(product: any, categoryQuery?: string | nu
     }
   }
 
-  // 5. Inferred category match from product name
+  // 7. Inferred category match from product name
   try {
     const inferred = inferProductCategory(pName, pCat);
-    if (inferred === targetSlug || inferred === targetParentSlug) {
+    if (inferred === targetSlug || cleanCat(inferred) === targetSlugClean || (targetParentSlug && inferred === targetParentSlug)) {
       return true;
     }
   } catch {}
@@ -226,10 +336,11 @@ function inferProductCategory(name: string, category?: string): string {
   if (n.includes("milk shake") || n.includes("honey") || n.includes("ghee") || n.includes("supplement") || c === "foods") return "foods";
   if (n.includes("hoodie") || n.includes("winter") || n.includes("jacket") || c === "winter") return "winter";
   if (n.includes("panjabi") || n.includes("kabli") || n.includes("shirt") || n.includes("pant") || c === "mens-fashion") return "mens-fashion";
-  if (n.includes("saree") || n.includes("kurti") || n.includes("hijab") || n.includes("borkha") || n.includes("jewelry") || c === "womens-fashion") return "womens-fashion";
+  if (n.includes("saree") || n.includes("kurti") || n.includes("hijab") || n.includes("borkha") || n.includes("jewelry") || c === "womens-fashion" || c.includes("women")) return "womens-fashion";
   if (n.includes("pot") || n.includes("pan") || n.includes("blender") || n.includes("kitchen") || n.includes("light") || c === "home-lifestyle") return "home-lifestyle";
   if (n.includes("serum") || n.includes("cream") || n.includes("hair") || n.includes("skin") || n.includes("beauty") || c === "health-beauty") return "health-beauty";
   if (n.includes("toy") || n.includes("baby") || n.includes("kid") || c === "kids-zone") return "kids-zone";
   return "gadgets-electronics";
 }
+
 

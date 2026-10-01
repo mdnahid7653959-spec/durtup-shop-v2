@@ -168,6 +168,14 @@ import { CATEGORIES_DATA } from "@/data/categoriesData";
 export function useCategories() {
   return useQuery({
     queryKey: ["categories"],
+    initialData: CATEGORIES_DATA.map(c => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      bangla: c.bangla,
+      image_url: c.image,
+      icon: c.iconName
+    })),
     queryFn: async () => {
       let supabaseCats: any[] = [];
       try {
